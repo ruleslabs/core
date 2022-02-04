@@ -66,7 +66,8 @@ async def build_copyable_deployment():
   defs = SimpleNamespace(
     account=compile("openzeppelin/Account.cairo"),
     ravageData=compile("RavageData.cairo"),
-    ravageCards=compile("RavageCards.cairo")
+    ravageCards=compile("RavageCards.cairo"),
+    ravageTokens=compile("RavageTokens.cairo")
   )
 
   signers = dict(
@@ -92,6 +93,17 @@ async def build_copyable_deployment():
       ravageData.contract_address
     ]
   )
+
+  ravageTokens = await starknet.deploy(
+    contract_def=defs.ravageTokens,
+    constructor_calldata=[
+      0x5374616D70656465, # name
+      0x5354414D50, # symbol
+      ravageCards.contract_address,
+      0
+    ]
+  )
+
   return SimpleNamespace(
     starknet=starknet,
     signers=signers,
@@ -99,7 +111,8 @@ async def build_copyable_deployment():
       admin=serialize_contract(accounts.admin, defs.account.abi),
       rando=serialize_contract(accounts.rando, defs.account.abi),
       ravageData=serialize_contract(ravageData, defs.ravageData.abi),
-      ravageCards=serialize_contract(ravageCards, defs.ravageCards.abi)
+      ravageCards=serialize_contract(ravageCards, defs.ravageCards.abi),
+      ravageTokens=serialize_contract(ravageTokens, defs.ravageTokens.abi)
     )
   )
 

@@ -5,20 +5,21 @@ from starkware.starknet.definitions.error_codes import StarknetErrorCode
 
 from utils import dict_to_flat_tuple
 
+# Artist
+
 async def _create_artist(ctx, artist_name):
   await ctx.ravageData.createArtist(artist_name).invoke()
-
-async def _create_card(ctx, card):
-  await ctx.ravageCards.createCard(dict_to_flat_tuple(card)).invoke()
-
-# async def _create_and_mint_card(ctx, artist_name):
-#   await ctx.ravageData.createArtist(artsit_name).invoke()
 
 async def _artist_exists(ctx, artist_name):
   (exists,) = (
     await ctx.ravageData.artistExists(artist_name).call()
   ).result
   return exists
+
+# Cards
+
+async def _create_card(ctx, card):
+  await ctx.ravageCards.createCard(dict_to_flat_tuple(card)).invoke()
 
 async def _card_exists(ctx, card_id):
   (exists,) = (
@@ -31,6 +32,20 @@ async def _get_card_id(ctx, card):
     await ctx.ravageCards.getCardId(dict_to_flat_tuple(card)).call()
   ).result
   return tuple(tuple(card_id)[0])
+
+# async def _create_and_mint_card(ctx, artist_name):
+#   await ctx.ravageData.createArtist(artsit_name).invoke()
+
+# Base Token URI
+
+async def _get_base_token_uri(ctx):
+  (base_token_uri,) = (
+    await ctx.ravageTokens.baseTokenURI().call()
+  ).result
+  return base_token_uri
+
+async def _set_base_token_uri(ctx, base_token_uri):
+  await ctx.ravageTokens.setBaseTokenURI(base_token_uri).invoke()
 
 
 class ScenarioState:
@@ -47,6 +62,9 @@ class ScenarioState:
 
   # async def create_and_mint_card(card):
   #   await _create_and_mint_card(card)
+
+  async def set_base_token_uri(self, base_token_uri):
+    await _set_base_token_uri(self.ctx, base_token_uri)
 
 
 async def run_scenario(ctx, scenario):
@@ -135,3 +153,24 @@ async def test_create_invalid_card(ctx_factory):
       ("create_card", dict(card=(lambda d: d.update(serial_number=2 ** 32) or d)(CARD_ARTIST_1)), False),
     ]
   )
+
+@pytest.mark.asyncio
+async def test_base_token_uri(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  base_token_uri = [1, 2, 2, 3, 3, 3]
+  assert await _get_base_token_uri(ctx) == []
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      ("set_base_token_uri", dict(base_token_uri=base_token_uri + base_token_uri), True),
+      ("set_base_token_uri", dict(base_token_uri=[32434, 5234, 23, 5324]), True),
+      ("set_base_token_uri", dict(base_token_uri=base_token_uri), True),
+    ]
+  )
+
+  # Then
+  assert await _get_base_token_uri(ctx) == base_token_uri
