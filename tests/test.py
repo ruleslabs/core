@@ -62,16 +62,14 @@ async def run_scenario(ctx, scenario):
       if not expect_success:
         assert e.code == StarknetErrorCode.TRANSACTION_FAILED
       else:
+        assert e.code != StarknetErrorCode.TRANSACTION_FAILED
         raise e
-
-    if expect_success:
+    else:
       assert expect_success == True
 
 
 ARTIST_1 = (0x416C7068612057616E6E, 0)
-
 METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
-
 CARD_ARTIST_1 = dict(artist_name=ARTIST_1, season=1, scarcity=1, serial_number=1, metadata=METADATA_1)
 
 
@@ -116,3 +114,24 @@ async def test_create_card(ctx_factory):
 
   # Then
   assert await _card_exists(ctx, card_id) == 1
+
+
+@pytest.mark.asyncio
+async def test_create_invalid_card(ctx_factory):
+  ctx = ctx_factory()
+
+  print((lambda d: d.update(season=2) or d)(CARD_ARTIST_1))
+
+  # When / Then
+  await run_scenario(
+    ctx,
+    [
+      ("create_artist", dict(artist_name=ARTIST_1), True),
+      ("create_card", dict(card=(lambda d: d.update(season=0) or d)(CARD_ARTIST_1)), False),
+      ("create_card", dict(card=(lambda d: d.update(scarcity=0) or d)(CARD_ARTIST_1)), False),
+      ("create_card", dict(card=(lambda d: d.update(serial_number=0) or d)(CARD_ARTIST_1)), False),
+      ("create_card", dict(card=(lambda d: d.update(season=2 ** 16) or d)(CARD_ARTIST_1)), False),
+      ("create_card", dict(card=(lambda d: d.update(scarcity=2 ** 8) or d)(CARD_ARTIST_1)), False),
+      ("create_card", dict(card=(lambda d: d.update(serial_number=2 ** 32) or d)(CARD_ARTIST_1)), False),
+    ]
+  )
