@@ -68,6 +68,7 @@ func constructor{
   }(
     name: felt,
     symbol: felt,
+    owner: felt,
     _ravage_cards_address: felt,
     _ravage_packs_address: felt,
   ):

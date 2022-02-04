@@ -71,7 +71,8 @@ async def build_copyable_deployment():
   )
 
   signers = dict(
-    admin=Signer(8245892928310),
+    owner=Signer(8245892928310),
+    minter=Signer(1004912350233),
     rando=Signer(7427329833829)
   )
 
@@ -99,6 +100,7 @@ async def build_copyable_deployment():
     constructor_calldata=[
       0x5374616D70656465, # name
       0x5354414D50, # symbol
+      accounts.owner.contract_address, # owner
       ravageCards.contract_address,
       0
     ]
@@ -108,8 +110,9 @@ async def build_copyable_deployment():
     starknet=starknet,
     signers=signers,
     serialized_contracts=dict(
-      admin=serialize_contract(accounts.admin, defs.account.abi),
+      owner=serialize_contract(accounts.owner, defs.account.abi),
       rando=serialize_contract(accounts.rando, defs.account.abi),
+      minter=serialize_contract(accounts.minter, defs.account.abi),
       ravageData=serialize_contract(ravageData, defs.ravageData.abi),
       ravageCards=serialize_contract(ravageCards, defs.ravageCards.abi),
       ravageTokens=serialize_contract(ravageTokens, defs.ravageTokens.abi)
@@ -145,7 +148,7 @@ async def ctx_factory(copyable_deployment):
     }
 
     async def execute(account_name, contract_address, selector_name, calldata):
-      return await signers[account_name].sendTransaction(
+      return await signers[account_name].send_transaction(
         contracts[account_name],
         contract_address,
         selector_name,

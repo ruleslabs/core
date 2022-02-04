@@ -7,11 +7,11 @@ from starkware.cairo.common.uint256 import (
 from starkware.cairo.common.math import assert_not_zero
 from starkware.starknet.common.syscalls import get_caller_address
 
-from contracts.ERC165_base import (
+from contracts.openzeppelin.ERC165_base import (
   ERC165_register_interface
 )
 
-from contracts.IERC165 import IERC165
+from contracts.openzeppelin.IERC165 import IERC165
 from contracts.token.ERC1155.IERC1155_Receiver import IERC1155_Receiver
 
 const TRUE = 1

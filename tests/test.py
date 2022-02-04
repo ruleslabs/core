@@ -3,12 +3,17 @@ import pytest
 from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.definitions.error_codes import StarknetErrorCode
 
-from utils import dict_to_flat_tuple
+from utils import dict_to_tuple, to_flat_tuple
 
 # Artist
 
-async def _create_artist(ctx, artist_name):
-  await ctx.ravageData.createArtist(artist_name).invoke()
+async def _create_artist(ctx, account_name, artist_name):
+  await ctx.execute(
+    account_name,
+    ctx.ravageData.contract_address,
+    "createArtist",
+    [*artist_name]
+  )
 
 async def _artist_exists(ctx, artist_name):
   (exists,) = (
@@ -18,8 +23,13 @@ async def _artist_exists(ctx, artist_name):
 
 # Cards
 
-async def _create_card(ctx, card):
-  await ctx.ravageCards.createCard(dict_to_flat_tuple(card)).invoke()
+async def _create_card(ctx, account_name, card):
+  await ctx.execute(
+    account_name,
+    ctx.ravageCards.contract_address,
+    "createCard",
+    [*to_flat_tuple(card)]
+  )
 
 async def _card_exists(ctx, card_id):
   (exists,) = (
@@ -29,7 +39,7 @@ async def _card_exists(ctx, card_id):
 
 async def _get_card_id(ctx, card):
   card_id = (
-    await ctx.ravageCards.getCardId(dict_to_flat_tuple(card)).call()
+    await ctx.ravageCards.getCardId(dict_to_tuple(card)).call()
   ).result
   return tuple(tuple(card_id)[0])
 
@@ -44,9 +54,17 @@ async def _get_base_token_uri(ctx):
   ).result
   return base_token_uri
 
-async def _set_base_token_uri(ctx, base_token_uri):
-  await ctx.ravageTokens.setBaseTokenURI(base_token_uri).invoke()
+async def _set_base_token_uri(ctx, account_name, base_token_uri):
+  await ctx.execute(
+    account_name,
+    ctx.ravageTokens.contract_address,
+    "setBaseTokenURI",
+    [len(base_token_uri), *base_token_uri]
+  )
 
+############
+# SCENARIO #
+############
 
 class ScenarioState:
   ctx = None
@@ -54,28 +72,31 @@ class ScenarioState:
   def __init__(self, ctx):
     self.ctx = ctx
 
-  async def create_artist(self, artist_name):
-    await _create_artist(self.ctx, artist_name)
+  async def create_artist(self, account_name, artist_name):
+    await _create_artist(self.ctx, account_name, artist_name)
 
-  async def create_card(self, card):
-    await _create_card(self.ctx, card)
+  async def create_card(self, account_name, card):
+    await _create_card(self.ctx, account_name, card)
 
   # async def create_and_mint_card(card):
   #   await _create_and_mint_card(card)
 
-  async def set_base_token_uri(self, base_token_uri):
-    await _set_base_token_uri(self.ctx, base_token_uri)
+  async def set_base_token_uri(self, account_name, base_token_uri):
+    await _set_base_token_uri(self.ctx, account_name, base_token_uri)
 
 
 async def run_scenario(ctx, scenario):
   scenario_state = ScenarioState(ctx)
-  for (function_name, kargs, expect_success) in scenario:
+  for (account_name, function_name, kargs, expect_success) in scenario:
+    if account_name not in [MINTER, OWNER]:
+      raise f"Invalid signer '{signer}'"
+
     func = getattr(scenario_state, function_name, None)
     if not func:
       raise AttributeError(f"ScenarioState.{function_name} doesn't exist.")
 
     try:
-      await func(**kargs)
+      await func(account_name, **kargs)
     except StarkException as e:
       if not expect_success:
         assert e.code == StarknetErrorCode.TRANSACTION_FAILED
@@ -85,14 +106,23 @@ async def run_scenario(ctx, scenario):
     else:
       assert expect_success == True
 
+##########
+# CONSTS #
+##########
+
+MINTER="minter"
+OWNER="owner"
 
 ARTIST_1 = (0x416C7068612057616E6E, 0)
 METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
 CARD_ARTIST_1 = dict(artist_name=ARTIST_1, season=1, scarcity=1, serial_number=1, metadata=METADATA_1)
 
+#########
+# TESTS #
+#########
 
 @pytest.mark.asyncio
-async def test_create_artist(ctx_factory):
+async def test_settle_where_minter_create_artist(ctx_factory):
   ctx = ctx_factory()
 
   # Given
@@ -102,8 +132,8 @@ async def test_create_artist(ctx_factory):
   await run_scenario(
     ctx,
     [
-      ("create_artist", dict(artist_name=ARTIST_1), True),
-      ("create_artist", dict(artist_name=ARTIST_1), False)
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), False)
     ]
   )
 
@@ -112,7 +142,7 @@ async def test_create_artist(ctx_factory):
 
 
 @pytest.mark.asyncio
-async def test_create_card(ctx_factory):
+async def test_settle_where_minter_create_card(ctx_factory):
   ctx = ctx_factory()
 
   # Given
@@ -123,10 +153,10 @@ async def test_create_card(ctx_factory):
   await run_scenario(
     ctx,
     [
-      ("create_card", dict(card=CARD_ARTIST_1), False),
-      ("create_artist", dict(artist_name=ARTIST_1), True),
-      ("create_card", dict(card=CARD_ARTIST_1), True),
-      ("create_card", dict(card=CARD_ARTIST_1), False),
+      (MINTER, "create_card", dict(card=CARD_ARTIST_1), False),
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, "create_card", dict(card=CARD_ARTIST_1), True),
+      (MINTER, "create_card", dict(card=CARD_ARTIST_1), False),
     ]
   )
 
@@ -135,7 +165,7 @@ async def test_create_card(ctx_factory):
 
 
 @pytest.mark.asyncio
-async def test_create_invalid_card(ctx_factory):
+async def test_settle_where_minter_create_invalid_card(ctx_factory):
   ctx = ctx_factory()
 
   print((lambda d: d.update(season=2) or d)(CARD_ARTIST_1))
@@ -144,18 +174,18 @@ async def test_create_invalid_card(ctx_factory):
   await run_scenario(
     ctx,
     [
-      ("create_artist", dict(artist_name=ARTIST_1), True),
-      ("create_card", dict(card=(lambda d: d.update(season=0) or d)(CARD_ARTIST_1)), False),
-      ("create_card", dict(card=(lambda d: d.update(scarcity=0) or d)(CARD_ARTIST_1)), False),
-      ("create_card", dict(card=(lambda d: d.update(serial_number=0) or d)(CARD_ARTIST_1)), False),
-      ("create_card", dict(card=(lambda d: d.update(season=2 ** 16) or d)(CARD_ARTIST_1)), False),
-      ("create_card", dict(card=(lambda d: d.update(scarcity=2 ** 8) or d)(CARD_ARTIST_1)), False),
-      ("create_card", dict(card=(lambda d: d.update(serial_number=2 ** 32) or d)(CARD_ARTIST_1)), False),
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, "create_card", dict(card=(lambda d: d.update(season=0) or d)(CARD_ARTIST_1)), False),
+      (MINTER, "create_card", dict(card=(lambda d: d.update(scarcity=0) or d)(CARD_ARTIST_1)), False),
+      (MINTER, "create_card", dict(card=(lambda d: d.update(serial_number=0) or d)(CARD_ARTIST_1)), False),
+      (MINTER, "create_card", dict(card=(lambda d: d.update(season=2 ** 16) or d)(CARD_ARTIST_1)), False),
+      (MINTER, "create_card", dict(card=(lambda d: d.update(scarcity=2 ** 8) or d)(CARD_ARTIST_1)), False),
+      (MINTER, "create_card", dict(card=(lambda d: d.update(serial_number=2 ** 32) or d)(CARD_ARTIST_1)), False),
     ]
   )
 
 @pytest.mark.asyncio
-async def test_base_token_uri(ctx_factory):
+async def test_settle_where_owner_set_base_token_uri(ctx_factory):
   ctx = ctx_factory()
 
   # Given
@@ -166,11 +196,15 @@ async def test_base_token_uri(ctx_factory):
   await run_scenario(
     ctx,
     [
-      ("set_base_token_uri", dict(base_token_uri=base_token_uri + base_token_uri), True),
-      ("set_base_token_uri", dict(base_token_uri=[32434, 5234, 23, 5324]), True),
-      ("set_base_token_uri", dict(base_token_uri=base_token_uri), True),
+      (OWNER, "set_base_token_uri", dict(base_token_uri=base_token_uri + base_token_uri), True),
+      (OWNER, "set_base_token_uri", dict(base_token_uri=[32434, 5234, 23, 5324]), True),
+      (OWNER, "set_base_token_uri", dict(base_token_uri=base_token_uri), True),
     ]
   )
 
   # Then
   assert await _get_base_token_uri(ctx) == base_token_uri
+
+
+# @pytest.mark.asyncio
+# async def test_settle_where_non_minter_create_artist(ctx_factory):
