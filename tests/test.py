@@ -3,7 +3,7 @@ import pytest
 from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.definitions.error_codes import StarknetErrorCode
 
-from utils import dict_to_tuple, to_flat_tuple, update_dict
+from utils import dict_to_tuple, to_flat_tuple, update_dict, get_contract
 
 # Artist
 
@@ -14,6 +14,7 @@ async def _create_artist(ctx, signer_account_name, artist_name):
     "createArtist",
     [*artist_name]
   )
+
 
 async def _artist_exists(ctx, artist_name):
   (exists,) = (
@@ -31,11 +32,13 @@ async def _create_card(ctx, signer_account_name, card):
     [*to_flat_tuple(card)]
   )
 
+
 async def _card_exists(ctx, card_id):
   (exists,) = (
     await ctx.ravageCards.cardExists(card_id).call()
   ).result
   return exists
+
 
 async def _get_card_id(ctx, card):
   card_id = (
@@ -54,6 +57,7 @@ async def _get_base_token_uri(ctx):
   ).result
   return base_token_uri
 
+
 async def _set_base_token_uri(ctx, signer_account_name, base_token_uri):
   await ctx.execute(
     signer_account_name,
@@ -64,21 +68,24 @@ async def _set_base_token_uri(ctx, signer_account_name, base_token_uri):
 
 # Roles
 
-async def _get_minter_role(contract):
+async def _get_minter_role(ctx, contract_name):
+  contract = get_contract(ctx, contract_name)
+
   (minter_role,) = (
     await contract.MINTER_ROLE().call()
   ).result
   return (minter_role)
 
-async def _has_tokens_role(ctx, role, account_name):
-  account_address = getattr(ctx, account_name, None).contract_address
-  if not account_address:
-    raise AttributeError(f"ctx.'{account}' doesn't exists.")
+
+async def _has_role(ctx, conrtact_name, role, account_name):
+  contract = get_contract(ctx, conrtact_name)
+  account_address = get_contract(ctx, account_name).contract_address
 
   (has_role,) = (
-    await ctx.ravageTokens.hasRole(role, account_address).call()
+    await contract.hasRole(role, account_address).call()
   ).result
   return (has_role)
+
 
 async def _add_minter(ctx, signer_account_name, contract, account_address):
   await ctx.execute(
@@ -87,6 +94,7 @@ async def _add_minter(ctx, signer_account_name, contract, account_address):
     "addMinter",
     [account_address]
   )
+
 
 async def _revoke_minter(ctx, signer_account_name, contract, account_address):
   await ctx.execute(
@@ -118,19 +126,17 @@ class ScenarioState:
   async def set_base_token_uri(self, signer_account_name, base_token_uri):
     await _set_base_token_uri(self.ctx, signer_account_name, base_token_uri)
 
-  async def add_tokens_minter(self, signer_account_name, account_name):
-    account_address = getattr(self.ctx, account_name, None).contract_address
-    if not account_address:
-      raise AttributeError(f"ctx.'{account_name}' doesn't exists.")
+  async def add_minter(self, signer_account_name, account_name, contract_name):
+    account_address = get_contract(self.ctx, account_name).contract_address
+    contract = get_contract(self.ctx, contract_name)
 
-    await _add_minter(self.ctx, signer_account_name, self.ctx.ravageTokens, account_address)
+    await _add_minter(self.ctx, signer_account_name, contract, account_address)
 
-  async def revoke_tokens_minter(self, signer_account_name, account_name):
-    account_address = getattr(self.ctx, account_name, None).contract_address
-    if not account_address:
-      raise AttributeError(f"ctx.'{account_name}' doesn't exists.")
+  async def revoke_minter(self, signer_account_name, account_name, contract_name):
+    account_address = get_contract(self.ctx, account_name).contract_address
+    contract = get_contract(self.ctx, contract_name)
 
-    await _revoke_minter(self.ctx, signer_account_name, self.ctx.ravageTokens, account_address)
+    await _revoke_minter(self.ctx, signer_account_name, contract, account_address)
 
 
 async def run_scenario(ctx, scenario):
@@ -255,31 +261,32 @@ async def test_settle_where_owner_set_base_token_uri(ctx_factory):
 
 
 @pytest.mark.asyncio
-async def test_settle_where_owner_distribute_ravageTokens_minter_role(ctx_factory):
+@pytest.mark.parametrize("contract_name", ["ravageTokens", "ravageCards", "ravageData"])
+async def test_settle_where_owner_distribute_minter_role(ctx_factory, contract_name):
   ctx = ctx_factory()
 
   # Given
-  minter_role = await _get_minter_role(ctx.ravageTokens)
+  minter_role = await _get_minter_role(ctx, contract_name)
   assert minter_role != 0
 
-  assert await _has_tokens_role(ctx, minter_role, OWNER) == 1
-  assert await _has_tokens_role(ctx, minter_role, MINTER) == 1
-  assert await _has_tokens_role(ctx, minter_role, RANDO) == 0
+  assert await _has_role(ctx, contract_name, minter_role, OWNER) == 1
+  assert await _has_role(ctx, contract_name, minter_role, MINTER) == 1
+  assert await _has_role(ctx, contract_name, minter_role, RANDO) == 0
 
   # When
   await run_scenario(
     ctx,
     [
-      (RANDO, "add_tokens_minter", dict(account_name=RANDO), False),
-      (MINTER, "add_tokens_minter", dict(account_name=RANDO), False),
-      (OWNER, "add_tokens_minter", dict(account_name=RANDO), True),
-      (OWNER, "add_tokens_minter", dict(account_name=RANDO), True),
-      (OWNER, "revoke_tokens_minter", dict(account_name=MINTER), True),
-      (RANDO, "revoke_tokens_minter", dict(account_name=OWNER), False),
-      (OWNER, "revoke_tokens_minter", dict(account_name=OWNER), True),
+      (RANDO, "add_minter", dict(account_name=RANDO, contract_name=contract_name), False),
+      (MINTER, "add_minter", dict(account_name=RANDO, contract_name=contract_name), False),
+      (OWNER, "add_minter", dict(account_name=RANDO, contract_name=contract_name), True),
+      (OWNER, "add_minter", dict(account_name=RANDO, contract_name=contract_name), True),
+      (OWNER, "revoke_minter", dict(account_name=MINTER, contract_name=contract_name), True),
+      (RANDO, "revoke_minter", dict(account_name=OWNER, contract_name=contract_name), False),
+      (OWNER, "revoke_minter", dict(account_name=OWNER, contract_name=contract_name), True),
     ]
   )
 
-  assert await _has_tokens_role(ctx, minter_role, OWNER) == 0
-  assert await _has_tokens_role(ctx, minter_role, MINTER) == 0
-  assert await _has_tokens_role(ctx, minter_role, RANDO) == 1
+  assert await _has_role(ctx, contract_name, minter_role, OWNER) == 0
+  assert await _has_role(ctx, contract_name, minter_role, MINTER) == 0
+  assert await _has_role(ctx, contract_name, minter_role, RANDO) == 1
