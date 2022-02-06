@@ -65,9 +65,9 @@ async def build_copyable_deployment():
 
   defs = SimpleNamespace(
     account=compile("openzeppelin/Account.cairo"),
-    ravageData=compile("RavageData.cairo"),
-    ravageCards=compile("RavageCards.cairo"),
-    ravageTokens=compile("RavageTokens.cairo")
+    rulesData=compile("RulesData.cairo"),
+    rulesCards=compile("RulesCards.cairo"),
+    rulesTokens=compile("RulesTokens.cairo")
   )
 
   signers = dict(
@@ -85,33 +85,33 @@ async def build_copyable_deployment():
     }
   )
 
-  ravageData = await starknet.deploy(
-    contract_def=defs.ravageData,
+  rulesData = await starknet.deploy(
+    contract_def=defs.rulesData,
     constructor_calldata=[
       accounts.owner.contract_address # owner
     ]
   )
 
-  ravageCards = await starknet.deploy(
-    contract_def=defs.ravageCards,
+  rulesCards = await starknet.deploy(
+    contract_def=defs.rulesCards,
     constructor_calldata=[
       accounts.owner.contract_address, # owner
-      ravageData.contract_address
+      rulesData.contract_address
     ]
   )
 
-  ravageTokens = await starknet.deploy(
-    contract_def=defs.ravageTokens,
+  rulesTokens = await starknet.deploy(
+    contract_def=defs.rulesTokens,
     constructor_calldata=[
       0x5374616D70656465, # name
       0x5354414D50, # symbol
       accounts.owner.contract_address, # owner
-      ravageCards.contract_address,
+      rulesCards.contract_address,
       0
     ]
   )
 
-  for contract in [ravageData, ravageCards, ravageTokens]:
+  for contract in [rulesData, rulesCards, rulesTokens]:
     await signers["owner"].send_transaction(
       accounts.owner,
       contract.contract_address,
@@ -121,7 +121,7 @@ async def build_copyable_deployment():
 
   await signers["owner"].send_transaction(
     accounts.owner,
-    ravageCards.contract_address,
+    rulesCards.contract_address,
     "addCapper",
     [accounts.minter.contract_address]
   )
@@ -135,9 +135,9 @@ async def build_copyable_deployment():
       rando2=serialize_contract(accounts.rando2, defs.account.abi),
       rando3=serialize_contract(accounts.rando3, defs.account.abi),
       minter=serialize_contract(accounts.minter, defs.account.abi),
-      ravageData=serialize_contract(ravageData, defs.ravageData.abi),
-      ravageCards=serialize_contract(ravageCards, defs.ravageCards.abi),
-      ravageTokens=serialize_contract(ravageTokens, defs.ravageTokens.abi)
+      rulesData=serialize_contract(rulesData, defs.rulesData.abi),
+      rulesCards=serialize_contract(rulesCards, defs.rulesCards.abi),
+      rulesTokens=serialize_contract(rulesTokens, defs.rulesTokens.abi)
     )
   )
 

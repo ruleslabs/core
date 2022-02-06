@@ -10,7 +10,7 @@ from utils import dict_to_tuple, to_flat_tuple, update_dict, get_contract, get_m
 async def _create_artist(ctx, signer_account_name, artist_name):
   await ctx.execute(
     signer_account_name,
-    ctx.ravageData.contract_address,
+    ctx.rulesData.contract_address,
     "createArtist",
     [*artist_name]
   )
@@ -18,7 +18,7 @@ async def _create_artist(ctx, signer_account_name, artist_name):
 
 async def _artist_exists(ctx, artist_name):
   (exists,) = (
-    await ctx.ravageData.artistExists(artist_name).call()
+    await ctx.rulesData.artistExists(artist_name).call()
   ).result
   return exists
 
@@ -27,7 +27,7 @@ async def _artist_exists(ctx, artist_name):
 async def _create_card(ctx, signer_account_name, card):
   await ctx.execute(
     signer_account_name,
-    ctx.ravageCards.contract_address,
+    ctx.rulesCards.contract_address,
     "createCard",
     [*to_flat_tuple(card)]
   )
@@ -35,25 +35,25 @@ async def _create_card(ctx, signer_account_name, card):
 
 async def _card_exists(ctx, card_id):
   (exists,) = (
-    await ctx.ravageCards.cardExists(card_id).call()
+    await ctx.rulesCards.cardExists(card_id).call()
   ).result
   return exists
 
 
 async def _get_card_id(ctx, card):
   card_id = (
-    await ctx.ravageCards.getCardId(dict_to_tuple(card)).call()
+    await ctx.rulesCards.getCardId(dict_to_tuple(card)).call()
   ).result
   return tuple(tuple(card_id)[0])
 
 # async def _create_and_mint_card(ctx, artist_name):
-#   await ctx.ravageData.createArtist(artsit_name).invoke()
+#   await ctx.rulesData.createArtist(artsit_name).invoke()
 
 # Base Token URI
 
 async def _get_base_token_uri(ctx):
   (base_token_uri,) = (
-    await ctx.ravageTokens.baseTokenURI().call()
+    await ctx.rulesTokens.baseTokenURI().call()
   ).result
   return base_token_uri
 
@@ -61,7 +61,7 @@ async def _get_base_token_uri(ctx):
 async def _set_base_token_uri(ctx, signer_account_name, base_token_uri):
   await ctx.execute(
     signer_account_name,
-    ctx.ravageTokens.contract_address,
+    ctx.rulesTokens.contract_address,
     "setBaseTokenURI",
     [len(base_token_uri), *base_token_uri]
   )
@@ -273,10 +273,10 @@ async def test_settle_where_owner_set_base_token_uri(ctx_factory):
 @pytest.mark.parametrize(
   "contract_name, role_name",
   [
-    ("ravageTokens", MINTER_ROLE),
-    ("ravageCards", CAPPER_ROLE),
-    ("ravageCards", MINTER_ROLE),
-    ("ravageData", MINTER_ROLE)
+    ("rulesTokens", MINTER_ROLE),
+    ("rulesCards", CAPPER_ROLE),
+    ("rulesCards", MINTER_ROLE),
+    ("rulesData", MINTER_ROLE)
   ]
 )
 async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, role_name):

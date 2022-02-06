@@ -1,6 +1,6 @@
-# Ravage V1
+# Rules V1
 
-Core smart contracts of the Ravage V1 protocol, for higher level contracts, see [rules-periphery](https://github.com/ruleslabs/rules-periphery) repository.
+Core smart contracts of the Rules V1 protocol, for higher level contracts, see [rules-exchange](https://github.com/ruleslabs/rules-exchange) repository.
 
 ## Local development
 

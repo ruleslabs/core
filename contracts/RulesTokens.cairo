@@ -54,8 +54,8 @@ from contracts.lib.roles.minter import (
   Minter_revoke
 )
 
-from contracts.interfaces.IRavageCards import IRavageCards
-# from contracts.interfaces.IRavagePacks import IRavagePacks
+from contracts.interfaces.IRulesCards import IRulesCards
+# from contracts.interfaces.IRulesPacks import IRulesPacks
 
 const TRUE = 1
 const FALSE = 1
@@ -65,11 +65,11 @@ const FALSE = 1
 #
 
 @storage_var
-func ravage_cards_address_storage() -> (ravage_cards_address: felt):
+func rules_cards_address_storage() -> (rules_cards_address: felt):
 end
 
 @storage_var
-func ravage_packs_address_storage() -> (ravage_cards_address: felt):
+func rules_packs_address_storage() -> (rules_cards_address: felt):
 end
 
 #
@@ -93,8 +93,8 @@ func constructor{
     name: felt,
     symbol: felt,
     owner: felt,
-    _ravage_cards_address: felt,
-    _ravage_packs_address: felt,
+    _rules_cards_address: felt,
+    _rules_packs_address: felt,
   ):
   ERC1155_initializer(name, symbol)
 
@@ -102,8 +102,8 @@ func constructor{
   AccessControl_initializer(owner)
   Minter_initializer(owner)
 
-  ravage_cards_address_storage.write(_ravage_cards_address)
-  ravage_packs_address_storage.write(_ravage_packs_address)
+  rules_cards_address_storage.write(_rules_cards_address)
+  rules_packs_address_storage.write(_rules_packs_address)
 
   return ()
 end
@@ -210,9 +210,9 @@ func getCard{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(card_id: Uint256) -> (card: Card):
-  let (ravage_cards_address) = ravage_cards_address_storage.read()
+  let (rules_cards_address) = rules_cards_address_storage.read()
 
-  let (card) = IRavageCards.getCard(ravage_cards_address, card_id)
+  let (card) = IRulesCards.getCard(rules_cards_address, card_id)
   return (card)
 end
 
@@ -250,8 +250,8 @@ func createAndMintCard{
   }(card: Card, to: felt) -> (token_id: Uint256):
   alloc_locals
 
-  let (ravage_cards_address) = ravage_cards_address_storage.read()
-  let (local card_id) = IRavageCards.createCard(ravage_cards_address, card)
+  let (rules_cards_address) = rules_cards_address_storage.read()
+  let (local card_id) = IRulesCards.createCard(rules_cards_address, card)
 
   _mint_token(to, token_id = card_id, amount = Uint256(1, 0))
 
@@ -264,9 +264,9 @@ func mintCard{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(card_id: Uint256, to: felt) -> (token_id: Uint256):
-  let (ravage_cards_address) = ravage_cards_address_storage.read()
+  let (rules_cards_address) = rules_cards_address_storage.read()
 
-  let (exists) = IRavageCards.cardExists(ravage_cards_address, card_id)
+  let (exists) = IRulesCards.cardExists(rules_cards_address, card_id)
   assert exists = TRUE # card doesn't exist
 
   let (exists) = ERC1155_Supply_exists(card_id)

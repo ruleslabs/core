@@ -42,7 +42,7 @@ from contracts.lib.roles.capper import (
   Capper_revoke
 )
 
-from contracts.interfaces.IRavageData import IRavageData
+from contracts.interfaces.IRulesData import IRulesData
 
 const TRUE = 1
 const FALSE = 0
@@ -56,7 +56,7 @@ func cards_storage(card_id: Uint256) -> (card: Card):
 end
 
 @storage_var
-func ravage_data_address_storage() -> (ravage_data_address: felt):
+func rules_data_address_storage() -> (rules_data_address: felt):
 end
 
 #
@@ -69,8 +69,8 @@ func constructor{
     pedersen_ptr: HashBuiltin*,
     bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
-  }(owner: felt, _ravage_data_address: felt):
-  ravage_data_address_storage.write(_ravage_data_address)
+  }(owner: felt, _rules_data_address: felt):
+  rules_data_address_storage.write(_rules_data_address)
 
   Ownable_initializer(owner)
   AccessControl_initializer(owner)
@@ -244,9 +244,9 @@ func createCard{
   }(card: Card) -> (card_id: Uint256):
   alloc_locals
 
-  let (ravage_data_address) = ravage_data_address_storage.read()
+  let (rules_data_address) = rules_data_address_storage.read()
 
-  let (artist_exists) = IRavageData.artistExists(ravage_data_address, card.artist_name)
+  let (artist_exists) = IRulesData.artistExists(rules_data_address, card.artist_name)
   assert_not_zero(artist_exists) # Unknown artist
 
   let (local card_id) = get_card_id_from_card(card)

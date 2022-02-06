@@ -5,7 +5,7 @@ from starkware.cairo.common.uint256 import Uint256
 from contracts.models.card import Card
 
 @contract_interface
-namespace IRavageCards:
+namespace IRulesCards:
   func getCard(card_id: Uint256) -> (card: Card):
   end
 
