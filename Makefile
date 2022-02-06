@@ -12,7 +12,7 @@ OBJS							=	$(addprefix $(OBJS_DIR), $(OBJS_LIST))
 
 TESTS_DIR					= tests/
 TESTS_BUILD_FLAGS = --cache-clear -s -W ignore::DeprecationWarning --asyncio-mode=auto
-TESTS_FLAGS				= -s -W ignore::DeprecationWarning --asyncio-mode=auto
+TESTS_FLAGS				= -W ignore::DeprecationWarning --asyncio-mode=auto -n 8
 
 .PHONY : all clean
 
