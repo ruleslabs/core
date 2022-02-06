@@ -28,3 +28,11 @@ def get_contract(ctx, contract_name):
     raise AttributeError(f"ctx.'{contract_name}' doesn't exists.")
 
   return (contract)
+
+
+def get_method(contract, method_name):
+  method = getattr(contract, method_name, None)
+  if not method:
+    raise AttributeError(f"contract.'{method_name}' doesn't exists.")
+
+  return (method)

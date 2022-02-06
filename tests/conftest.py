@@ -73,7 +73,9 @@ async def build_copyable_deployment():
   signers = dict(
     owner=Signer(8245892928310),
     minter=Signer(1004912350233),
-    rando=Signer(7427329833829)
+    rando1=Signer(1111111111111),
+    rando2=Signer(2222222222222),
+    rando3=Signer(3333333333333)
   )
 
   accounts = SimpleNamespace(
@@ -85,12 +87,15 @@ async def build_copyable_deployment():
 
   ravageData = await starknet.deploy(
     contract_def=defs.ravageData,
-    constructor_calldata=[]
+    constructor_calldata=[
+      accounts.owner.contract_address # owner
+    ]
   )
 
   ravageCards = await starknet.deploy(
     contract_def=defs.ravageCards,
     constructor_calldata=[
+      accounts.owner.contract_address, # owner
       ravageData.contract_address
     ]
   )
@@ -106,10 +111,18 @@ async def build_copyable_deployment():
     ]
   )
 
+  for contract in [ravageData, ravageCards, ravageTokens]:
+    await signers["owner"].send_transaction(
+      accounts.owner,
+      contract.contract_address,
+      "addMinter",
+      [accounts.minter.contract_address]
+    )
+
   await signers["owner"].send_transaction(
     accounts.owner,
-    ravageTokens.contract_address,
-    "addMinter",
+    ravageCards.contract_address,
+    "addCapper",
     [accounts.minter.contract_address]
   )
 
@@ -118,7 +131,9 @@ async def build_copyable_deployment():
     signers=signers,
     serialized_contracts=dict(
       owner=serialize_contract(accounts.owner, defs.account.abi),
-      rando=serialize_contract(accounts.rando, defs.account.abi),
+      rando1=serialize_contract(accounts.rando1, defs.account.abi),
+      rando2=serialize_contract(accounts.rando2, defs.account.abi),
+      rando3=serialize_contract(accounts.rando3, defs.account.abi),
       minter=serialize_contract(accounts.minter, defs.account.abi),
       ravageData=serialize_contract(ravageData, defs.ravageData.abi),
       ravageCards=serialize_contract(ravageCards, defs.ravageCards.abi),

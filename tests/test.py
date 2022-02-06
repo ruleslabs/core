@@ -3,7 +3,7 @@ import pytest
 from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.definitions.error_codes import StarknetErrorCode
 
-from utils import dict_to_tuple, to_flat_tuple, update_dict, get_contract
+from utils import dict_to_tuple, to_flat_tuple, update_dict, get_contract, get_method
 
 # Artist
 
@@ -68,11 +68,12 @@ async def _set_base_token_uri(ctx, signer_account_name, base_token_uri):
 
 # Roles
 
-async def _get_minter_role(ctx, contract_name):
+async def _get_role(ctx, contract_name, role_name):
   contract = get_contract(ctx, contract_name)
+  method = get_method(contract, role_name)
 
   (minter_role,) = (
-    await contract.MINTER_ROLE().call()
+    await method().call()
   ).result
   return (minter_role)
 
@@ -87,20 +88,22 @@ async def _has_role(ctx, conrtact_name, role, account_name):
   return (has_role)
 
 
-async def _add_minter(ctx, signer_account_name, contract, account_address):
+async def _grant_role(ctx, signer_account_name, contract, role_name, account_address):
+  method_name = "add" + ROLES[role_name]
   await ctx.execute(
     signer_account_name,
     contract.contract_address,
-    "addMinter",
+    method_name,
     [account_address]
   )
 
 
-async def _revoke_minter(ctx, signer_account_name, contract, account_address):
+async def _revoke_role(ctx, signer_account_name, contract, role_name, account_address):
+  method_name = "revoke" + ROLES[role_name]
   await ctx.execute(
     signer_account_name,
     contract.contract_address,
-    "revokeMinter",
+    method_name,
     [account_address]
   )
 
@@ -126,17 +129,17 @@ class ScenarioState:
   async def set_base_token_uri(self, signer_account_name, base_token_uri):
     await _set_base_token_uri(self.ctx, signer_account_name, base_token_uri)
 
-  async def add_minter(self, signer_account_name, account_name, contract_name):
+  async def grant_role(self, signer_account_name, contract_name, role_name, account_name):
     account_address = get_contract(self.ctx, account_name).contract_address
     contract = get_contract(self.ctx, contract_name)
 
-    await _add_minter(self.ctx, signer_account_name, contract, account_address)
+    await _grant_role(self.ctx, signer_account_name, contract, role_name, account_address)
 
-  async def revoke_minter(self, signer_account_name, account_name, contract_name):
+  async def revoke_role(self, signer_account_name, contract_name, role_name, account_name):
     account_address = get_contract(self.ctx, account_name).contract_address
     contract = get_contract(self.ctx, contract_name)
 
-    await _revoke_minter(self.ctx, signer_account_name, contract, account_address)
+    await _revoke_role(self.ctx, signer_account_name, contract, role_name, account_address)
 
 
 async def run_scenario(ctx, scenario):
@@ -166,8 +169,14 @@ async def run_scenario(ctx, scenario):
 
 MINTER = "minter"
 OWNER = "owner"
-RANDO = "rando"
-VALID_ACCOUNT_NAMES = [MINTER, OWNER, RANDO]
+RANDO_1 = "rando1"
+RANDO_2 = "rando2"
+RANDO_3 = "rando3"
+VALID_ACCOUNT_NAMES = [MINTER, OWNER, RANDO_1, RANDO_2, RANDO_3]
+
+MINTER_ROLE = "MINTER_ROLE"
+CAPPER_ROLE = "CAPPER_ROLE"
+ROLES = dict(MINTER_ROLE="Minter", CAPPER_ROLE="Capper")
 
 ARTIST_1 = (0x416C7068612057616E6E, 0)
 METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
@@ -261,32 +270,50 @@ async def test_settle_where_owner_set_base_token_uri(ctx_factory):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("contract_name", ["ravageTokens", "ravageCards", "ravageData"])
-async def test_settle_where_owner_distribute_minter_role(ctx_factory, contract_name):
+@pytest.mark.parametrize(
+  "contract_name, role_name",
+  [
+    ("ravageTokens", MINTER_ROLE),
+    ("ravageCards", CAPPER_ROLE),
+    ("ravageCards", MINTER_ROLE),
+    ("ravageData", MINTER_ROLE)
+  ]
+)
+async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, role_name):
   ctx = ctx_factory()
 
   # Given
-  minter_role = await _get_minter_role(ctx, contract_name)
-  assert minter_role != 0
+  role = await _get_role(ctx, contract_name, role_name)
+  assert role != 0
 
-  assert await _has_role(ctx, contract_name, minter_role, OWNER) == 1
-  assert await _has_role(ctx, contract_name, minter_role, MINTER) == 1
-  assert await _has_role(ctx, contract_name, minter_role, RANDO) == 0
+  assert await _has_role(ctx, contract_name, role, OWNER) == 1
+  assert await _has_role(ctx, contract_name, role, RANDO_1) == 0
+  assert await _has_role(ctx, contract_name, role, RANDO_2) == 0
+  assert await _has_role(ctx, contract_name, role, RANDO_3) == 0
 
   # When
   await run_scenario(
     ctx,
     [
-      (RANDO, "add_minter", dict(account_name=RANDO, contract_name=contract_name), False),
-      (MINTER, "add_minter", dict(account_name=RANDO, contract_name=contract_name), False),
-      (OWNER, "add_minter", dict(account_name=RANDO, contract_name=contract_name), True),
-      (OWNER, "add_minter", dict(account_name=RANDO, contract_name=contract_name), True),
-      (OWNER, "revoke_minter", dict(account_name=MINTER, contract_name=contract_name), True),
-      (RANDO, "revoke_minter", dict(account_name=OWNER, contract_name=contract_name), False),
-      (OWNER, "revoke_minter", dict(account_name=OWNER, contract_name=contract_name), True),
+      (RANDO_1, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), False),
+      (RANDO_3, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_3), False),
+
+      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
+      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
+      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
+
+      (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
+      (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
+      (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
+      (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=OWNER), True),
+
+      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
+      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
+      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_3), True)
     ]
   )
 
-  assert await _has_role(ctx, contract_name, minter_role, OWNER) == 0
-  assert await _has_role(ctx, contract_name, minter_role, MINTER) == 0
-  assert await _has_role(ctx, contract_name, minter_role, RANDO) == 1
+  assert await _has_role(ctx, contract_name, role, OWNER) == 0
+  assert await _has_role(ctx, contract_name, role, RANDO_1) == 1
+  assert await _has_role(ctx, contract_name, role, RANDO_2) == 1
+  assert await _has_role(ctx, contract_name, role, RANDO_3) == 1

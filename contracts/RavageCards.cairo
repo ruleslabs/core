@@ -9,6 +9,39 @@ from contracts.models.card import (
   Card, CardMetadata, get_card_id_from_card, card_is_null
 )
 
+from contracts.lib.Ownable_base import (
+  Ownable_get_owner,
+
+  Ownable_initializer,
+  Ownable_only_owner
+)
+
+from contracts.lib.roles.AccessControl_base import (
+  AccessControl_has_role,
+  AccessControl_roles_count,
+  AccessControl_get_role_member,
+
+  AccessControl_initializer
+)
+
+from contracts.lib.roles.minter import (
+  Minter_role,
+
+  Minter_initializer,
+  Minter_only_minter,
+  Minter_grant,
+  Minter_revoke
+)
+
+from contracts.lib.roles.capper import (
+  Capper_role,
+
+  Capper_initializer,
+  Capper_only_capper,
+  Capper_grant,
+  Capper_revoke
+)
+
 from contracts.interfaces.IRavageData import IRavageData
 
 const TRUE = 1
@@ -36,8 +69,13 @@ func constructor{
     pedersen_ptr: HashBuiltin*,
     bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
-  }(_ravage_data_address: felt):
+  }(owner: felt, _ravage_data_address: felt):
   ravage_data_address_storage.write(_ravage_data_address)
+
+  Ownable_initializer(owner)
+  AccessControl_initializer(owner)
+  Capper_initializer(owner)
+  Minter_initializer(owner)
 
   return ()
 end
@@ -45,6 +83,68 @@ end
 #
 # Getters
 #
+
+# Roles
+
+@view
+func CAPPER_ROLE{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }() -> (role: felt):
+  let (role) = Capper_role()
+  return (role)
+end
+
+@view
+func MINTER_ROLE{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }() -> (role: felt):
+  let (role) = Minter_role()
+  return (role)
+end
+
+@view
+func owner{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }() -> (owner: felt):
+  let (owner) = Ownable_get_owner()
+  return (owner)
+end
+
+@view
+func getRoleMember{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(role: felt, index: felt) -> (account: felt):
+  let (account) = AccessControl_get_role_member(role, index)
+  return (account)
+end
+
+@view
+func getRoleMemberCount{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(role: felt) -> (count: felt):
+  let (count) = AccessControl_roles_count(role)
+  return (count)
+end
+
+@view
+func hasRole{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(role: felt, account: felt) -> (has_role: felt):
+  let (has_role) = AccessControl_has_role(role, account)
+  return (has_role)
+end
 
 @view
 func cardExists{
@@ -92,6 +192,48 @@ end
 #
 # Externals
 #
+
+# Roles
+
+@external
+func addCapper{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(account: felt):
+  Capper_grant(account)
+  return ()
+end
+
+@external
+func addMinter{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(account: felt):
+  Minter_grant(account)
+  return ()
+end
+
+@external
+func revokeCapper{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(account: felt):
+  Capper_revoke(account)
+  return ()
+end
+
+@external
+func revokeMinter{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(account: felt):
+  Minter_revoke(account)
+  return ()
+end
 
 @external
 func createCard{
