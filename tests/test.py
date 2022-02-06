@@ -320,6 +320,8 @@ async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, ro
 
       (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
       (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
+
+      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True)
     ]
   )
 

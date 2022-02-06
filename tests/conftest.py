@@ -119,13 +119,6 @@ async def build_copyable_deployment():
       [accounts.minter.contract_address]
     )
 
-  await signers["owner"].send_transaction(
-    accounts.owner,
-    rulesCards.contract_address,
-    "addCapper",
-    [accounts.minter.contract_address]
-  )
-
   return SimpleNamespace(
     starknet=starknet,
     signers=signers,

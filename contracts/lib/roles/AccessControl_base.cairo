@@ -94,10 +94,6 @@ func AccessControl_only_admin{
   return ()
 end
 
-#
-# Externals
-#
-
 func AccessControl_grant_role{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
@@ -187,7 +183,13 @@ func _grant_role{
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
   }(role: felt, account: felt):
-  let (accounts_len: felt) = roles_storage_len.read(role)
+  alloc_locals
+
+  let (local accounts_len: felt) = roles_storage_len.read(role)
+  let (already_has_role) = _has_role(role, account, accounts_len)
+  if already_has_role == TRUE:
+    return ()
+  end
 
   roles_storage.write(role=role, index=accounts_len, value=account)
   roles_storage_len.write(role, accounts_len + 1)
