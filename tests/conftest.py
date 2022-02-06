@@ -106,6 +106,13 @@ async def build_copyable_deployment():
     ]
   )
 
+  await signers["owner"].send_transaction(
+    accounts.owner,
+    ravageTokens.contract_address,
+    "addMinter",
+    [accounts.minter.contract_address]
+  )
+
   return SimpleNamespace(
     starknet=starknet,
     signers=signers,
