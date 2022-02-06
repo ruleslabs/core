@@ -160,6 +160,8 @@ func createArtist{
   let (exists) = artistExists(artist_name)
   assert exists = 0 # Artist already exists
 
+  Minter_only_minter()
+
   assert_artist_name_well_formed(artist_name) # Invalid artist name
 
   artists_storage.write(artist_name, TRUE)

@@ -250,6 +250,8 @@ func createAndMintCard{
   }(card: Card, to: felt) -> (token_id: Uint256):
   alloc_locals
 
+  Minter_only_minter()
+
   let (rules_cards_address) = rules_cards_address_storage.read()
   let (local card_id) = IRulesCards.createCard(rules_cards_address, card)
 
@@ -264,6 +266,9 @@ func mintCard{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(card_id: Uint256, to: felt) -> (token_id: Uint256):
+
+  Minter_only_minter()
+
   let (rules_cards_address) = rules_cards_address_storage.read()
 
   let (exists) = IRulesCards.cardExists(rules_cards_address, card_id)
@@ -283,6 +288,9 @@ func setBaseTokenURI{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(base_token_uri_len: felt, base_token_uri: felt*):
+
+  Ownable_only_owner()
+
   ERC1155_Metadata_setBaseTokenURI(base_token_uri_len, base_token_uri)
   return ()
 end

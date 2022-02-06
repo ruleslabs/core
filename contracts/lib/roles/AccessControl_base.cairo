@@ -155,7 +155,7 @@ func _array_of_accounts{
     return (0)
   end
 
-  let (next_account: felt) = roles_storage.read(role, accounts_len)
+  let (next_account: felt) = roles_storage.read(role, accounts_len - 1)
 
   if next_account != exclude:
     assert accounts[0] = next_account

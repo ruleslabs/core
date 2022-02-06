@@ -78,6 +78,15 @@ async def _get_role(ctx, contract_name, role_name):
   return (minter_role)
 
 
+async def _role_members_count(ctx, contract_name, role):
+  contract = get_contract(ctx, contract_name)
+
+  (count,) = (
+    await contract.getRoleMemberCount(role).call()
+  ).result
+  return (count)
+
+
 async def _has_role(ctx, conrtact_name, role, account_name):
   contract = get_contract(ctx, conrtact_name)
   account_address = get_contract(ctx, account_name).contract_address
@@ -271,15 +280,15 @@ async def test_settle_where_owner_set_base_token_uri(ctx_factory):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-  "contract_name, role_name",
+  "contract_name, role_name, initial_members_count",
   [
-    ("rulesTokens", MINTER_ROLE),
-    ("rulesCards", CAPPER_ROLE),
-    ("rulesCards", MINTER_ROLE),
-    ("rulesData", MINTER_ROLE)
+    ("rulesTokens", MINTER_ROLE, 2),
+    ("rulesCards", CAPPER_ROLE, 1),
+    ("rulesCards", MINTER_ROLE, 2),
+    ("rulesData", MINTER_ROLE, 2)
   ]
 )
-async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, role_name):
+async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, role_name, initial_members_count):
   ctx = ctx_factory()
 
   # Given
@@ -290,6 +299,7 @@ async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, ro
   assert await _has_role(ctx, contract_name, role, RANDO_1) == 0
   assert await _has_role(ctx, contract_name, role, RANDO_2) == 0
   assert await _has_role(ctx, contract_name, role, RANDO_3) == 0
+  assert await _role_members_count(ctx, contract_name, role) == initial_members_count
 
   # When
   await run_scenario(
@@ -303,17 +313,18 @@ async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, ro
       (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
 
       (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
-      (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
-      (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
       (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=OWNER), True),
 
       (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
-      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
-      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_3), True)
+      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_3), True),
+
+      (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
+      (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
     ]
   )
 
   assert await _has_role(ctx, contract_name, role, OWNER) == 0
   assert await _has_role(ctx, contract_name, role, RANDO_1) == 1
-  assert await _has_role(ctx, contract_name, role, RANDO_2) == 1
+  assert await _has_role(ctx, contract_name, role, RANDO_2) == 0
   assert await _has_role(ctx, contract_name, role, RANDO_3) == 1
+  assert await _role_members_count(ctx, contract_name, role) == initial_members_count + 1

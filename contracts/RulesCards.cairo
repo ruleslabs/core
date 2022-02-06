@@ -244,6 +244,8 @@ func createCard{
   }(card: Card) -> (card_id: Uint256):
   alloc_locals
 
+  Minter_only_minter()
+
   let (rules_data_address) = rules_data_address_storage.read()
 
   let (artist_exists) = IRulesData.artistExists(rules_data_address, card.artist_name)
