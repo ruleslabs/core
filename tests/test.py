@@ -116,6 +116,29 @@ async def _revoke_role(ctx, signer_account_name, contract, role_name, account_ad
     [account_address]
   )
 
+# Ownable
+
+async def _get_owner(ctx, contract_name):
+  contract = get_contract(ctx, contract_name)
+
+  (owner_address,) = (
+    await contract.owner().call()
+  ).result
+  return owner_address
+
+
+async def _transfer_ownership(ctx, signer_account_name, contract, account_address):
+  await ctx.execute(
+    signer_account_name,
+    contract.contract_address,
+    "transferOwnership",
+    [account_address]
+  )
+
+
+async def _renounce_ownership(ctx, signer_account_name, contract):
+  await ctx.execute(signer_account_name, contract.contract_address, "renounceOwnership", [])
+
 ############
 # SCENARIO #
 ############
@@ -149,6 +172,17 @@ class ScenarioState:
     contract = get_contract(self.ctx, contract_name)
 
     await _revoke_role(self.ctx, signer_account_name, contract, role_name, account_address)
+
+  async def transfer_ownership(self, signer_account_name, contract_name, account_name):
+    account_address = get_contract(self.ctx, account_name).contract_address
+    contract = get_contract(self.ctx, contract_name)
+
+    await _transfer_ownership(self.ctx, signer_account_name, contract, account_address)
+
+  async def renounce_ownership(self, signer_account_name, contract_name):
+    contract = get_contract(self.ctx, contract_name)
+
+    await _renounce_ownership(self.ctx, signer_account_name, contract)
 
 
 async def run_scenario(ctx, scenario):
@@ -330,3 +364,50 @@ async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, ro
   assert await _has_role(ctx, contract_name, role, RANDO_2) == 0
   assert await _has_role(ctx, contract_name, role, RANDO_3) == 1
   assert await _role_members_count(ctx, contract_name, role) == initial_members_count + 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("contract_name", ["rulesTokens", "rulesCards", "rulesData"])
+async def test_settle_where_owner_transfer_the_owner_ship(ctx_factory, contract_name):
+  ctx = ctx_factory()
+
+  # Given
+  owner_address = get_contract(ctx, OWNER).contract_address
+  rando1_address = get_contract(ctx, RANDO_1).contract_address
+  assert await _get_owner(ctx, contract_name) == owner_address
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (RANDO_1, "transfer_ownership", dict(contract_name=contract_name, account_name=RANDO_2), False),
+      (OWNER, "transfer_ownership", dict(contract_name=contract_name, account_name=RANDO_1), True),
+      (OWNER, "transfer_ownership", dict(contract_name=contract_name, account_name=RANDO_2), False),
+    ]
+  )
+
+  # Then
+  assert await _get_owner(ctx, contract_name) == rando1_address
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("contract_name", ["rulesTokens", "rulesCards", "rulesData"])
+async def test_settle_where_owner_renounce_the_owner_ship(ctx_factory, contract_name):
+  ctx = ctx_factory()
+
+  # Given
+  owner_address = get_contract(ctx, OWNER).contract_address
+  assert await _get_owner(ctx, contract_name) == owner_address
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (RANDO_1, "renounce_ownership", dict(contract_name=contract_name), False),
+      (OWNER, "renounce_ownership", dict(contract_name=contract_name), True),
+      (OWNER, "renounce_ownership", dict(contract_name=contract_name), False),
+    ]
+  )
+
+  # Then
+  assert await _get_owner(ctx, contract_name) == 0

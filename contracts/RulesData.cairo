@@ -10,7 +10,8 @@ from contracts.lib.Ownable_base import (
   Ownable_get_owner,
 
   Ownable_initializer,
-  Ownable_only_owner
+  Ownable_only_owner,
+  Ownable_transfer_ownership
 )
 
 from contracts.lib.roles.AccessControl_base import (
@@ -166,5 +167,27 @@ func createArtist{
 
   artists_storage.write(artist_name, TRUE)
 
+  return ()
+end
+
+# Ownership
+
+@external
+func transferOwnership{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+  }(new_owner: felt) -> (new_owner: felt):
+  Ownable_transfer_ownership(new_owner)
+  return (new_owner)
+end
+
+@external
+func renounceOwnership{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+  }():
+  Ownable_transfer_ownership(0)
   return ()
 end
