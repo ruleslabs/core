@@ -25,7 +25,7 @@ const SCARCITY_MAX = 2 ** 8 - 1
 const SERIAL_NUMBER_MAX = 2 ** 32 - 1
 
 const SEASON_MIN = 1
-const SCARCITY_MIN = 1
+const SCARCITY_MIN = 0
 const SERIAL_NUMBER_MIN = 1
 
 const TRUE = 1

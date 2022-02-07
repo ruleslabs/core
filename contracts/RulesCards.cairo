@@ -2,12 +2,15 @@
 %builtins pedersen range_check bitwise
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
-from starkware.cairo.common.math import assert_not_zero
+from starkware.cairo.common.math import assert_not_zero, assert_le
+from starkware.cairo.common.math_cmp import is_not_zero
 from starkware.cairo.common.uint256 import Uint256
 
 from contracts.models.card import (
   Card, CardMetadata, get_card_id_from_card, card_is_null
 )
+
+# AccessControl/Ownable
 
 from contracts.lib.Ownable_base import (
   Ownable_get_owner,
@@ -18,9 +21,9 @@ from contracts.lib.Ownable_base import (
 )
 
 from contracts.lib.roles.AccessControl_base import (
-  AccessControl_has_role,
-  AccessControl_roles_count,
-  AccessControl_get_role_member,
+  AccessControl_hasRole,
+  AccessControl_rolesCount,
+  AccessControl_getRoleMember,
 
   AccessControl_initializer
 )
@@ -29,7 +32,7 @@ from contracts.lib.roles.minter import (
   Minter_role,
 
   Minter_initializer,
-  Minter_only_minter,
+  Minter_onlyMinter,
   Minter_grant,
   Minter_revoke
 )
@@ -38,9 +41,17 @@ from contracts.lib.roles.capper import (
   Capper_role,
 
   Capper_initializer,
-  Capper_only_capper,
+  Capper_onlyCapper,
   Capper_grant,
   Capper_revoke
+)
+
+# Supply
+
+from contracts.lib.scarcity.Scarcity_base import (
+  Scarcity_supply,
+
+  Scarcity_addScarcity
 )
 
 from contracts.interfaces.IRulesData import IRulesData
@@ -123,7 +134,7 @@ func getRoleMember{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(role: felt, index: felt) -> (account: felt):
-  let (account) = AccessControl_get_role_member(role, index)
+  let (account) = AccessControl_getRoleMember(role, index)
   return (account)
 end
 
@@ -133,7 +144,7 @@ func getRoleMemberCount{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(role: felt) -> (count: felt):
-  let (count) = AccessControl_roles_count(role)
+  let (count) = AccessControl_rolesCount(role)
   return (count)
 end
 
@@ -143,7 +154,7 @@ func hasRole{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(role: felt, account: felt) -> (has_role: felt):
-  let (has_role) = AccessControl_has_role(role, account)
+  let (has_role) = AccessControl_hasRole(role, account)
   return (has_role)
 end
 
@@ -188,6 +199,18 @@ func getCardId{
   let (card_id) = get_card_id_from_card(card)
 
   return (card_id)
+end
+
+# Supply
+
+@view
+func getSupplyForSeasonAndScarcity{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(season: felt, scarcity: felt) -> (supply: felt):
+  let (supply) = Scarcity_supply(season, scarcity)
+  return (supply)
 end
 
 #
@@ -236,6 +259,23 @@ func revokeMinter{
   return ()
 end
 
+# Supply
+
+@external
+func addScarcityForSeason{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    bitwise_ptr: BitwiseBuiltin*,
+    range_check_ptr
+  }(season: felt, supply: felt) -> (scarcity: felt):
+  Capper_onlyCapper()
+
+  let (scarcity) = Scarcity_addScarcity(season, supply)
+  return (scarcity)
+end
+
+# Cards
+
 @external
 func createCard{
     syscall_ptr: felt*,
@@ -245,12 +285,22 @@ func createCard{
   }(card: Card) -> (card_id: Uint256):
   alloc_locals
 
-  Minter_only_minter()
+  Minter_onlyMinter()
 
   let (rules_data_address) = rules_data_address_storage.read()
 
   let (artist_exists) = IRulesData.artistExists(rules_data_address, card.artist_name)
   assert_not_zero(artist_exists) # Unknown artist
+
+  let (supply) = Scarcity_supply(card.season, card.scarcity)
+  let (is_supply_set) = is_not_zero(supply)
+
+  if is_supply_set == TRUE:
+    assert_le(card.serial_number, supply) # Invalid serial
+    tempvar range_check_ptr = range_check_ptr
+  else:
+    tempvar range_check_ptr = range_check_ptr
+  end
 
   let (local card_id) = get_card_id_from_card(card)
 

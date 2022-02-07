@@ -39,9 +39,9 @@ from contracts.lib.Ownable_base import (
 )
 
 from contracts.lib.roles.AccessControl_base import (
-  AccessControl_has_role,
-  AccessControl_roles_count,
-  AccessControl_get_role_member,
+  AccessControl_hasRole,
+  AccessControl_rolesCount,
+  AccessControl_getRoleMember,
 
   AccessControl_initializer
 )
@@ -50,7 +50,7 @@ from contracts.lib.roles.minter import (
   Minter_role,
 
   Minter_initializer,
-  Minter_only_minter,
+  Minter_onlyMinter,
   Minter_grant,
   Minter_revoke
 )
@@ -161,7 +161,7 @@ func getRoleMember{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(role: felt, index: felt) -> (account: felt):
-  let (account) = AccessControl_get_role_member(role, index)
+  let (account) = AccessControl_getRoleMember(role, index)
   return (account)
 end
 
@@ -171,7 +171,7 @@ func getRoleMemberCount{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(role: felt) -> (count: felt):
-  let (count) = AccessControl_roles_count(role)
+  let (count) = AccessControl_rolesCount(role)
   return (count)
 end
 
@@ -181,7 +181,7 @@ func hasRole{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(role: felt, account: felt) -> (has_role: felt):
-  let (has_role) = AccessControl_has_role(role, account)
+  let (has_role) = AccessControl_hasRole(role, account)
   return (has_role)
 end
 
@@ -251,7 +251,7 @@ func createAndMintCard{
   }(card: Card, to: felt) -> (token_id: Uint256):
   alloc_locals
 
-  Minter_only_minter()
+  Minter_onlyMinter()
 
   let (rules_cards_address) = rules_cards_address_storage.read()
   let (local card_id) = IRulesCards.createCard(rules_cards_address, card)
@@ -268,7 +268,7 @@ func mintCard{
     range_check_ptr
   }(card_id: Uint256, to: felt) -> (token_id: Uint256):
 
-  Minter_only_minter()
+  Minter_onlyMinter()
 
   let (rules_cards_address) = rules_cards_address_storage.read()
 

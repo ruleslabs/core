@@ -139,6 +139,23 @@ async def _transfer_ownership(ctx, signer_account_name, contract, account_addres
 async def _renounce_ownership(ctx, signer_account_name, contract):
   await ctx.execute(signer_account_name, contract.contract_address, "renounceOwnership", [])
 
+# Scarcity
+
+async def _get_supply_for_season_and_scarcity(ctx, season, scarcity):
+  (supply,) = (
+    await ctx.rulesCards.getSupplyForSeasonAndScarcity(season, scarcity).call()
+  ).result
+  return supply
+
+
+async def _add_scarcity_for_season(ctx, signer_account_name, season, supply):
+  await ctx.execute(
+    signer_account_name,
+    ctx.rulesCards.contract_address,
+    "addScarcityForSeason",
+    [season, supply]
+  )
+
 ############
 # SCENARIO #
 ############
@@ -184,6 +201,9 @@ class ScenarioState:
 
     await _renounce_ownership(self.ctx, signer_account_name, contract)
 
+  async def add_scarcity_for_season(self, signer_account_name, season, supply):
+    await _add_scarcity_for_season(self.ctx, signer_account_name, season, supply)
+
 
 async def run_scenario(ctx, scenario):
   scenario_state = ScenarioState(ctx)
@@ -194,6 +214,8 @@ async def run_scenario(ctx, scenario):
     func = getattr(scenario_state, function_name, None)
     if not func:
       raise AttributeError(f"ScenarioState.{function_name} doesn't exist.")
+
+    print(kwargs)
 
     try:
       await func(signer_account_name, **kwargs)
@@ -223,7 +245,7 @@ ROLES = dict(MINTER_ROLE="Minter", CAPPER_ROLE="Capper")
 
 ARTIST_1 = (0x416C7068612057616E6E, 0)
 METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
-CARD_ARTIST_1 = dict(artist_name=ARTIST_1, season=1, scarcity=1, serial_number=1, metadata=METADATA_1)
+COMMON_CARD_ARTIST_1 = dict(artist_name=ARTIST_1, season=1, scarcity=0, serial_number=1, metadata=METADATA_1)
 
 #########
 # TESTS #
@@ -254,17 +276,17 @@ async def test_settle_where_minter_create_card(ctx_factory):
   ctx = ctx_factory()
 
   # Given
-  card_id = await _get_card_id(ctx, CARD_ARTIST_1)
+  card_id = await _get_card_id(ctx, COMMON_CARD_ARTIST_1)
   assert await _card_exists(ctx, card_id) == 0
 
   # When
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_card", dict(card=CARD_ARTIST_1), False),
+      (MINTER, "create_card", dict(card=COMMON_CARD_ARTIST_1), False),
       (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_card", dict(card=CARD_ARTIST_1), True),
-      (MINTER, "create_card", dict(card=CARD_ARTIST_1), False),
+      (MINTER, "create_card", dict(card=COMMON_CARD_ARTIST_1), True),
+      (MINTER, "create_card", dict(card=COMMON_CARD_ARTIST_1), False),
     ]
   )
 
@@ -276,17 +298,20 @@ async def test_settle_where_minter_create_card(ctx_factory):
 async def test_settle_where_minter_create_invalid_card(ctx_factory):
   ctx = ctx_factory()
 
+  # Given
+  assert await _get_supply_for_season_and_scarcity(ctx, 1, 1) == 0
+
   # When / Then
   await run_scenario(
     ctx,
     [
       (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_card", dict(card=update_dict(CARD_ARTIST_1, season=0)), False),
-      (MINTER, "create_card", dict(card=update_dict(CARD_ARTIST_1, scarcity=0)), False),
-      (MINTER, "create_card", dict(card=update_dict(CARD_ARTIST_1, serial_number=0)), False),
-      (MINTER, "create_card", dict(card=update_dict(CARD_ARTIST_1, season=2 ** 16)), False),
-      (MINTER, "create_card", dict(card=update_dict(CARD_ARTIST_1, scarcity=2 ** 8)), False),
-      (MINTER, "create_card", dict(card=update_dict(CARD_ARTIST_1, serial_number=2 ** 32)), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, season=0)), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=1)), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, serial_number=0)), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, season=2 ** 16)), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=2 ** 8)), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, serial_number=2 ** 32)), False),
     ]
   )
 
@@ -411,3 +436,35 @@ async def test_settle_where_owner_renounce_the_owner_ship(ctx_factory, contract_
 
   # Then
   assert await _get_owner(ctx, contract_name) == 0
+
+
+@pytest.mark.asyncio
+async def test_settle_where_capper_add_scarcity_levels(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  assert await _get_supply_for_season_and_scarcity(ctx, 1, 0) == 0
+  assert await _get_supply_for_season_and_scarcity(ctx, 1, 1) == 0
+  assert await _get_supply_for_season_and_scarcity(ctx, 1, 2) == 0
+  assert await _get_supply_for_season_and_scarcity(ctx, 0, 1) == 0
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "add_scarcity_for_season", dict(season=1, supply=1000), False),
+      (OWNER, "add_scarcity_for_season", dict(season=1, supply=0), False),
+      (OWNER, "add_scarcity_for_season", dict(season=1, supply=1000), True),
+      (OWNER, "add_scarcity_for_season", dict(season=1, supply=500), True),
+      (OWNER, "add_scarcity_for_season", dict(season=1, supply=251), False),
+      (OWNER, "add_scarcity_for_season", dict(season=1, supply=0), False),
+
+      (OWNER, "add_scarcity_for_season", dict(season=2, supply=1), True),
+    ]
+  )
+
+  # Then
+  assert await _get_supply_for_season_and_scarcity(ctx, 1, 0) == 0
+  assert await _get_supply_for_season_and_scarcity(ctx, 1, 1) == 1000
+  assert await _get_supply_for_season_and_scarcity(ctx, 1, 2) == 500
+  assert await _get_supply_for_season_and_scarcity(ctx, 2, 1) == 1

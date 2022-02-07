@@ -34,41 +34,7 @@ func RoleRevoked(role: felt, account: felt):
 end
 
 #
-# Getters
-#
-
-func AccessControl_has_role{
-    syscall_ptr : felt*,
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr
-  }(role: felt, account: felt) -> (res: felt):
-  let (accounts_len: felt) = roles_storage_len.read(role)
-  let (has_role) = _has_role(role, account, accounts_len)
-
-  return (has_role)
-end
-
-func AccessControl_roles_count{
-    syscall_ptr : felt*,
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr
-  }(role: felt) -> (count: felt):
-  let (accounts_len: felt) = roles_storage_len.read(role)
-
-  return (accounts_len)
-end
-
-func AccessControl_get_role_member{
-    syscall_ptr : felt*,
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr
-  }(role: felt, index: felt) -> (account: felt):
-  let (account) = roles_storage.read(role, index)
-  return (account)
-end
-
-#
-# Externals
+# Constructor
 #
 
 func AccessControl_initializer{
@@ -82,13 +48,51 @@ func AccessControl_initializer{
   return ()
 end
 
+#
+# Getters
+#
+
+func AccessControl_hasRole{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+  }(role: felt, account: felt) -> (res: felt):
+  let (accounts_len: felt) = roles_storage_len.read(role)
+  let (has_role) = _has_role(role, account, accounts_len)
+
+  return (has_role)
+end
+
+func AccessControl_rolesCount{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+  }(role: felt) -> (count: felt):
+  let (accounts_len: felt) = roles_storage_len.read(role)
+
+  return (accounts_len)
+end
+
+func AccessControl_getRoleMember{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+  }(role: felt, index: felt) -> (account: felt):
+  let (account) = roles_storage.read(role, index)
+  return (account)
+end
+
+#
+# Externals
+#
+
 func AccessControl_only_admin{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
   }():
   let (caller) = get_caller_address()
-  let (has_role) = AccessControl_has_role(ADMIN_ROLE, caller)
+  let (has_role) = AccessControl_hasRole(ADMIN_ROLE, caller)
   assert has_role = TRUE
 
   return ()
