@@ -19,7 +19,7 @@ def to_flat_tuple(data):
 
 
 def update_dict(dict, **new):
-  return (lambda d: d.update(**new) or d)(dict)
+  return (lambda d: d.update(**new) or d)(dict.copy())
 
 
 def get_contract(ctx, contract_name):

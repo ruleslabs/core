@@ -21,6 +21,22 @@ end
 func last_scarcity_storage(season: felt) -> (scarcity: felt):
 end
 
+@storage_var
+func stopped_scarcity_storage(season: felt, scarcity: felt) -> (stopped: felt):
+end
+
+#
+# Events
+#
+
+@event
+func ScarcityAdded(season: felt, scarcity: felt, supply: felt):
+end
+
+@event
+func ScarcityProductionStopped(season: felt, scarcity: felt):
+end
+
 #
 # Getters
 #
@@ -32,6 +48,15 @@ func Scarcity_supply{
   }(season: felt, scarcity: felt) -> (supply: felt):
   let (supply) = scarcity_supply_storage.read(season, scarcity)
   return (supply)
+end
+
+func Scarcity_productionStopped{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(season: felt, scarcity: felt) -> (stopped: felt):
+  let (stopped) = stopped_scarcity_storage.read(season, scarcity)
+  return (stopped)
 end
 
 #
@@ -62,5 +87,24 @@ func Scarcity_addScarcity{
   scarcity_supply_storage.write(season, last_scarcity + 1, supply)
   last_scarcity_storage.write(season, last_scarcity + 1)
 
+  ScarcityAdded.emit(season, last_scarcity + 1, supply)
+
   return (last_scarcity + 1)
+end
+
+func Scarcity_stopProduction{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(season: felt, scarcity: felt):
+  alloc_locals
+  let (already_stopped) = stopped_scarcity_storage.read(season, scarcity)
+  stopped_scarcity_storage.write(season, scarcity, TRUE)
+
+  if already_stopped == FALSE:
+    ScarcityProductionStopped.emit(season, scarcity)
+    return ()
+  end
+
+  return ()
 end

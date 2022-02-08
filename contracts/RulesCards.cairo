@@ -50,8 +50,10 @@ from contracts.lib.roles.capper import (
 
 from contracts.lib.scarcity.Scarcity_base import (
   Scarcity_supply,
+  Scarcity_productionStopped,
 
-  Scarcity_addScarcity
+  Scarcity_addScarcity,
+  Scarcity_stopProduction
 )
 
 from contracts.interfaces.IRulesData import IRulesData
@@ -213,6 +215,16 @@ func getSupplyForSeasonAndScarcity{
   return (supply)
 end
 
+@view
+func productionStoppedForSeasonAndScarcity{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(season: felt, scarcity: felt) -> (stopped: felt):
+  let (stopped) = Scarcity_productionStopped(season, scarcity)
+  return (stopped)
+end
+
 #
 # Externals
 #
@@ -265,13 +277,24 @@ end
 func addScarcityForSeason{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
-    bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
   }(season: felt, supply: felt) -> (scarcity: felt):
   Capper_onlyCapper()
 
   let (scarcity) = Scarcity_addScarcity(season, supply)
   return (scarcity)
+end
+
+@external
+func stopProductionForSeasonAndScarcity{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(season: felt, scarcity: felt):
+  Capper_onlyCapper()
+
+  Scarcity_stopProduction(season, scarcity)
+  return ()
 end
 
 # Cards
@@ -292,6 +315,11 @@ func createCard{
   let (artist_exists) = IRulesData.artistExists(rules_data_address, card.artist_name)
   assert_not_zero(artist_exists) # Unknown artist
 
+  # Check is production is stopped for this scarcity and season
+  let (stopped) = Scarcity_productionStopped(card.season, card.scarcity)
+  assert stopped = FALSE # Production is stopped
+
+  # Check if the serial_number is valid, given the scarcity supply
   let (supply) = Scarcity_supply(card.season, card.scarcity)
   let (is_supply_set) = is_not_zero(supply)
 
@@ -302,6 +330,7 @@ func createCard{
     tempvar range_check_ptr = range_check_ptr
   end
 
+  # Check if card already exists
   let (local card_id) = get_card_id_from_card(card)
 
   let (exists) = cardExists(card_id)
