@@ -518,14 +518,51 @@ async def test_settle_where_capper_stop_production_for_season_and_scarcity(ctx_f
 
 
 @pytest.mark.asyncio
+async def test_settle_where_minter_create_card_with_invalid_serial_number(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  card_id_1 = await _get_card_id(ctx, update_dict(COMMON_CARD_ARTIST_1, scarcity=1, serial_number=1))
+  card_id_2 = await _get_card_id(ctx, update_dict(COMMON_CARD_ARTIST_1, scarcity=1, serial_number=2))
+  card_id_3 = await _get_card_id(ctx, update_dict(COMMON_CARD_ARTIST_1, scarcity=2, serial_number=1))
+  assert await _get_supply_for_season_and_scarcity(ctx, 1, 1) == 0
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (OWNER, "add_scarcity_for_season", dict(season=1, supply=2), True),
+
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=1, serial_number=3)), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=1, serial_number=1)), True),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=1, serial_number=2)), True),
+
+      (OWNER, "add_scarcity_for_season", dict(season=1, supply=1), True),
+
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=2, serial_number=1)), True),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=2, serial_number=2)), False),
+    ]
+  )
+
+  # Then
+  assert await _card_exists(ctx, card_id_1) == 1
+  assert await _card_exists(ctx, card_id_2) == 1
+  assert await _card_exists(ctx, card_id_3) == 1
+
+
+@pytest.mark.asyncio
 async def test_settle_where_minter_create_card_with_frozen_scarcity(ctx_factory):
   ctx = ctx_factory()
 
   # Given
+  card_id_1 = await _get_card_id(ctx, COMMON_CARD_ARTIST_1)
+  card_id_2 = await _get_card_id(ctx, update_dict(COMMON_CARD_ARTIST_1, serial_number=5))
+  card_id_3 = await _get_card_id(ctx, update_dict(COMMON_CARD_ARTIST_1, season=2))
   assert await _stopped_stopped_for_season_and_scarcity(ctx, 1, 0) == 0
   assert await _stopped_stopped_for_season_and_scarcity(ctx, 2, 0) == 0
 
-  # When / Then
+  # When
   await run_scenario(
     ctx,
     [
@@ -541,4 +578,6 @@ async def test_settle_where_minter_create_card_with_frozen_scarcity(ctx_factory)
   )
 
   # Then
-  assert await _stopped_stopped_for_season_and_scarcity(ctx, 1, 0) == 1
+  assert await _card_exists(ctx, card_id_1) == 1
+  assert await _card_exists(ctx, card_id_2) == 1
+  assert await _card_exists(ctx, card_id_3) == 1
