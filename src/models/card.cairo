@@ -1,11 +1,32 @@
+%lang starknet
+
 from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.math import unsigned_div_rem
 from starkware.cairo.common.alloc import alloc
-from contracts.lib.keccak import keccak256
+from lib.keccak import keccak256
 from starkware.cairo.common.math import assert_le, assert_not_zero
 from starkware.cairo.common.uint256 import (
   Uint256, uint256_eq, uint256_check
 )
+
+# Constants
+
+from openzeppelin.utils.constants import TRUE, FALSE
+
+const SEASON_MAX = 2 ** 16 - 1
+const SCARCITY_MAX = 2 ** 8 - 1
+const SERIAL_NUMBER_MAX = 2 ** 32 - 1
+
+const SEASON_MIN = 1
+const SCARCITY_MIN = 0
+const SERIAL_NUMBER_MIN = 1
+
+const SHIFT = 2 ** 64
+const MASK = 2 ** 64 - 1
+
+#
+# Structs
+#
 
 struct CardMetadata:
   member hash: Uint256
@@ -20,19 +41,9 @@ struct Card:
   member metadata: CardMetadata
 end
 
-const SEASON_MAX = 2 ** 16 - 1
-const SCARCITY_MAX = 2 ** 8 - 1
-const SERIAL_NUMBER_MAX = 2 ** 32 - 1
-
-const SEASON_MIN = 1
-const SCARCITY_MIN = 0
-const SERIAL_NUMBER_MIN = 1
-
-const TRUE = 1
-const FALSE = 0
-
-const SHIFT = 2 ** 64
-const MASK = 2 ** 64 - 1
+#
+# Functions
+#
 
 func card_is_null{
     syscall_ptr: felt*,

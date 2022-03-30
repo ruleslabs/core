@@ -6,13 +6,13 @@ from starkware.cairo.common.math import assert_not_zero, assert_le
 from starkware.cairo.common.math_cmp import is_not_zero
 from starkware.cairo.common.uint256 import Uint256
 
-from contracts.models.card import (
+from models.card import (
   Card, CardMetadata, get_card_id_from_card, card_is_null
 )
 
 # AccessControl/Ownable
 
-from contracts.lib.Ownable_base import (
+from lib.Ownable_base import (
   Ownable_get_owner,
 
   Ownable_initializer,
@@ -20,7 +20,7 @@ from contracts.lib.Ownable_base import (
   Ownable_transfer_ownership
 )
 
-from contracts.lib.roles.AccessControl_base import (
+from lib.roles.AccessControl_base import (
   AccessControl_hasRole,
   AccessControl_rolesCount,
   AccessControl_getRoleMember,
@@ -28,7 +28,7 @@ from contracts.lib.roles.AccessControl_base import (
   AccessControl_initializer
 )
 
-from contracts.lib.roles.minter import (
+from lib.roles.minter import (
   Minter_role,
 
   Minter_initializer,
@@ -37,7 +37,7 @@ from contracts.lib.roles.minter import (
   Minter_revoke
 )
 
-from contracts.lib.roles.capper import (
+from lib.roles.capper import (
   Capper_role,
 
   Capper_initializer,
@@ -48,7 +48,7 @@ from contracts.lib.roles.capper import (
 
 # Supply
 
-from contracts.lib.scarcity.Scarcity_base import (
+from lib.scarcity.Scarcity_base import (
   Scarcity_supply,
   Scarcity_productionStopped,
 
@@ -56,10 +56,15 @@ from contracts.lib.scarcity.Scarcity_base import (
   Scarcity_stopProduction
 )
 
-from contracts.interfaces.IRulesData import IRulesData
+# Constants
 
-const TRUE = 1
-const FALSE = 0
+from openzeppelin.utils.constants import TRUE, FALSE
+
+#
+# Import interfaces
+#
+
+from interfaces.IRulesData import IRulesData
 
 #
 # Storage

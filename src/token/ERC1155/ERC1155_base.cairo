@@ -7,21 +7,22 @@ from starkware.cairo.common.uint256 import (
 from starkware.cairo.common.math import assert_not_zero
 from starkware.starknet.common.syscalls import get_caller_address
 
-from contracts.openzeppelin.ERC165_base import (
+from openzeppelin.introspection.ERC165 import (
   ERC165_register_interface
 )
 
-from contracts.openzeppelin.IERC165 import IERC165
-from contracts.token.ERC1155.IERC1155_Receiver import IERC1155_Receiver
+# Constants
 
-const TRUE = 1
-const FALSE = 0
+from openzeppelin.utils.constants import (
+  TRUE, IERC1155_ID, IERC1155_ACCEPTED_ID, IERC1155_BATCH_ACCEPTED_ID, IERC1155_RECEIVER_ID, IACCOUNT_ID
+)
 
-const ERC1155_ERC165 = 0xd9b67a26
-const ERC1155_ERC165_TOKENRECEIVER = 0x4e2312e0
-const ERC1155_ACCEPTED = 0xf23a6e61
-const ERC1155_BATCH_ACCEPTED = 0xbc197c81
-const ACCOUNT_ERC165 = 0x50b70dcb
+#
+# Import interfaces
+#
+
+from openzeppelin.introspection.IERC165 import IERC165
+from token.ERC1155.IERC1155_Receiver import IERC1155_Receiver
 
 #
 # Storage
@@ -51,7 +52,7 @@ func ERC1155_initializer{
   ERC1155_name_.write(name)
   ERC1155_symbol_.write(symbol)
 
-  ERC165_register_interface(ERC1155_ERC165)
+  ERC165_register_interface(IERC1155_ID)
   return ()
 end
 
@@ -168,7 +169,7 @@ func _check_onERC1155Received{
     data: felt*
   ) -> (success: felt):
   let (caller) = get_caller_address()
-  let (is_supported) = IERC165.supportsInterface(to, ERC1155_ERC165_TOKENRECEIVER)
+  let (is_supported) = IERC165.supportsInterface(to, IERC1155_RECEIVER_ID)
 
   if is_supported == TRUE:
     let (selector) = IERC1155_Receiver.onERC1155Received(
@@ -181,11 +182,11 @@ func _check_onERC1155Received{
       data
     )
 
-    assert selector = ERC1155_ACCEPTED
+    assert selector = IERC1155_ACCEPTED_ID
     return (TRUE)
   end
 
-  let (is_account) = IERC165.supportsInterface(to, ACCOUNT_ERC165)
+  let (is_account) = IERC165.supportsInterface(to, IACCOUNT_ID)
   return (is_account)
 end
 
@@ -204,7 +205,7 @@ func _check_onERC1155BatchReceived{
     data: felt*
   ) -> (success: felt):
   let (caller) = get_caller_address()
-  let (is_supported) = IERC165.supportsInterface(to, ERC1155_ERC165_TOKENRECEIVER)
+  let (is_supported) = IERC165.supportsInterface(to, IERC1155_RECEIVER_ID)
 
   if is_supported == TRUE:
     let (selector) = IERC1155_Receiver.onERC1155BatchReceived(
@@ -219,10 +220,10 @@ func _check_onERC1155BatchReceived{
       data
     )
 
-    assert selector = ERC1155_BATCH_ACCEPTED
+    assert selector = IERC1155_BATCH_ACCEPTED_ID
     return (TRUE)
   end
 
-  let (is_account) = IERC165.supportsInterface(to, ACCOUNT_ERC165)
+  let (is_account) = IERC165.supportsInterface(to, IACCOUNT_ID)
   return (is_account)
 end

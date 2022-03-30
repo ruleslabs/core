@@ -5,8 +5,8 @@ from starkware.cairo.common.math_cmp import is_le
 from starkware.cairo.common.memset import memset
 from starkware.cairo.common.pow import pow
 
-from contracts.lib.packed_keccak import BLOCK_SIZE, packed_keccak_func
-from contracts.lib.xor_state import state_xor, mask_garbage
+from lib.packed_keccak import BLOCK_SIZE, packed_keccak_func
+from lib.xor_state import state_xor, mask_garbage
 
 # Runs keccak_f permutations on the given input
 # Uses packed_keccak_func from Starkware (in native Cairo)

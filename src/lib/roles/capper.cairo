@@ -3,7 +3,7 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.starknet.common.syscalls import get_caller_address
 
-from contracts.lib.roles.AccessControl_base import (
+from lib.roles.AccessControl_base import (
   AccessControl_hasRole,
 
   AccessControl_grant_role,
@@ -11,8 +11,9 @@ from contracts.lib.roles.AccessControl_base import (
   _grant_role
 )
 
-const TRUE = 1
-const FALSE = 0
+# Constants
+
+from openzeppelin.utils.constants import TRUE, FALSE
 
 const CAPPER_ROLE = 0x4341505045525F524F4C45 # "CAPPER_ROLE"
 

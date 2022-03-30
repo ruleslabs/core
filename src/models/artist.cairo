@@ -1,10 +1,17 @@
+%lang starknet
+
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import (
   Uint256, uint256_eq, uint256_check
 )
 
-const TRUE = 1
-const FALSE = 0
+# Constants
+
+from openzeppelin.utils.constants import FALSE
+
+#
+# Functions
+#
 
 func assert_artist_name_well_formed{
     syscall_ptr: felt*,

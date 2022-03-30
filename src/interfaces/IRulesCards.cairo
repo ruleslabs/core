@@ -2,7 +2,7 @@
 
 from starkware.cairo.common.uint256 import Uint256
 
-from contracts.models.card import Card
+from models.card import Card
 
 @contract_interface
 namespace IRulesCards:

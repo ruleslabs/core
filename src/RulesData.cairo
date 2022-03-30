@@ -4,9 +4,9 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256
 
-from contracts.models.artist import assert_artist_name_well_formed
+from models.artist import assert_artist_name_well_formed
 
-from contracts.lib.Ownable_base import (
+from lib.Ownable_base import (
   Ownable_get_owner,
 
   Ownable_initializer,
@@ -14,7 +14,7 @@ from contracts.lib.Ownable_base import (
   Ownable_transfer_ownership
 )
 
-from contracts.lib.roles.AccessControl_base import (
+from lib.roles.AccessControl_base import (
   AccessControl_hasRole,
   AccessControl_rolesCount,
   AccessControl_getRoleMember,
@@ -22,7 +22,7 @@ from contracts.lib.roles.AccessControl_base import (
   AccessControl_initializer
 )
 
-from contracts.lib.roles.minter import (
+from lib.roles.minter import (
   Minter_role,
 
   Minter_initializer,
@@ -31,8 +31,9 @@ from contracts.lib.roles.minter import (
   Minter_revoke
 )
 
-const TRUE = 1
-const FALSE = 0
+# Constants
+
+from openzeppelin.utils.constants import TRUE
 
 #
 # Storage

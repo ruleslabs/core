@@ -6,9 +6,9 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.uint256 import Uint256
 from starkware.cairo.common.registers import get_fp_and_pc
 
-from contracts.models.card import Card
+from models.card import Card
 
-from contracts.token.ERC1155.ERC1155_base import (
+from token.ERC1155.ERC1155_base import (
   ERC1155_name,
   ERC1155_symbol,
 
@@ -16,21 +16,21 @@ from contracts.token.ERC1155.ERC1155_base import (
   ERC1155_mint
 )
 
-from contracts.token.ERC1155.ERC1155_Metadata_base import (
+from token.ERC1155.ERC1155_Metadata_base import (
   ERC1155_Metadata_tokenURI,
   ERC1155_Metadata_baseTokenURI,
 
   ERC1155_Metadata_setBaseTokenURI
 )
 
-from contracts.token.ERC1155.ERC1155_Supply_base import (
+from token.ERC1155.ERC1155_Supply_base import (
   ERC1155_Supply_exists,
   ERC1155_Supply_totalSupply,
 
   ERC1155_Supply_beforeTokenTransfer
 )
 
-from contracts.lib.Ownable_base import (
+from lib.Ownable_base import (
   Ownable_get_owner,
 
   Ownable_initializer,
@@ -38,7 +38,7 @@ from contracts.lib.Ownable_base import (
   Ownable_transfer_ownership
 )
 
-from contracts.lib.roles.AccessControl_base import (
+from lib.roles.AccessControl_base import (
   AccessControl_hasRole,
   AccessControl_rolesCount,
   AccessControl_getRoleMember,
@@ -46,7 +46,7 @@ from contracts.lib.roles.AccessControl_base import (
   AccessControl_initializer
 )
 
-from contracts.lib.roles.minter import (
+from lib.roles.minter import (
   Minter_role,
 
   Minter_initializer,
@@ -55,11 +55,16 @@ from contracts.lib.roles.minter import (
   Minter_revoke
 )
 
-from contracts.interfaces.IRulesCards import IRulesCards
-# from contracts.interfaces.IRulesPacks import IRulesPacks
+# Constants
 
-const TRUE = 1
-const FALSE = 1
+from openzeppelin.utils.constants import TRUE, FALSE
+
+#
+# Import interfaces
+#
+
+from interfaces.IRulesCards import IRulesCards
+# from interfaces.IRulesPacks import IRulesPacks
 
 #
 # Storage

@@ -4,8 +4,9 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 from starkware.starknet.common.syscalls import get_caller_address
 
-const TRUE = 1
-const FALSE = 0
+# Constants
+
+from openzeppelin.utils.constants import TRUE, FALSE
 
 const ADMIN_ROLE = 0x0
 

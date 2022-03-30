@@ -4,10 +4,11 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.math import assert_le, assert_not_zero
 from starkware.cairo.common.math_cmp import is_not_zero
 
-const SCARCITY_SUPPLY_DIVISOR = 2
+# Constants
 
-const TRUE = 1
-const FALSE = 0
+from openzeppelin.utils.constants import TRUE, FALSE
+
+const SCARCITY_SUPPLY_DIVISOR = 2
 
 #
 # Storage

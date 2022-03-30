@@ -2,7 +2,7 @@ SHEL							=	/bin/bash
 
 CC								=	nile
 
-SRCS_DIR					=	contracts/
+SRCS_DIR					=	src/
 SRCS_LIST					=	RulesTokens.cairo RulesCards.cairo RulesData.cairo
 SRCS							=	$(addprefix $(SRCS_DIR), $(SRCS_LIST))
 
@@ -20,7 +20,7 @@ all : $(OBJS)
 
 $(OBJS_DIR)%.json : $(SRCS_DIR)%.cairo
 	@mkdir -p $(OBJS_DIR)
-	@$(CC) compile $<
+	@$(CC) compile --directory $(SRCS_DIR) $<
 
 build-tests:
 	@pytest $(TESTS_BUILD_FLAGS) $(TESTS_DIR)build_cache.py
