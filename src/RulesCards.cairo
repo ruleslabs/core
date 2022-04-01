@@ -230,6 +230,18 @@ func productionStoppedForSeasonAndScarcity{
   return (stopped)
 end
 
+# Other contracts
+
+@view
+func rulesData{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }() -> (address: felt):
+  let (address) = rules_data_address_storage.read()
+  return (address)
+end
+
 #
 # Externals
 #

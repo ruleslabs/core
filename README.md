@@ -18,6 +18,4 @@ Core smart contracts of the Rules V1 protocol, for marketplace contracts, see [m
 
 `RulesCards <owner> <rules_data>`
 
-`RulesTokens <owner> <rules_data>`
-
 `RulesTokens <name> <symbol> <owner> <cards> <pack>`

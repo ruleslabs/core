@@ -222,6 +222,28 @@ func getCard{
   return (card)
 end
 
+# Other contracts
+
+@view
+func rulesCards{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }() -> (address: felt):
+  let (address) = rules_cards_address_storage.read()
+  return (address)
+end
+
+@view
+func rulesPacks{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }() -> (address: felt):
+  let (address) = rules_packs_address_storage.read()
+  return (address)
+end
+
 #
 # Externals
 #
