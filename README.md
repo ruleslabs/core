@@ -13,7 +13,7 @@ nile compile src/Rules* --directory src
 ### Run tests
 
 ```bash
-tox
+tox tests/test.py
 ```
 
 ### Deploy contracts
