@@ -6,21 +6,13 @@ import sys
 from types import SimpleNamespace
 import time
 
-from starkware.starknet.compiler.compile import compile_starknet_files
 from starkware.starknet.testing.starknet import Starknet, StarknetContract
 from starkware.starknet.business_logic.state import BlockInfo
 
-from OpenZeppelin.Signer import Signer
+from utils import Signer, get_contract_def, _root
 
 # pytest-xdest only shows stderr
 sys.stdout = sys.stderr
-CONTRACT_SRC = [os.path.dirname(__file__), "..", "contracts"]
-
-def compile(path):
-  return compile_starknet_files(
-    files=['/'.join(CONTRACT_SRC + [path])],
-    debug_info=True
-  )
 
 
 def get_block_timestamp(starknet_state):
@@ -64,10 +56,10 @@ async def build_copyable_deployment():
   set_block_timestamp(starknet.state, round(time.time()))
 
   defs = SimpleNamespace(
-    account=compile("openzeppelin/Account.cairo"),
-    rulesData=compile("RulesData.cairo"),
-    rulesCards=compile("RulesCards.cairo"),
-    rulesTokens=compile("RulesTokens.cairo")
+    account=get_contract_def("openzeppelin/account/Account.cairo"),
+    rulesData=get_contract_def("RulesData.cairo"),
+    rulesCards=get_contract_def("RulesCards.cairo"),
+    rulesTokens=get_contract_def("RulesTokens.cairo")
   )
 
   signers = dict(

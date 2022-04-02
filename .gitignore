@@ -4,6 +4,7 @@
 __pycache__
 *.egg-info/
 venv/
+.tox
 
 artifacts/
 
@@ -11,4 +12,7 @@ artifacts/
 
 env
 
+# Nile files
 node.json
+*.accounts.json
+*.deployments.txt

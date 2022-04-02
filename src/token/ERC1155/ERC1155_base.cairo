@@ -78,6 +78,17 @@ func ERC1155_symbol{
   return (symbol)
 end
 
+func ERC1155_balanceOf{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(account: felt, token_id: Uint256) -> (balance: Uint256):
+  uint256_check(token_id)
+
+  let (balance: Uint256) = ERC721_balances.read(account, token_id)
+  return (balance)
+end
+
 #
 # Externals
 #

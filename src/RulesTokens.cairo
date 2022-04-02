@@ -6,11 +6,12 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.uint256 import Uint256
 from starkware.cairo.common.registers import get_fp_and_pc
 
-from models.card import Card
+from models.card import Card, CardMetadata
 
 from token.ERC1155.ERC1155_base import (
   ERC1155_name,
   ERC1155_symbol,
+  ERC1155_balanceOf,
 
   ERC1155_initializer,
   ERC1155_mint
@@ -215,11 +216,11 @@ func getCard{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(card_id: Uint256) -> (card: Card):
+  }(card_id: Uint256) -> (card: Card, metadata: CardMetadata):
   let (rules_cards_address) = rules_cards_address_storage.read()
 
-  let (card) = IRulesCards.getCard(rules_cards_address, card_id)
-  return (card)
+  let (card, metadata) = IRulesCards.getCard(rules_cards_address, card_id)
+  return (card, metadata)
 end
 
 # Other contracts
@@ -242,6 +243,28 @@ func rulesPacks{
   }() -> (address: felt):
   let (address) = rules_packs_address_storage.read()
   return (address)
+end
+
+# Balance and supply
+
+@view
+func balanceOf{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(account: felt, token_id: Uint256) -> (balance: Uint256):
+  let (balance) = ERC1155_balanceOf(account, token_id)
+  return (balance)
+end
+
+@view
+func tokenSupply{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(token_id: Uint256) -> (supply: Uint256):
+  let (supply) = ERC1155_Supply_totalSupply(token_id)
+  return (supply)
 end
 
 #
@@ -275,13 +298,13 @@ func createAndMintCard{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(card: Card, to: felt) -> (token_id: Uint256):
+  }(card: Card, metadata: CardMetadata, to: felt) -> (token_id: Uint256):
   alloc_locals
 
   Minter_onlyMinter()
 
   let (rules_cards_address) = rules_cards_address_storage.read()
-  let (local card_id) = IRulesCards.createCard(rules_cards_address, card)
+  let (local card_id) = IRulesCards.createCard(rules_cards_address, card, metadata)
 
   _mint_token(to, token_id = card_id, amount = Uint256(1, 0))
 

@@ -6,16 +6,20 @@ Core smart contracts of the Rules V1 protocol, for marketplace contracts, see [m
 
 ### Compile contracts
 
-`make`
+```bash
+nile compile src/Rules* --directory src
+```
 
 ### Run tests
 
-`make test`
+```bash
+tox
+```
 
 ### Deploy contracts
 
-`RulesData <owner>`
-
-`RulesCards <owner> <rules_data>`
-
-`RulesTokens <name> <symbol> <owner> <cards> <pack>`
+```bash
+nile deploy RulesData <owner>
+nile deploy RulesCards <owner> <rules_data>
+nile deploy RulesTokens <name> <symbol> <owner> <cards> <pack>
+```

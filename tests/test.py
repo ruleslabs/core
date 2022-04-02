@@ -24,12 +24,12 @@ async def _artist_exists(ctx, artist_name):
 
 # Cards
 
-async def _create_card(ctx, signer_account_name, card):
+async def _create_card(ctx, signer_account_name, card, metadata):
   await ctx.execute(
     signer_account_name,
     ctx.rulesCards.contract_address,
     "createCard",
-    [*to_flat_tuple(card)]
+    [*to_flat_tuple(card), *to_flat_tuple(metadata)]
   )
 
 
@@ -185,8 +185,8 @@ class ScenarioState:
   async def create_artist(self, signer_account_name, artist_name):
     await _create_artist(self.ctx, signer_account_name, artist_name)
 
-  async def create_card(self, signer_account_name, card):
-    await _create_card(self.ctx, signer_account_name, card)
+  async def create_card(self, signer_account_name, card, metadata):
+    await _create_card(self.ctx, signer_account_name, card, metadata)
 
   # async def create_and_mint_card(card):
   #   await _create_and_mint_card(card)
@@ -264,7 +264,7 @@ ROLES = dict(MINTER_ROLE="Minter", CAPPER_ROLE="Capper")
 
 ARTIST_1 = (0x416C7068612057616E6E, 0)
 METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
-COMMON_CARD_ARTIST_1 = dict(artist_name=ARTIST_1, season=1, scarcity=0, serial_number=1, metadata=METADATA_1)
+COMMON_CARD_ARTIST_1 = dict(artist_name=ARTIST_1, season=1, scarcity=0, serial_number=1)
 
 #########
 # TESTS #
@@ -302,10 +302,10 @@ async def test_settle_where_minter_create_card(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_card", dict(card=COMMON_CARD_ARTIST_1), False),
+      (MINTER, "create_card", dict(card=COMMON_CARD_ARTIST_1, metadata=METADATA_1), False),
       (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_card", dict(card=COMMON_CARD_ARTIST_1), True),
-      (MINTER, "create_card", dict(card=COMMON_CARD_ARTIST_1), False),
+      (MINTER, "create_card", dict(card=COMMON_CARD_ARTIST_1, metadata=METADATA_1), True),
+      (MINTER, "create_card", dict(card=COMMON_CARD_ARTIST_1, metadata=METADATA_1), False),
     ]
   )
 
@@ -325,11 +325,11 @@ async def test_settle_where_minter_create_invalid_card(ctx_factory):
     ctx,
     [
       (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, season=0)), False),
-      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, serial_number=0)), False),
-      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, season=2 ** 16)), False),
-      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=2 ** 8)), False),
-      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, serial_number=2 ** 32)), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, season=0), metadata=METADATA_1), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, serial_number=0), metadata=METADATA_1), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, season=2 ** 16), metadata=METADATA_1), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=2 ** 8), metadata=METADATA_1), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, serial_number=2 ** 32), metadata=METADATA_1), False),
     ]
   )
 
@@ -534,14 +534,14 @@ async def test_settle_where_minter_create_card_with_invalid_serial_number(ctx_fa
       (OWNER, "add_scarcity_for_season", dict(season=1, supply=2), True),
 
       (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=1, serial_number=3)), False),
-      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=1, serial_number=1)), True),
-      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=1, serial_number=2)), True),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=1, serial_number=3), metadata=METADATA_1), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=1, serial_number=1), metadata=METADATA_1), True),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=1, serial_number=2), metadata=METADATA_1), True),
 
       (OWNER, "add_scarcity_for_season", dict(season=1, supply=1), True),
 
-      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=2, serial_number=1)), True),
-      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=2, serial_number=2)), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=2, serial_number=1), metadata=METADATA_1), True),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, scarcity=2, serial_number=2), metadata=METADATA_1), False),
     ]
   )
 
@@ -567,13 +567,13 @@ async def test_settle_where_minter_create_card_with_frozen_scarcity(ctx_factory)
     ctx,
     [
       (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_card", dict(card=COMMON_CARD_ARTIST_1), True),
-      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, serial_number=5)), True),
+      (MINTER, "create_card", dict(card=COMMON_CARD_ARTIST_1, metadata=METADATA_1), True),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, serial_number=5), metadata=METADATA_1), True),
 
       (OWNER, "stop_production_for_season_and_scarcity", dict(season=1, scarcity=0), True),
 
-      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, serial_number=10)), False),
-      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, season=2)), True),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, serial_number=10), metadata=METADATA_1), False),
+      (MINTER, "create_card", dict(card=update_dict(COMMON_CARD_ARTIST_1, season=2), metadata=METADATA_1), True),
     ]
   )
 

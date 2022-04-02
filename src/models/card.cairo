@@ -38,7 +38,6 @@ struct Card:
   member season: felt # uint16
   member scarcity: felt # uint8
   member serial_number: felt # uint32
-  member metadata: CardMetadata
 end
 
 #
@@ -55,14 +54,6 @@ func card_is_null{
     return (FALSE)
   end
 
-  let (is_metadata_hash_null) = uint256_eq(card.metadata.hash, Uint256(0, 0))
-  if is_metadata_hash_null == FALSE:
-    return (FALSE)
-  end
-
-  if card.metadata.multihash_identifier != 0:
-    return (FALSE)
-  end
   if card.season != 0:
     return (FALSE)
   end
@@ -82,12 +73,6 @@ func assert_card_well_formed{
     range_check_ptr
   }(card: Card):
   uint256_check(card.artist_name)
-  uint256_check(card.metadata.hash)
-
-  let (is_metadata_hash_null) = uint256_eq(card.metadata.hash, Uint256(0, 0))
-  assert is_metadata_hash_null = FALSE
-
-  assert_not_zero(card.metadata.multihash_identifier)
 
   assert_le(card.season, SEASON_MAX)
   assert_le(card.scarcity, SCARCITY_MAX)

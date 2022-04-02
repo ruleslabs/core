@@ -75,6 +75,10 @@ func cards_storage(card_id: Uint256) -> (card: Card):
 end
 
 @storage_var
+func cards_metadata_storage(card_id: Uint256) -> (metadata: CardMetadata):
+end
+
+@storage_var
 func rules_data_address_storage() -> (rules_data_address: felt):
 end
 
@@ -190,10 +194,11 @@ func getCard{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(card_id: Uint256) -> (card: Card):
+  }(card_id: Uint256) -> (card: Card, metadata: CardMetadata):
   let (card) = cards_storage.read(card_id)
+  let (metadata) = cards_metadata_storage.read(card_id)
 
-  return (card)
+  return (card, metadata)
 end
 
 @view
@@ -322,7 +327,7 @@ func createCard{
     pedersen_ptr: HashBuiltin*,
     bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
-  }(card: Card) -> (card_id: Uint256):
+  }(card: Card, metadata: CardMetadata) -> (card_id: Uint256):
   alloc_locals
 
   Minter_onlyMinter()
@@ -354,6 +359,7 @@ func createCard{
   assert exists = FALSE # Card already exists
 
   cards_storage.write(card_id, card)
+  cards_metadata_storage.write(card_id, metadata)
 
   return (card_id)
 end
