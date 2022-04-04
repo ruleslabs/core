@@ -2,14 +2,14 @@
 
 from starkware.cairo.common.uint256 import Uint256
 
-from models.card import Card, CardMetadata
+from models.card import Card, Metadata
 
 @contract_interface
 namespace IRulesCards:
-  func getCard(card_id: Uint256) -> (card: Card, metadata: CardMetadata):
+  func getCard(card_id: Uint256) -> (card: Card, metadata: Metadata):
   end
 
-  func createCard(card: Card, metadata: CardMetadata) -> (card_id: Uint256):
+  func createCard(card: Card, metadata: Metadata) -> (card_id: Uint256):
   end
 
   func cardExists(card_id: Uint256) -> (res: felt):

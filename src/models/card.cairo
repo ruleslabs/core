@@ -28,15 +28,19 @@ const MASK = 2 ** 64 - 1
 # Structs
 #
 
-struct CardMetadata:
+struct Metadata:
   member hash: Uint256
   member multihash_identifier: felt
 end
 
-struct Card:
+struct CardModel:
   member artist_name: Uint256
   member season: felt # uint16
   member scarcity: felt # uint8
+end
+
+struct Card:
+  member model: CardModel
   member serial_number: felt # uint32
 end
 
@@ -49,15 +53,15 @@ func card_is_null{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(card: Card) -> (res: felt):
-  let (is_artist_name_null) = uint256_eq(card.artist_name, Uint256(0, 0))
+  let (is_artist_name_null) = uint256_eq(card.model.artist_name, Uint256(0, 0))
   if is_artist_name_null == FALSE:
     return (FALSE)
   end
 
-  if card.season != 0:
+  if card.model.season != 0:
     return (FALSE)
   end
-  if card.scarcity != 0:
+  if card.model.scarcity != 0:
     return (FALSE)
   end
   if card.serial_number != 0:
@@ -72,14 +76,14 @@ func assert_card_well_formed{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(card: Card):
-  uint256_check(card.artist_name)
+  uint256_check(card.model.artist_name)
 
-  assert_le(card.season, SEASON_MAX)
-  assert_le(card.scarcity, SCARCITY_MAX)
+  assert_le(card.model.season, SEASON_MAX)
+  assert_le(card.model.scarcity, SCARCITY_MAX)
   assert_le(card.serial_number, SERIAL_NUMBER_MAX)
 
-  assert_le(SEASON_MIN, card.season)
-  assert_le(SCARCITY_MIN, card.scarcity)
+  assert_le(SEASON_MIN, card.model.season)
+  assert_le(SCARCITY_MIN, card.model.scarcity)
   assert_le(SERIAL_NUMBER_MIN, card.serial_number)
 
   return ()
@@ -100,18 +104,18 @@ func get_card_id_from_card{
 
   # artist_name
 
-  assert bitwise_ptr[0].x = card.artist_name.low
+  assert bitwise_ptr[0].x = card.model.artist_name.low
   assert bitwise_ptr[0].y = MASK
   assert keccak_input[0] = bitwise_ptr[0].x_and_y
 
-  let (res, _) = unsigned_div_rem(card.artist_name.low, SHIFT)
+  let (res, _) = unsigned_div_rem(card.model.artist_name.low, SHIFT)
   assert keccak_input[1] = res
 
-  assert bitwise_ptr[1].x = card.artist_name.high
+  assert bitwise_ptr[1].x = card.model.artist_name.high
   assert bitwise_ptr[1].y = MASK
   assert keccak_input[2] = bitwise_ptr[1].x_and_y
 
-  let (res, _) = unsigned_div_rem(card.artist_name.high, SHIFT)
+  let (res, _) = unsigned_div_rem(card.model.artist_name.high, SHIFT)
   assert keccak_input[3] = res
 
   let bitwise_ptr = bitwise_ptr + 2 * BitwiseBuiltin.SIZE
@@ -122,12 +126,12 @@ func get_card_id_from_card{
   #  |   ----> scarcity
   #   -------> season
 
-  assert bitwise_ptr[0].x = card.season
+  assert bitwise_ptr[0].x = card.model.season
   assert bitwise_ptr[0].y = 0xffff
   let season = bitwise_ptr[0].x_and_y
   let season = season * 2 ** 40
 
-  assert bitwise_ptr[1].x = card.scarcity
+  assert bitwise_ptr[1].x = card.model.scarcity
   assert bitwise_ptr[1].y = 0xff
   let scarcity = bitwise_ptr[1].x_and_y
   let scarcity = scarcity * 2 ** 32

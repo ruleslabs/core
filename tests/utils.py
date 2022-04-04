@@ -126,6 +126,14 @@ def to_flat_tuple(data):
   return tuple(items)
 
 
+def update_card(card, **new):
+  if 'serial_number' in new:
+    card = update_dict(card, serial_number=new['serial_number'])
+    del new['serial_number']
+
+  return update_dict(card, model=update_dict(card['model'], **new))
+
+
 def update_dict(dict, **new):
   return (lambda d: d.update(**new) or d)(dict.copy())
 

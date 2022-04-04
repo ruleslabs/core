@@ -7,7 +7,7 @@ from starkware.cairo.common.math_cmp import is_not_zero
 from starkware.cairo.common.uint256 import Uint256
 
 from models.card import (
-  Card, CardMetadata, get_card_id_from_card, card_is_null
+  Card, Metadata, get_card_id_from_card, card_is_null
 )
 
 # AccessControl/Ownable
@@ -75,7 +75,7 @@ func cards_storage(card_id: Uint256) -> (card: Card):
 end
 
 @storage_var
-func cards_metadata_storage(card_id: Uint256) -> (metadata: CardMetadata):
+func cards_metadata_storage(card_id: Uint256) -> (metadata: Metadata):
 end
 
 @storage_var
@@ -194,7 +194,7 @@ func getCard{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(card_id: Uint256) -> (card: Card, metadata: CardMetadata):
+  }(card_id: Uint256) -> (card: Card, metadata: Metadata):
   let (card) = cards_storage.read(card_id)
   let (metadata) = cards_metadata_storage.read(card_id)
 
@@ -327,22 +327,22 @@ func createCard{
     pedersen_ptr: HashBuiltin*,
     bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
-  }(card: Card, metadata: CardMetadata) -> (card_id: Uint256):
+  }(card: Card, metadata: Metadata) -> (card_id: Uint256):
   alloc_locals
 
   Minter_onlyMinter()
 
   let (rules_data_address) = rules_data_address_storage.read()
 
-  let (artist_exists) = IRulesData.artistExists(rules_data_address, card.artist_name)
+  let (artist_exists) = IRulesData.artistExists(rules_data_address, card.model.artist_name)
   assert_not_zero(artist_exists) # Unknown artist
 
   # Check is production is stopped for this scarcity and season
-  let (stopped) = Scarcity_productionStopped(card.season, card.scarcity)
+  let (stopped) = Scarcity_productionStopped(card.model.season, card.model.scarcity)
   assert stopped = FALSE # Production is stopped
 
   # Check if the serial_number is valid, given the scarcity supply
-  let (supply) = Scarcity_supply(card.season, card.scarcity)
+  let (supply) = Scarcity_supply(card.model.season, card.model.scarcity)
   let (is_supply_set) = is_not_zero(supply)
 
   if is_supply_set == TRUE:

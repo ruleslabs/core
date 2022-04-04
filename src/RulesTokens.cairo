@@ -6,7 +6,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.uint256 import Uint256
 from starkware.cairo.common.registers import get_fp_and_pc
 
-from models.card import Card, CardMetadata
+from models.card import Card, Metadata
 
 from token.ERC1155.ERC1155_base import (
   ERC1155_name,
@@ -216,7 +216,7 @@ func getCard{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(card_id: Uint256) -> (card: Card, metadata: CardMetadata):
+  }(card_id: Uint256) -> (card: Card, metadata: Metadata):
   let (rules_cards_address) = rules_cards_address_storage.read()
 
   let (card, metadata) = IRulesCards.getCard(rules_cards_address, card_id)
@@ -298,7 +298,7 @@ func createAndMintCard{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(card: Card, metadata: CardMetadata, to: felt) -> (token_id: Uint256):
+  }(card: Card, metadata: Metadata, to: felt) -> (token_id: Uint256):
   alloc_locals
 
   Minter_onlyMinter()
