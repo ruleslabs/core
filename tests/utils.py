@@ -146,9 +146,26 @@ def get_contract(ctx, contract_name):
   return (contract)
 
 
+def get_account_address(ctx, account_name):
+  if account_name == "null":
+    return 0
+
+  return (get_contract(ctx, account_name).contract_address)
+
+
 def get_method(contract, method_name):
   method = getattr(contract, method_name, None)
   if not method:
     raise AttributeError(f"contract.'{method_name}' doesn't exists.")
 
   return (method)
+
+
+def to_uint(a):
+  """Takes in value, returns uint256-ish tuple."""
+  return (a & ((1 << 128) - 1), a >> 128)
+
+
+def from_uint(uint):
+  """Takes in uint256-ish tuple, returns value."""
+  return uint[0] + (uint[1] << 128)

@@ -3,7 +3,7 @@ import pytest
 from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.definitions.error_codes import StarknetErrorCode
 
-from utils import dict_to_tuple, to_flat_tuple, update_card, get_contract, get_method
+from utils import dict_to_tuple, to_flat_tuple, update_card, get_contract, get_method, to_uint, get_account_address
 
 # Artist
 
@@ -89,7 +89,7 @@ async def _role_members_count(ctx, contract_name, role):
 
 async def _has_role(ctx, conrtact_name, role, account_name):
   contract = get_contract(ctx, conrtact_name)
-  account_address = get_contract(ctx, account_name).contract_address
+  account_address = get_account_address(ctx, account_name)
 
   (has_role,) = (
     await contract.hasRole(role, account_address).call()
@@ -157,7 +157,7 @@ async def _add_scarcity_for_season(ctx, signer_account_name, season, supply):
   )
 
 
-async def _stopped_stopped_for_season_and_scarcity(ctx, season, scarcity):
+async def _stopped_production_for_season_and_scarcity(ctx, season, scarcity):
   (stopped,) = (
     await ctx.rulesCards.productionStoppedForSeasonAndScarcity(season, scarcity).call()
   ).result
@@ -171,6 +171,25 @@ async def _stop_production_for_season_and_scarcity(ctx, signer_account_name, sea
     "stopProductionForSeasonAndScarcity",
     [season, scarcity]
   )
+
+# Mint
+
+async def _create_and_mint_card(ctx, signer_account_name, card, metadata, to_account_address):
+  await ctx.execute(
+    signer_account_name,
+    ctx.rulesTokens.contract_address,
+    "createAndMintCard",
+    [*to_flat_tuple(card), *to_flat_tuple(metadata), to_account_address]
+  )
+
+
+async def _balance_of(ctx, account_name, token_id):
+  account_address = get_account_address(ctx, account_name)
+
+  (balance,) = (
+    await ctx.rulesTokens.balanceOf(account_address, token_id).call()
+  ).result
+  return balance
 
 ############
 # SCENARIO #
@@ -188,26 +207,28 @@ class ScenarioState:
   async def create_card(self, signer_account_name, card, metadata):
     await _create_card(self.ctx, signer_account_name, card, metadata)
 
-  # async def create_and_mint_card(card):
-  #   await _create_and_mint_card(card)
+  async def create_and_mint_card(self, signer_account_name, card, metadata, to_account_name):
+    to_account_address = get_account_address(self.ctx, to_account_name)
+
+    await _create_and_mint_card(self.ctx, signer_account_name, card, metadata, to_account_address)
 
   async def set_base_token_uri(self, signer_account_name, base_token_uri):
     await _set_base_token_uri(self.ctx, signer_account_name, base_token_uri)
 
   async def grant_role(self, signer_account_name, contract_name, role_name, account_name):
-    account_address = get_contract(self.ctx, account_name).contract_address
+    account_address = get_account_address(self.ctx, account_name)
     contract = get_contract(self.ctx, contract_name)
 
     await _grant_role(self.ctx, signer_account_name, contract, role_name, account_address)
 
   async def revoke_role(self, signer_account_name, contract_name, role_name, account_name):
-    account_address = get_contract(self.ctx, account_name).contract_address
+    account_address = get_account_address(self.ctx, account_name)
     contract = get_contract(self.ctx, contract_name)
 
     await _revoke_role(self.ctx, signer_account_name, contract, role_name, account_address)
 
   async def transfer_ownership(self, signer_account_name, contract_name, account_name):
-    account_address = get_contract(self.ctx, account_name).contract_address
+    account_address = get_account_address(self.ctx, account_name)
     contract = get_contract(self.ctx, contract_name)
 
     await _transfer_ownership(self.ctx, signer_account_name, contract, account_address)
@@ -251,12 +272,13 @@ async def run_scenario(ctx, scenario):
 # CONSTS #
 ##########
 
+NULL = "null"
 MINTER = "minter"
 OWNER = "owner"
 RANDO_1 = "rando1"
 RANDO_2 = "rando2"
 RANDO_3 = "rando3"
-VALID_ACCOUNT_NAMES = [MINTER, OWNER, RANDO_1, RANDO_2, RANDO_3]
+VALID_ACCOUNT_NAMES = [MINTER, OWNER, RANDO_1, RANDO_2, RANDO_3, NULL]
 
 MINTER_ROLE = "MINTER_ROLE"
 CAPPER_ROLE = "CAPPER_ROLE"
@@ -362,7 +384,7 @@ async def test_settle_where_owner_set_base_token_uri(ctx_factory):
   [
     ("rulesTokens", MINTER_ROLE, 2),
     ("rulesCards", CAPPER_ROLE, 1),
-    ("rulesCards", MINTER_ROLE, 2),
+    ("rulesCards", MINTER_ROLE, 3),
     ("rulesData", MINTER_ROLE, 2)
   ]
 )
@@ -416,8 +438,8 @@ async def test_settle_where_owner_transfer_the_owner_ship(ctx_factory, contract_
   ctx = ctx_factory()
 
   # Given
-  owner_address = get_contract(ctx, OWNER).contract_address
-  rando1_address = get_contract(ctx, RANDO_1).contract_address
+  owner_address = get_account_address(ctx, OWNER)
+  rando1_address = get_account_address(ctx, RANDO_1)
   assert await _get_owner(ctx, contract_name) == owner_address
 
   # When
@@ -440,7 +462,7 @@ async def test_settle_where_owner_renounce_the_owner_ship(ctx_factory, contract_
   ctx = ctx_factory()
 
   # Given
-  owner_address = get_contract(ctx, OWNER).contract_address
+  owner_address = get_account_address(ctx, OWNER)
   assert await _get_owner(ctx, contract_name) == owner_address
 
   # When
@@ -494,10 +516,10 @@ async def test_settle_where_capper_stop_production_for_season_and_scarcity(ctx_f
   ctx = ctx_factory()
 
   # Given
-  assert await _stopped_stopped_for_season_and_scarcity(ctx, 1, 0) == 0
-  assert await _stopped_stopped_for_season_and_scarcity(ctx, 1, 1) == 0
-  assert await _stopped_stopped_for_season_and_scarcity(ctx, 1, 2) == 0
-  assert await _stopped_stopped_for_season_and_scarcity(ctx, 42, 42) == 0
+  assert await _stopped_production_for_season_and_scarcity(ctx, 1, 0) == 0
+  assert await _stopped_production_for_season_and_scarcity(ctx, 1, 1) == 0
+  assert await _stopped_production_for_season_and_scarcity(ctx, 1, 2) == 0
+  assert await _stopped_production_for_season_and_scarcity(ctx, 42, 42) == 0
 
   # When
   await run_scenario(
@@ -512,10 +534,10 @@ async def test_settle_where_capper_stop_production_for_season_and_scarcity(ctx_f
   )
 
   # Then
-  assert await _stopped_stopped_for_season_and_scarcity(ctx, 1, 0) == 1
-  assert await _stopped_stopped_for_season_and_scarcity(ctx, 1, 1) == 0
-  assert await _stopped_stopped_for_season_and_scarcity(ctx, 1, 2) == 1
-  assert await _stopped_stopped_for_season_and_scarcity(ctx, 42, 42) == 1
+  assert await _stopped_production_for_season_and_scarcity(ctx, 1, 0) == 1
+  assert await _stopped_production_for_season_and_scarcity(ctx, 1, 1) == 0
+  assert await _stopped_production_for_season_and_scarcity(ctx, 1, 2) == 1
+  assert await _stopped_production_for_season_and_scarcity(ctx, 42, 42) == 1
 
 
 @pytest.mark.asyncio
@@ -560,8 +582,8 @@ async def test_settle_where_minter_create_card_with_frozen_scarcity(ctx_factory)
   card_id_1 = await _get_card_id(ctx, CARD_1)
   card_id_2 = await _get_card_id(ctx, update_card(CARD_1, serial_number=5))
   card_id_3 = await _get_card_id(ctx, update_card(CARD_1, season=2))
-  assert await _stopped_stopped_for_season_and_scarcity(ctx, 1, 0) == 0
-  assert await _stopped_stopped_for_season_and_scarcity(ctx, 2, 0) == 0
+  assert await _stopped_production_for_season_and_scarcity(ctx, 1, 0) == 0
+  assert await _stopped_production_for_season_and_scarcity(ctx, 2, 0) == 0
 
   # When
   await run_scenario(
@@ -582,3 +604,37 @@ async def test_settle_where_minter_create_card_with_frozen_scarcity(ctx_factory)
   assert await _card_exists(ctx, card_id_1) == 1
   assert await _card_exists(ctx, card_id_2) == 1
   assert await _card_exists(ctx, card_id_3) == 1
+
+
+@pytest.mark.asyncio
+async def test_settle_where_minter_create_and_mint_cards(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  card_id_1 = await _get_card_id(ctx, CARD_1)
+  card_id_2 = await _get_card_id(ctx, update_card(CARD_1, serial_number=2))
+  assert await _balance_of(ctx, MINTER, card_id_1) == to_uint(0)
+  assert await _balance_of(ctx, MINTER, card_id_2) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, card_id_1) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, card_id_2) == to_uint(0)
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+
+      (MINTER, "create_and_mint_card", dict(card=CARD_1, metadata=METADATA_1, to_account_name=NULL), False),
+
+      (MINTER, "create_and_mint_card", dict(card=CARD_1, metadata=METADATA_1, to_account_name=MINTER), True),
+      (MINTER, "create_and_mint_card", dict(card=update_card(CARD_1, serial_number=2), metadata=METADATA_1, to_account_name=RANDO_1), True),
+
+      (MINTER, "create_and_mint_card", dict(card=CARD_1, metadata=METADATA_1, to_account_name=MINTER), False),
+    ]
+  )
+
+  # Then
+  assert await _balance_of(ctx, MINTER, card_id_1) == to_uint(1)
+  assert await _balance_of(ctx, MINTER, card_id_2) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, card_id_1) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, card_id_2) == to_uint(1)
