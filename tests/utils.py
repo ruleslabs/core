@@ -1,6 +1,7 @@
 """Utilities for testing Cairo contracts."""
 
 from pathlib import Path
+from functools import reduce
 from starkware.starknet.compiler.compile import compile_starknet_files
 from starkware.crypto.signature.signature import private_to_stark_key, sign
 from starkware.starknet.public.abi import get_selector_from_name
@@ -169,3 +170,11 @@ def to_uint(a):
 def from_uint(uint):
   """Takes in uint256-ish tuple, returns value."""
   return uint[0] + (uint[1] << 128)
+
+
+def felts_to_ascii(felts):
+  return reduce(lambda acc, felt: acc + bytearray.fromhex("{:x}".format(felt)).decode(), felts, "")
+
+
+def felts_to_string(felts):
+  return reduce(lambda acc, felt: acc + "{:x}".format(felt), felts, "")

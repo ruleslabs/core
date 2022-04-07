@@ -92,7 +92,7 @@ func _increaseTotalSupply{
   end
 
   let (total_supply) = ERC1155_total_supply.read([ids])
-  let new_total_supply: Uint256 = uint256_add(total_supply, [amounts])
+  let (new_total_supply: Uint256, _) = uint256_add(total_supply, [amounts])
 
   ERC1155_total_supply.write([ids], new_total_supply)
   _increaseTotalSupply(ids_len = ids_len - 1, ids = ids + 1, amounts = amounts + 1)

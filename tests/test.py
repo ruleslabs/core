@@ -3,7 +3,10 @@ import pytest
 from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.definitions.error_codes import StarknetErrorCode
 
-from utils import dict_to_tuple, to_flat_tuple, update_card, get_contract, get_method, to_uint, get_account_address
+from utils import (
+  dict_to_tuple, to_flat_tuple, update_card, get_contract, get_method, to_uint, get_account_address,
+  felts_to_string, felts_to_ascii, from_uint
+)
 
 # Artist
 
@@ -46,16 +49,20 @@ async def _get_card_id(ctx, card):
   ).result
   return tuple(tuple(card_id)[0])
 
-# async def _create_and_mint_card(ctx, artist_name):
-#   await ctx.rulesData.createArtist(artsit_name).invoke()
-
-# Base Token URI
+# Token URI
 
 async def _get_base_token_uri(ctx):
   (base_token_uri,) = (
     await ctx.rulesTokens.baseTokenURI().call()
   ).result
   return base_token_uri
+
+
+async def _get_token_uri(ctx, token_id):
+  (token_uri,) = (
+    await ctx.rulesTokens.tokenURI(token_id).call()
+  ).result
+  return token_uri
 
 
 async def _set_base_token_uri(ctx, signer_account_name, base_token_uri):
@@ -182,6 +189,7 @@ async def _create_and_mint_card(ctx, signer_account_name, card, metadata, to_acc
     [*to_flat_tuple(card), *to_flat_tuple(metadata), to_account_address]
   )
 
+# Balance and supply
 
 async def _balance_of(ctx, account_name, token_id):
   account_address = get_account_address(ctx, account_name)
@@ -190,6 +198,13 @@ async def _balance_of(ctx, account_name, token_id):
     await ctx.rulesTokens.balanceOf(account_address, token_id).call()
   ).result
   return balance
+
+
+async def _get_total_supply(ctx, token_id):
+  (supply,) = (
+    await ctx.rulesTokens.totalSupply(token_id).call()
+  ).result
+  return supply
 
 ############
 # SCENARIO #
@@ -254,8 +269,6 @@ async def run_scenario(ctx, scenario):
     func = getattr(scenario_state, function_name, None)
     if not func:
       raise AttributeError(f"ScenarioState.{function_name} doesn't exist.")
-
-    print(kwargs)
 
     try:
       await func(signer_account_name, **kwargs)
@@ -638,3 +651,29 @@ async def test_settle_where_minter_create_and_mint_cards(ctx_factory):
   assert await _balance_of(ctx, MINTER, card_id_2) == to_uint(0)
   assert await _balance_of(ctx, RANDO_1, card_id_1) == to_uint(0)
   assert await _balance_of(ctx, RANDO_1, card_id_2) == to_uint(1)
+
+
+@pytest.mark.asyncio
+async def test_settle_where_minter_create_and_mint_card_and_check_token_uri(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  base_token_uri = [0x68747470733A2F2F6578616D706C652E, 0x636F6D2F6170692F63617264732F]
+  card_id_1 = await _get_card_id(ctx, CARD_1)
+  token_uri = felts_to_ascii(base_token_uri) + felts_to_string([from_uint(card_id_1)])
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (OWNER, "set_base_token_uri", dict(base_token_uri=base_token_uri), True),
+
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, "create_and_mint_card", dict(card=CARD_1, metadata=METADATA_1, to_account_name=MINTER), True),
+    ]
+  )
+
+  # Then
+  print(card_id_1)
+  print(await _get_token_uri(ctx, card_id_1))
+  assert felts_to_ascii(await _get_token_uri(ctx, card_id_1)) == token_uri

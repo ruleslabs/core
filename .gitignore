@@ -16,3 +16,7 @@ env
 node.json
 *.accounts.json
 *.deployments.txt
+
+# debug
+main.cairo
+test.json

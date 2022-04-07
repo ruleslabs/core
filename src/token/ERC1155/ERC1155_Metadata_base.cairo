@@ -4,12 +4,12 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin, SignatureBuiltin
 from starkware.cairo.common.uint256 import Uint256
 from starkware.cairo.common.alloc import alloc
 
-from lib.ShortString import uint256_to_ss
+from lib.HexString import uint256_to_hs
 from lib.Array import concat_arr
 
-from token.ERC1155.ERC1155_Supply_base import (
-  ERC1155_Supply_exists
-)
+# Constants
+
+from openzeppelin.utils.constants import TRUE
 
 #
 # Storage
@@ -34,12 +34,9 @@ func ERC1155_Metadata_tokenURI{
   }(token_id: Uint256) -> (token_uri_len: felt, token_uri: felt*):
   alloc_locals
 
-  let (exists) = ERC1155_Supply_exists(token_id)
-  assert exists = 1
-
   let (base_token_uri_len, base_token_uri) = ERC1155_Metadata_baseTokenURI()
 
-  let (token_id_ss_len, token_id_ss) = uint256_to_ss(token_id)
+  let (token_id_ss_len, token_id_ss) = uint256_to_hs(token_id)
   let (token_uri, token_uri_len) = concat_arr(
       base_token_uri_len,
       base_token_uri,

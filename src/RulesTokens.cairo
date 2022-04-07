@@ -197,6 +197,11 @@ func tokenURI{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(token_id: Uint256) -> (token_uri_len: felt, token_uri: felt*):
+  let (exists) = ERC1155_Supply_exists(token_id)
+  with_attr error_message("Token does not exist."):
+    assert exists = TRUE
+  end
+
   let (token_uri_len, token_uri) = ERC1155_Metadata_tokenURI(token_id)
   return (token_uri_len, token_uri)
 end
@@ -258,7 +263,7 @@ func balanceOf{
 end
 
 @view
-func tokenSupply{
+func totalSupply{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
