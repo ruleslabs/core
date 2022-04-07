@@ -189,6 +189,14 @@ async def _create_and_mint_card(ctx, signer_account_name, card, metadata, to_acc
     [*to_flat_tuple(card), *to_flat_tuple(metadata), to_account_address]
   )
 
+async def _mint_card(ctx, signer_account_name, card_id, to_account_address):
+  await ctx.execute(
+    signer_account_name,
+    ctx.rulesTokens.contract_address,
+    "mintCard",
+    [*to_flat_tuple(card_id), to_account_address]
+  )
+
 # Balance and supply
 
 async def _balance_of(ctx, account_name, token_id):
@@ -226,6 +234,11 @@ class ScenarioState:
     to_account_address = get_account_address(self.ctx, to_account_name)
 
     await _create_and_mint_card(self.ctx, signer_account_name, card, metadata, to_account_address)
+
+  async def mint_card(self, signer_account_name, card_id, to_account_name):
+    to_account_address = get_account_address(self.ctx, to_account_name)
+
+    await _mint_card(self.ctx, signer_account_name, card_id, to_account_address)
 
   async def set_base_token_uri(self, signer_account_name, base_token_uri):
     await _set_base_token_uri(self.ctx, signer_account_name, base_token_uri)
@@ -677,3 +690,41 @@ async def test_settle_where_minter_create_and_mint_card_and_check_token_uri(ctx_
   print(card_id_1)
   print(await _get_token_uri(ctx, card_id_1))
   assert felts_to_ascii(await _get_token_uri(ctx, card_id_1)) == token_uri
+
+
+@pytest.mark.asyncio
+async def test_settle_where_minter_create_cards_and_mint_them(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  CARD_2 = update_card(CARD_1, serial_number=2)
+  card_id_1 = await _get_card_id(ctx, CARD_1)
+  card_id_2 = await _get_card_id(ctx, CARD_2)
+  assert await _balance_of(ctx, MINTER, card_id_1) == to_uint(0)
+  assert await _balance_of(ctx, MINTER, card_id_2) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, card_id_1) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, card_id_2) == to_uint(0)
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+
+      (MINTER, "mint_card", dict(card_id=card_id_1, to_account_name=MINTER), False),
+
+      (MINTER, "create_card", dict(card=CARD_1, metadata=METADATA_1), True),
+      (MINTER, "create_card", dict(card=CARD_2, metadata=METADATA_1), True),
+
+      (MINTER, "mint_card", dict(card_id=card_id_1, to_account_name=MINTER), True),
+      (MINTER, "mint_card", dict(card_id=card_id_1, to_account_name=RANDO_1), False),
+
+      (MINTER, "mint_card", dict(card_id=card_id_2, to_account_name=RANDO_1), True),
+    ]
+  )
+
+  # Then
+  assert await _balance_of(ctx, MINTER, card_id_1) == to_uint(1)
+  assert await _balance_of(ctx, MINTER, card_id_2) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, card_id_1) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, card_id_2) == to_uint(1)
