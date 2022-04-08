@@ -4,7 +4,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.starknet.common.syscalls import get_caller_address
 
 from lib.roles.AccessControl_base import (
-  AccessControl_hasRole,
+  AccessControl_has_role,
 
   AccessControl_grant_role,
   AccessControl_revoke_role,
@@ -48,7 +48,7 @@ func Capper_onlyCapper{
     range_check_ptr
   }():
   let (caller) = get_caller_address()
-  let (has_role) = AccessControl_hasRole(CAPPER_ROLE, caller)
+  let (has_role) = AccessControl_has_role(CAPPER_ROLE, caller)
   assert has_role = TRUE
 
   return ()

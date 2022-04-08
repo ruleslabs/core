@@ -1,5 +1,4 @@
 %lang starknet
-%builtins pedersen range_check
 
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.cairo_builtins import HashBuiltin
@@ -8,33 +7,6 @@ from starkware.cairo.common.uint256 import Uint256
 from models.card import CardModel
 from models.metadata import Metadata
 from models.pack import PackCardModel, get_pack_max_supply
-
-# AccessControl/Ownable
-
-from lib.Ownable_base import (
-  Ownable_get_owner,
-
-  Ownable_initializer,
-  Ownable_only_owner,
-  Ownable_transfer_ownership
-)
-
-from lib.roles.AccessControl_base import (
-  AccessControl_hasRole,
-  AccessControl_rolesCount,
-  AccessControl_getRoleMember,
-
-  AccessControl_initializer
-)
-
-from lib.roles.minter import (
-  Minter_role,
-
-  Minter_initializer,
-  Minter_onlyMinter,
-  Minter_grant,
-  Minter_revoke
-)
 
 # Constants
 
@@ -77,29 +49,23 @@ func rules_cards_address_storage() -> (rules_cards_address: felt):
 end
 
 #
-# Constructor
+# Initializer
 #
 
-func constructor{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
+func RulesPacks_initializer{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
     range_check_ptr
-  }(owner: felt, _rules_cards_address: felt):
-    rules_cards_address_storage.write(_rules_cards_address)
-
-    Ownable_initializer(owner)
-    AccessControl_initializer(owner)
-    Minter_initializer(owner)
-
-    return ()
+  }(_rules_cards_address: felt):
+  rules_cards_address_storage.write(_rules_cards_address)
+  return ()
 end
 
 #
 # Getters
 #
 
-@view
-func packExists{
+func RulesPacks_pack_exists{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
@@ -117,28 +83,25 @@ func packExists{
   end
 end
 
-@view
-func getPackCardModelQuantity{
+func RulesPacks_pack_card_model_quantity{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(pack_id: Uint256, card_model: CardModel) -> (quantity: felt):
+  }(pack_id: Uint256, card_model: CardModel) -> (res: felt):
   let (quantity) = packs_card_models_quantity_storage.read(pack_id, card_model)
   return (quantity)
 end
 
-@view
-func getPackMaxSupply{
+func RulesPacks_pack_max_supply{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(pack_id: Uint256) -> (quantity: felt):
+  }(pack_id: Uint256) -> (max_supply: felt):
   let (max_supply) = packs_max_supply_storage.read(pack_id)
   return (max_supply)
 end
 
-@view
-func getPack{
+func RulesPacks_pack{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
@@ -149,10 +112,7 @@ func getPack{
   return (cards_per_pack, metadata)
 end
 
-# Other contracts
-
-@view
-func rulesCards{
+func RulesPacks_rules_cards_address{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
@@ -162,11 +122,14 @@ func rulesCards{
 end
 
 #
-# Externals
+# Setters
 #
 
-@external
-func createPack{
+#
+# Business logic
+#
+
+func RulesPacks_create_pack{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr

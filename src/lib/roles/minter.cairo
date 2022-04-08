@@ -4,7 +4,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.starknet.common.syscalls import get_caller_address
 
 from lib.roles.AccessControl_base import (
-  AccessControl_hasRole,
+  AccessControl_has_role,
 
   AccessControl_grant_role,
   AccessControl_revoke_role,
@@ -42,13 +42,13 @@ end
 # Externals
 #
 
-func Minter_onlyMinter{
+func Minter_only_minter{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
   }():
   let (caller) = get_caller_address()
-  let (has_role) = AccessControl_hasRole(MINTER_ROLE, caller)
+  let (has_role) = AccessControl_has_role(MINTER_ROLE, caller)
   assert has_role = TRUE
 
   return ()

@@ -15,9 +15,9 @@ from lib.Ownable_base import (
 )
 
 from lib.roles.AccessControl_base import (
-  AccessControl_hasRole,
-  AccessControl_rolesCount,
-  AccessControl_getRoleMember,
+  AccessControl_has_role,
+  AccessControl_roles_count,
+  AccessControl_role_member,
 
   AccessControl_initializer
 )
@@ -26,7 +26,7 @@ from lib.roles.minter import (
   Minter_role,
 
   Minter_initializer,
-  Minter_onlyMinter,
+  Minter_only_minter,
   Minter_grant,
   Minter_revoke
 )
@@ -92,7 +92,7 @@ func getRoleMember{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(role: felt, index: felt) -> (account: felt):
-  let (account) = AccessControl_getRoleMember(role, index)
+  let (account) = AccessControl_role_member(role, index)
   return (account)
 end
 
@@ -102,7 +102,7 @@ func getRoleMemberCount{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(role: felt) -> (count: felt):
-  let (count) = AccessControl_rolesCount(role)
+  let (count) = AccessControl_roles_count(role)
   return (count)
 end
 
@@ -112,7 +112,7 @@ func hasRole{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(role: felt, account: felt) -> (has_role: felt):
-  let (has_role) = AccessControl_hasRole(role, account)
+  let (has_role) = AccessControl_has_role(role, account)
   return (has_role)
 end
 
@@ -162,7 +162,7 @@ func createArtist{
   let (exists) = artistExists(artist_name)
   assert exists = 0 # Artist already exists
 
-  Minter_onlyMinter()
+  Minter_only_minter()
 
   assert_artist_name_well_formed(artist_name) # Invalid artist name
 

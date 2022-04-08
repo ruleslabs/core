@@ -6,7 +6,8 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.uint256 import Uint256
 from starkware.cairo.common.registers import get_fp_and_pc
 
-from models.card import Card, Metadata
+from models.metadata import Metadata
+from models.card import Card
 
 from token.ERC1155.ERC1155_base import (
   ERC1155_name,
@@ -40,9 +41,9 @@ from lib.Ownable_base import (
 )
 
 from lib.roles.AccessControl_base import (
-  AccessControl_hasRole,
-  AccessControl_rolesCount,
-  AccessControl_getRoleMember,
+  AccessControl_has_role,
+  AccessControl_roles_count,
+  AccessControl_role_member,
 
   AccessControl_initializer
 )
@@ -51,7 +52,7 @@ from lib.roles.minter import (
   Minter_role,
 
   Minter_initializer,
-  Minter_onlyMinter,
+  Minter_only_minter,
   Minter_grant,
   Minter_revoke
 )
@@ -62,8 +63,8 @@ from openzeppelin.utils.constants import TRUE, FALSE
 
 # Interfaces
 
-from interfaces.IRulesCards import IRulesCards
-from interfaces.IRulesPacks import IRulesPacks
+from contracts.RulesCards.IRulesCards import IRulesCards
+from contracts.rulesPacks.IRulesPacks import IRulesPacks
 
 #
 # Storage
@@ -165,7 +166,7 @@ func getRoleMember{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(role: felt, index: felt) -> (account: felt):
-  let (account) = AccessControl_getRoleMember(role, index)
+  let (account) = AccessControl_role_member(role, index)
   return (account)
 end
 
@@ -175,7 +176,7 @@ func getRoleMemberCount{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(role: felt) -> (count: felt):
-  let (count) = AccessControl_rolesCount(role)
+  let (count) = AccessControl_roles_count(role)
   return (count)
 end
 
@@ -185,7 +186,7 @@ func hasRole{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(role: felt, account: felt) -> (has_role: felt):
-  let (has_role) = AccessControl_hasRole(role, account)
+  let (has_role) = AccessControl_has_role(role, account)
   return (has_role)
 end
 
@@ -304,7 +305,7 @@ func createAndMintCard{
   }(card: Card, metadata: Metadata, to: felt) -> (token_id: Uint256):
   alloc_locals
 
-  Minter_onlyMinter()
+  Minter_only_minter()
 
   let (rules_cards_address) = rules_cards_address_storage.read()
   let (local card_id) = IRulesCards.createCard(rules_cards_address, card, metadata)
@@ -321,7 +322,7 @@ func mintCard{
     range_check_ptr
   }(card_id: Uint256, to: felt) -> (token_id: Uint256):
 
-  Minter_onlyMinter()
+  Minter_only_minter()
 
   let (rules_cards_address) = rules_cards_address_storage.read()
 

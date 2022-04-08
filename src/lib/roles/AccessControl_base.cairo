@@ -53,7 +53,7 @@ end
 # Getters
 #
 
-func AccessControl_hasRole{
+func AccessControl_has_role{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
@@ -64,7 +64,7 @@ func AccessControl_hasRole{
   return (has_role)
 end
 
-func AccessControl_rolesCount{
+func AccessControl_roles_count{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
@@ -74,7 +74,7 @@ func AccessControl_rolesCount{
   return (accounts_len)
 end
 
-func AccessControl_getRoleMember{
+func AccessControl_role_member{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
@@ -93,7 +93,7 @@ func AccessControl_only_admin{
     range_check_ptr
   }():
   let (caller) = get_caller_address()
-  let (has_role) = AccessControl_hasRole(ADMIN_ROLE, caller)
+  let (has_role) = AccessControl_has_role(ADMIN_ROLE, caller)
   assert has_role = TRUE
 
   return ()
