@@ -57,9 +57,10 @@ async def build_copyable_deployment():
 
   defs = SimpleNamespace(
     account=get_contract_def("openzeppelin/account/Account.cairo"),
-    rulesData=get_contract_def("RulesData.cairo"),
-    rulesCards=get_contract_def("RulesCards.cairo"),
-    rulesTokens=get_contract_def("RulesTokens.cairo")
+    rulesData=get_contract_def("contracts/RulesData/RulesData.cairo"),
+    rulesCards=get_contract_def("contracts/RulesCards/RulesCards.cairo"),
+    rulesPacks=get_contract_def("contracts/RulesPacks/RulesPacks.cairo"),
+    rulesTokens=get_contract_def("contracts/RulesTokens/RulesTokens.cairo")
   )
 
   signers = dict(
@@ -92,6 +93,14 @@ async def build_copyable_deployment():
     ]
   )
 
+  rulesPacks = await starknet.deploy(
+    contract_def=defs.rulesPacks,
+    constructor_calldata=[
+      accounts.owner.contract_address, # owner
+      rulesCards.contract_address
+    ]
+  )
+
   rulesTokens = await starknet.deploy(
     contract_def=defs.rulesTokens,
     constructor_calldata=[
@@ -99,7 +108,7 @@ async def build_copyable_deployment():
       0x5354414D50, # symbol
       accounts.owner.contract_address, # owner
       rulesCards.contract_address,
-      0
+      rulesPacks.contract_address
     ]
   )
 
@@ -118,6 +127,13 @@ async def build_copyable_deployment():
     [rulesTokens.contract_address]
   )
 
+  # await signers["owner"].send_transaction(
+  #   accounts.owner,
+  #   rulesPacks.contract_address,
+  #   "addMinter",
+  #   [rulesTokens.contract_address]
+  # )
+
   return SimpleNamespace(
     starknet=starknet,
     signers=signers,
@@ -129,6 +145,7 @@ async def build_copyable_deployment():
       minter=serialize_contract(accounts.minter, defs.account.abi),
       rulesData=serialize_contract(rulesData, defs.rulesData.abi),
       rulesCards=serialize_contract(rulesCards, defs.rulesCards.abi),
+      rulesPacks=serialize_contract(rulesPacks, defs.rulesPacks.abi),
       rulesTokens=serialize_contract(rulesTokens, defs.rulesTokens.abi)
     )
   )
