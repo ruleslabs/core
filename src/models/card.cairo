@@ -4,7 +4,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.math import unsigned_div_rem
 from starkware.cairo.common.alloc import alloc
 from lib.keccak import keccak256
-from starkware.cairo.common.math import assert_le, assert_not_zero
+from starkware.cairo.common.math import assert_le
 from starkware.cairo.common.uint256 import (
   Uint256, uint256_eq, uint256_check
 )
@@ -27,11 +27,6 @@ const MASK = 2 ** 64 - 1
 #
 # Structs
 #
-
-struct Metadata:
-  member hash: Uint256
-  member multihash_identifier: felt
-end
 
 struct CardModel:
   member artist_name: Uint256
@@ -71,24 +66,6 @@ func card_is_null{
   return (TRUE)
 end
 
-func assert_card_well_formed{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(card: Card):
-  uint256_check(card.model.artist_name)
-
-  assert_le(card.model.season, SEASON_MAX)
-  assert_le(card.model.scarcity, SCARCITY_MAX)
-  assert_le(card.serial_number, SERIAL_NUMBER_MAX)
-
-  assert_le(SEASON_MIN, card.model.season)
-  assert_le(SCARCITY_MIN, card.model.scarcity)
-  assert_le(SERIAL_NUMBER_MIN, card.serial_number)
-
-  return ()
-end
-
 func get_card_id_from_card{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
@@ -97,7 +74,7 @@ func get_card_id_from_card{
   }(card: Card) -> (card_id: Uint256):
   alloc_locals
 
-  assert_card_well_formed(card)
+  _assert_card_well_formed(card)
 
   let (local keccak_ptr : felt*) = alloc()
   let (local keccak_input : felt*) = alloc()
@@ -154,4 +131,26 @@ func get_card_id_from_card{
   let high = keccak_output[2] * SHIFT + keccak_output[3]
 
   return (card_id = Uint256(low, high))
+end
+
+#
+# Internals
+#
+
+func _assert_card_well_formed{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(card: Card):
+  uint256_check(card.model.artist_name)
+
+  assert_le(card.model.season, SEASON_MAX)
+  assert_le(card.model.scarcity, SCARCITY_MAX)
+  assert_le(card.serial_number, SERIAL_NUMBER_MAX)
+
+  assert_le(SEASON_MIN, card.model.season)
+  assert_le(SCARCITY_MIN, card.model.scarcity)
+  assert_le(SERIAL_NUMBER_MIN, card.serial_number)
+
+  return ()
 end

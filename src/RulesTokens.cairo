@@ -60,12 +60,10 @@ from lib.roles.minter import (
 
 from openzeppelin.utils.constants import TRUE, FALSE
 
-#
-# Import interfaces
-#
+# Interfaces
 
 from interfaces.IRulesCards import IRulesCards
-# from interfaces.IRulesPacks import IRulesPacks
+from interfaces.IRulesPacks import IRulesPacks
 
 #
 # Storage

@@ -6,8 +6,9 @@ from starkware.cairo.common.math import assert_not_zero, assert_le
 from starkware.cairo.common.math_cmp import is_not_zero
 from starkware.cairo.common.uint256 import Uint256
 
+from model.metadata import Metadata
 from models.card import (
-  Card, Metadata, get_card_id_from_card, card_is_null
+  Card, get_card_id_from_card, card_is_null
 )
 
 # AccessControl/Ownable
@@ -60,9 +61,7 @@ from lib.scarcity.Scarcity_base import (
 
 from openzeppelin.utils.constants import TRUE, FALSE
 
-#
-# Import interfaces
-#
+# Interfaces
 
 from interfaces.IRulesData import IRulesData
 
