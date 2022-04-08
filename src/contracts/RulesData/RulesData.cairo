@@ -4,7 +4,11 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256
 
-from models.artist import assert_artist_name_well_formed
+from contracts.RulesData.library import (
+  RulesData_artist_exists,
+
+  RulesData_create_artist
+)
 
 from lib.Ownable_base import (
   Ownable_get_owner,
@@ -30,18 +34,6 @@ from lib.roles.minter import (
   Minter_grant,
   Minter_revoke
 )
-
-# Constants
-
-from openzeppelin.utils.constants import TRUE
-
-#
-# Storage
-#
-
-@storage_var
-func artists_storage(artist_name: Uint256) -> (exists: felt):
-end
 
 #
 # Constructor
@@ -122,13 +114,12 @@ func artistExists{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(artist_name: Uint256) -> (res: felt):
-  let (exists) = artists_storage.read(artist_name)
-
+  let (exists) = RulesData_artist_exists(artist_name)
   return (exists)
 end
 
 #
-# Externals
+# Business logic
 #
 
 # Roles
@@ -159,15 +150,8 @@ func createArtist{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(artist_name: Uint256):
-  let (exists) = artistExists(artist_name)
-  assert exists = 0 # Artist already exists
-
   Minter_only_minter()
-
-  assert_artist_name_well_formed(artist_name) # Invalid artist name
-
-  artists_storage.write(artist_name, TRUE)
-
+  RulesData_create_artist(artist_name)
   return ()
 end
 

@@ -50,6 +50,7 @@ from lib.roles.minter import (
 # Constructor
 #
 
+@constructor
 func constructor{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,

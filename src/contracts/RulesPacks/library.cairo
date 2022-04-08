@@ -122,10 +122,6 @@ func RulesPacks_rules_cards_address{
 end
 
 #
-# Setters
-#
-
-#
 # Business logic
 #
 
