@@ -2,16 +2,23 @@
 %builtins pedersen range_check bitwise
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
-from starkware.cairo.common.math import assert_not_zero, assert_le
-from starkware.cairo.common.math_cmp import is_not_zero
 from starkware.cairo.common.uint256 import Uint256
 
 from models.metadata import Metadata
-from models.card import (
-  Card, get_card_id_from_card, card_is_null
-)
+from models.card import Card, CardModel
 
-# AccessControl/Ownable
+# Libraries
+
+from contracts.RulesCards.library import (
+  RulesCards_card_model_available_supply,
+  RulesCards_card_exists,
+  RulesCards_rules_data,
+  RulesCards_card_id,
+  RulesCards_card,
+
+  RulesCards_initializer,
+  RulesCards_create_card,
+)
 
 from lib.Ownable_base import (
   Ownable_get_owner,
@@ -47,10 +54,8 @@ from lib.roles.capper import (
   Capper_revoke
 )
 
-# Supply
-
 from lib.scarcity.Scarcity_base import (
-  Scarcity_supply,
+  Scarcity_max_supply,
   Scarcity_productionStopped,
 
   Scarcity_addScarcity,
@@ -66,22 +71,6 @@ from openzeppelin.utils.constants import TRUE, FALSE
 from contracts.RulesData.IRulesData import IRulesData
 
 #
-# Storage
-#
-
-@storage_var
-func cards_storage(card_id: Uint256) -> (card: Card):
-end
-
-@storage_var
-func cards_metadata_storage(card_id: Uint256) -> (metadata: Metadata):
-end
-
-@storage_var
-func rules_data_address_storage() -> (rules_data_address: felt):
-end
-
-#
 # Constructor
 #
 
@@ -92,13 +81,12 @@ func constructor{
     bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
   }(owner: felt, _rules_data_address: felt):
-  rules_data_address_storage.write(_rules_data_address)
-
   Ownable_initializer(owner)
   AccessControl_initializer(owner)
   Capper_initializer(owner)
   Minter_initializer(owner)
 
+  RulesCards_initializer(_rules_data_address)
   return ()
 end
 
@@ -174,18 +162,8 @@ func cardExists{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(card_id: Uint256) -> (res: felt):
-  let (card) = cards_storage.read(card_id)
-  let (is_null) = card_is_null(card)
-
-  tempvar syscall_ptr = syscall_ptr
-  tempvar pedersen_ptr = pedersen_ptr
-  tempvar range_check_ptr = range_check_ptr
-
-  if is_null == 1:
-      return (FALSE)
-  else:
-      return (TRUE)
-  end
+  let (exists) = RulesCards_card_exists(card_id)
+  return (exists)
 end
 
 @view
@@ -194,9 +172,7 @@ func getCard{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(card_id: Uint256) -> (card: Card, metadata: Metadata):
-  let (card) = cards_storage.read(card_id)
-  let (metadata) = cards_metadata_storage.read(card_id)
-
+  let (card, metadata) = RulesCards_card(card_id)
   return (card, metadata)
 end
 
@@ -207,8 +183,7 @@ func getCardId{
     bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
   }(card: Card) -> (card_id: Uint256):
-  let (card_id) = get_card_id_from_card(card)
-
+  let (card_id) = RulesCards_card_id(card)
   return (card_id)
 end
 
@@ -220,7 +195,7 @@ func getSupplyForSeasonAndScarcity{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(season: felt, scarcity: felt) -> (supply: felt):
-  let (supply) = Scarcity_supply(season, scarcity)
+  let (supply) = Scarcity_max_supply(season, scarcity)
   return (supply)
 end
 
@@ -234,6 +209,16 @@ func productionStoppedForSeasonAndScarcity{
   return (stopped)
 end
 
+@view
+func getCardModelAvailableSupply{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(card_model: CardModel) -> (supply: felt):
+  let (supply) = RulesCards_card_model_available_supply(card_model)
+  return (supply)
+end
+
 # Other contracts
 
 @view
@@ -242,7 +227,7 @@ func rulesData{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }() -> (address: felt):
-  let (address) = rules_data_address_storage.read()
+  let (address) = RulesCards_rules_data()
   return (address)
 end
 
@@ -327,39 +312,9 @@ func createCard{
     bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
   }(card: Card, metadata: Metadata) -> (card_id: Uint256):
-  alloc_locals
-
   Minter_only_minter()
 
-  let (rules_data_address) = rules_data_address_storage.read()
-
-  let (artist_exists) = IRulesData.artistExists(rules_data_address, card.model.artist_name)
-  assert_not_zero(artist_exists) # Unknown artist
-
-  # Check is production is stopped for this scarcity and season
-  let (stopped) = Scarcity_productionStopped(card.model.season, card.model.scarcity)
-  assert stopped = FALSE # Production is stopped
-
-  # Check if the serial_number is valid, given the scarcity supply
-  let (supply) = Scarcity_supply(card.model.season, card.model.scarcity)
-  let (is_supply_set) = is_not_zero(supply)
-
-  if is_supply_set == TRUE:
-    assert_le(card.serial_number, supply) # Invalid serial
-    tempvar range_check_ptr = range_check_ptr
-  else:
-    tempvar range_check_ptr = range_check_ptr
-  end
-
-  # Check if card already exists
-  let (local card_id) = get_card_id_from_card(card)
-
-  let (exists) = cardExists(card_id)
-  assert exists = FALSE # Card already exists
-
-  cards_storage.write(card_id, card)
-  cards_metadata_storage.write(card_id, metadata)
-
+  let (card_id) = RulesCards_create_card(card, metadata)
   return (card_id)
 end
 
