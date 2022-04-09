@@ -5,11 +5,11 @@ from functools import reduce
 from starkware.starknet.compiler.compile import compile_starknet_files
 from starkware.crypto.signature.signature import private_to_stark_key, sign
 from starkware.starknet.public.abi import get_selector_from_name
-from starkware.starknet.core.os.transaction_hash import calculate_transaction_hash_common, TransactionHashPrefix
+from starkware.starknet.core.os.transaction_hash.transaction_hash import calculate_transaction_hash_common, TransactionHashPrefix
 from starkware.starknet.definitions.general_config import StarknetChainId
 from itertools import chain
 
-
+SERIAL_NUMBER_MAX = 2 ** 32 - 1
 TRANSACTION_VERSION = 0
 
 _root = Path(__file__).parent.parent
@@ -123,7 +123,7 @@ def to_starknet_args(data):
       items.extend([*to_starknet_args(d)])
     elif type(d) is list:
       items.append(len(d))
-      items.extend([*to_starknet_args(*d)])
+      items.extend([*to_starknet_args(tuple(d))])
     else:
       items.append(d)
 

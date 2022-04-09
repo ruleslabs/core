@@ -5,7 +5,7 @@ from starkware.starknet.definitions.error_codes import StarknetErrorCode
 
 from utils import (
   dict_to_tuple, to_starknet_args, update_card, get_contract, get_method, to_uint, get_account_address,
-  felts_to_string, felts_to_ascii, from_uint
+  felts_to_string, felts_to_ascii, from_uint, update_dict, SERIAL_NUMBER_MAX
 )
 
 # Artist
@@ -232,6 +232,13 @@ async def _get_total_supply(ctx, token_id):
   ).result
   return supply
 
+
+async def _get_card_model_available_supply(ctx, card_model):
+  (available_supply,) = (
+    await ctx.rulesCards.getCardModelAvailableSupply(dict_to_tuple(card_model)).call()
+  ).result
+  return available_supply
+
 ############
 # SCENARIO #
 ############
@@ -331,12 +338,21 @@ MINTER_ROLE = "MINTER_ROLE"
 CAPPER_ROLE = "CAPPER_ROLE"
 ROLES = dict(MINTER_ROLE="Minter", CAPPER_ROLE="Capper")
 
-ARTIST_1 = (0x416C7068612057616E6E, 0)
 METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
+
+ARTIST_1 = (0x416C7068612057616E6E, 0)
+ARTIST_2 = (0x5A6575, 0)
+
 CARD_MODEL_1 = dict(artist_name=ARTIST_1, season=1, scarcity=0)
+CARD_MODEL_2 = dict(artist_name=ARTIST_2, season=1, scarcity=0)
+
 CARD_1 = dict(model=CARD_MODEL_1, serial_number=1)
 
-PACK_1 = dict(cards_per_pack=3, pack_card_models=[dict(card_model=CARD_MODEL_1, quantity=12)])
+PACK_CARD_MODELS=[
+  dict(card_model=CARD_MODEL_1, quantity=10),
+  dict(card_model=CARD_MODEL_2, quantity=5),
+]
+PACK_1 = dict(cards_per_pack=3, pack_card_models=PACK_CARD_MODELS)
 
 #########
 # TESTS #
@@ -533,7 +549,7 @@ async def test_settle_where_capper_add_scarcity_levels(ctx_factory):
   ctx = ctx_factory()
 
   # Given
-  assert await _get_supply_for_season_and_scarcity(ctx, 1, 0) == 0
+  assert await _get_supply_for_season_and_scarcity(ctx, 1, 0) == SERIAL_NUMBER_MAX
   assert await _get_supply_for_season_and_scarcity(ctx, 1, 1) == 0
   assert await _get_supply_for_season_and_scarcity(ctx, 1, 2) == 0
   assert await _get_supply_for_season_and_scarcity(ctx, 0, 1) == 0
@@ -554,7 +570,7 @@ async def test_settle_where_capper_add_scarcity_levels(ctx_factory):
   )
 
   # Then
-  assert await _get_supply_for_season_and_scarcity(ctx, 1, 0) == 0
+  assert await _get_supply_for_season_and_scarcity(ctx, 1, 0) == SERIAL_NUMBER_MAX
   assert await _get_supply_for_season_and_scarcity(ctx, 1, 1) == 1000
   assert await _get_supply_for_season_and_scarcity(ctx, 1, 2) == 500
   assert await _get_supply_for_season_and_scarcity(ctx, 2, 1) == 1
@@ -710,8 +726,6 @@ async def test_settle_where_minter_create_and_mint_card_and_check_token_uri(ctx_
   )
 
   # Then
-  print(card_id_1)
-  print(await _get_token_uri(ctx, card_id_1))
   assert felts_to_ascii(await _get_token_uri(ctx, card_id_1)) == token_uri
 
 
@@ -765,11 +779,80 @@ async def test_settle_where_minter_creates_pack(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (OWNER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), False),
       (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (OWNER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), False),
+
+      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+
       (OWNER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
     ]
   )
 
   # Then
   assert await _pack_exists(ctx, pack_id) == 1
+
+
+@pytest.mark.asyncio
+async def test_settle_where_minter_creates_invalid_pack(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  pack_id = to_uint(1)
+  assert await _pack_exists(ctx, pack_id) == 0
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+
+      (OWNER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=4), metadata=METADATA_1), False),
+      (OWNER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=15), metadata=METADATA_1), False),
+    ]
+  )
+
+  # Then
+  assert await _pack_exists(ctx, pack_id) == 0
+
+
+@pytest.mark.asyncio
+async def test_settle_where_minter_saturates_card_model_supply(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  pack_id_1 = to_uint(1)
+  pack_id_2 = to_uint(2)
+  assert await _pack_exists(ctx, pack_id_1) == 0
+  assert await _pack_exists(ctx, pack_id_2) == 0
+
+  NEW_CARD_MODEL = update_dict(CARD_MODEL_1, scarcity=1)
+  NEW_CARD = update_dict(CARD_1, model=NEW_CARD_MODEL)
+  NEW_PACK = update_dict(
+    PACK_1,
+    pack_card_models=PACK_1["pack_card_models"] + [dict(card_model=NEW_CARD_MODEL, quantity=33)]
+  )
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+
+      (OWNER, "add_scarcity_for_season", dict(season=1, supply=100), True),
+
+      (OWNER, "create_pack", dict(pack=NEW_PACK, metadata=METADATA_1), True),
+      (OWNER, "create_pack", dict(pack=NEW_PACK, metadata=METADATA_1), True),
+
+      (OWNER, "create_card", dict(card=update_card(NEW_CARD, serial_number=1), metadata=METADATA_1), True),
+      (OWNER, "create_card", dict(card=update_card(NEW_CARD, serial_number=2), metadata=METADATA_1), True),
+
+      (OWNER, "create_pack", dict(pack=NEW_PACK, metadata=METADATA_1), False),
+    ]
+  )
+
+  # Then
+  assert await _pack_exists(ctx, pack_id_1) == 1
+  assert await _pack_exists(ctx, pack_id_2) == 1
+  assert await _get_card_model_available_supply(ctx, NEW_CARD_MODEL) == 32

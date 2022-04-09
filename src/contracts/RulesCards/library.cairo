@@ -187,6 +187,9 @@ func RulesCards_create_card{
   let (exists) = RulesCards_card_exists(card_id)
   assert exists = FALSE # Card already exists
 
+  let (supply) = card_models_supply_storage.read(card.model)
+  card_models_supply_storage.write(card.model, supply + 1)
+
   cards_storage.write(card_id, card)
   cards_metadata_storage.write(card_id, metadata)
 

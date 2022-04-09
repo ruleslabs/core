@@ -32,9 +32,9 @@ func get_pack_max_supply{
 
   _assert_pack_well_formed(cards_per_pack)
 
-  let (total) = _total_number_of_cards(pack_card_models, pack_card_models_len)
+  let (local total) = _total_number_of_cards(pack_card_models_len, pack_card_models)
   let (_, remainder) = unsigned_div_rem(total, cards_per_pack)
-  with_attr error_message("card models quantities and cards per pack are not compatible"):
+  with_attr error_message("card models quantities and cards per pack are not compatible: {total} / {cards_per_pack}"):
     assert remainder = 0
   end
 
@@ -52,11 +52,11 @@ func _assert_pack_well_formed{ range_check_ptr }(cards_per_pack: felt):
   return ()
 end
 
-func _total_number_of_cards(pack_card_models: PackCardModel*, pack_card_models_len: felt) -> (total: felt):
+func _total_number_of_cards(pack_card_models_len: felt, pack_card_models: PackCardModel*) -> (total: felt):
   if pack_card_models_len == 0:
     return (0)
   end
 
-  let (total) = _total_number_of_cards(pack_card_models + 1, pack_card_models_len - 1)
-  return (total + pack_card_models.quantity)
+  let (total) = _total_number_of_cards(pack_card_models_len=pack_card_models_len - 1, pack_card_models=pack_card_models + 1)
+  return (total + [pack_card_models].quantity)
 end
