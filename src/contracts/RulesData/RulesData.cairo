@@ -4,6 +4,8 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256
 
+# Libraries
+
 from contracts.RulesData.library import (
   RulesData_artist_exists,
 
@@ -151,6 +153,7 @@ func createArtist{
     range_check_ptr
   }(artist_name: Uint256):
   Minter_only_minter()
+
   RulesData_create_artist(artist_name)
   return ()
 end

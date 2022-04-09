@@ -127,6 +127,20 @@ async def build_copyable_deployment():
     [rulesTokens.contract_address]
   )
 
+  await signers["owner"].send_transaction(
+    accounts.owner,
+    rulesCards.contract_address,
+    "addPacker",
+    [rulesPacks.contract_address]
+  )
+
+  await signers["owner"].send_transaction(
+    accounts.owner,
+    rulesCards.contract_address,
+    "revokePacker",
+    [accounts.owner.contract_address]
+  )
+
   # await signers["owner"].send_transaction(
   #   accounts.owner,
   #   rulesPacks.contract_address,

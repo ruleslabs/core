@@ -4,6 +4,12 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256
 
+from models.card import CardModel
+from models.metadata import Metadata
+from models.pack import PackCardModel
+
+# Libraries
+
 from contracts.RulesPacks.library import (
   RulesPacks_pack_exists,
   RulesPacks_pack_card_model_quantity,
@@ -14,12 +20,6 @@ from contracts.RulesPacks.library import (
   RulesPacks_initializer,
   RulesPacks_create_pack,
 )
-
-from models.card import CardModel
-from models.metadata import Metadata
-from models.pack import PackCardModel
-
-# AccessControl/Ownable
 
 from lib.Ownable_base import (
   Ownable_get_owner,

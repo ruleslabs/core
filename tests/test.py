@@ -4,7 +4,7 @@ from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.definitions.error_codes import StarknetErrorCode
 
 from utils import (
-  dict_to_tuple, to_flat_tuple, update_card, get_contract, get_method, to_uint, get_account_address,
+  dict_to_tuple, to_starknet_args, update_card, get_contract, get_method, to_uint, get_account_address,
   felts_to_string, felts_to_ascii, from_uint
 )
 
@@ -32,7 +32,7 @@ async def _create_card(ctx, signer_account_name, card, metadata):
     signer_account_name,
     ctx.rulesCards.contract_address,
     "createCard",
-    [*to_flat_tuple(card), *to_flat_tuple(metadata)]
+    [*to_starknet_args(card), *to_starknet_args(metadata)]
   )
 
 
@@ -48,6 +48,24 @@ async def _get_card_id(ctx, card):
     await ctx.rulesCards.getCardId(dict_to_tuple(card)).call()
   ).result
   return tuple(tuple(card_id)[0])
+
+# Packs
+
+async def _create_pack(ctx, signer_account_name, pack, metadata):
+  print([*to_starknet_args(pack), *to_starknet_args(metadata)])
+  await ctx.execute(
+    signer_account_name,
+    ctx.rulesPacks.contract_address,
+    "createPack",
+    [*to_starknet_args(pack), *to_starknet_args(metadata)]
+  )
+
+
+async def _pack_exists(ctx, pack_id):
+  (exists,) = (
+    await ctx.rulesPacks.packExists(pack_id).call()
+  ).result
+  return exists
 
 # Token URI
 
@@ -186,7 +204,7 @@ async def _create_and_mint_card(ctx, signer_account_name, card, metadata, to_acc
     signer_account_name,
     ctx.rulesTokens.contract_address,
     "createAndMintCard",
-    [*to_flat_tuple(card), *to_flat_tuple(metadata), to_account_address]
+    [*to_starknet_args(card), *to_starknet_args(metadata), to_account_address]
   )
 
 async def _mint_card(ctx, signer_account_name, card_id, to_account_address):
@@ -194,7 +212,7 @@ async def _mint_card(ctx, signer_account_name, card_id, to_account_address):
     signer_account_name,
     ctx.rulesTokens.contract_address,
     "mintCard",
-    [*to_flat_tuple(card_id), to_account_address]
+    [*to_starknet_args(card_id), to_account_address]
   )
 
 # Balance and supply
@@ -239,6 +257,9 @@ class ScenarioState:
     to_account_address = get_account_address(self.ctx, to_account_name)
 
     await _mint_card(self.ctx, signer_account_name, card_id, to_account_address)
+
+  async def create_pack(self, signer_account_name, pack, metadata):
+    await _create_pack(self.ctx, signer_account_name, pack, metadata)
 
   async def set_base_token_uri(self, signer_account_name, base_token_uri):
     await _set_base_token_uri(self.ctx, signer_account_name, base_token_uri)
@@ -314,6 +335,8 @@ ARTIST_1 = (0x416C7068612057616E6E, 0)
 METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
 CARD_MODEL_1 = dict(artist_name=ARTIST_1, season=1, scarcity=0)
 CARD_1 = dict(model=CARD_MODEL_1, serial_number=1)
+
+PACK_1 = dict(cards_per_pack=3, pack_card_models=[dict(card_model=CARD_MODEL_1, quantity=12)])
 
 #########
 # TESTS #
@@ -728,3 +751,25 @@ async def test_settle_where_minter_create_cards_and_mint_them(ctx_factory):
   assert await _balance_of(ctx, MINTER, card_id_2) == to_uint(0)
   assert await _balance_of(ctx, RANDO_1, card_id_1) == to_uint(0)
   assert await _balance_of(ctx, RANDO_1, card_id_2) == to_uint(1)
+
+
+@pytest.mark.asyncio
+async def test_settle_where_minter_creates_pack(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  pack_id = to_uint(1)
+  assert await _pack_exists(ctx, pack_id) == 0
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (OWNER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), False),
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (OWNER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+    ]
+  )
+
+  # Then
+  assert await _pack_exists(ctx, pack_id) == 1

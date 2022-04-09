@@ -6,6 +6,7 @@ from starkware.cairo.common.uint256 import Uint256
 
 from models.metadata import Metadata
 from models.card import Card, CardModel
+from models.pack import PackCardModel
 
 # Libraries
 
@@ -18,6 +19,7 @@ from contracts.RulesCards.library import (
 
   RulesCards_initializer,
   RulesCards_create_card,
+  RulesCards_pack_card_model,
 )
 
 from lib.Ownable_base import (
@@ -49,9 +51,18 @@ from lib.roles.capper import (
   Capper_role,
 
   Capper_initializer,
-  Capper_onlyCapper,
+  Capper_only_capper,
   Capper_grant,
   Capper_revoke
+)
+
+from lib.roles.packer import (
+  Packer_role,
+
+  Packer_initializer,
+  Packer_only_packer,
+  Packer_grant,
+  Packer_revoke
 )
 
 from lib.scarcity.Scarcity_base import (
@@ -84,6 +95,7 @@ func constructor{
   Ownable_initializer(owner)
   AccessControl_initializer(owner)
   Capper_initializer(owner)
+  Packer_initializer(owner)
   Minter_initializer(owner)
 
   RulesCards_initializer(_rules_data_address)
@@ -103,6 +115,16 @@ func CAPPER_ROLE{
     range_check_ptr
   }() -> (role: felt):
   let (role) = Capper_role()
+  return (role)
+end
+
+@view
+func PACKER_ROLE{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }() -> (role: felt):
+  let (role) = Packer_role()
   return (role)
 end
 
@@ -248,6 +270,16 @@ func addCapper{
 end
 
 @external
+func addPacker{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(account: felt):
+  Packer_grant(account)
+  return ()
+end
+
+@external
 func addMinter{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
@@ -264,6 +296,16 @@ func revokeCapper{
     range_check_ptr
   }(account: felt):
   Capper_revoke(account)
+  return ()
+end
+
+@external
+func revokePacker{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(account: felt):
+  Packer_revoke(account)
   return ()
 end
 
@@ -285,7 +327,7 @@ func addScarcityForSeason{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(season: felt, supply: felt) -> (scarcity: felt):
-  Capper_onlyCapper()
+  Capper_only_capper()
 
   let (scarcity) = Scarcity_addScarcity(season, supply)
   return (scarcity)
@@ -297,7 +339,7 @@ func stopProductionForSeasonAndScarcity{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(season: felt, scarcity: felt):
-  Capper_onlyCapper()
+  Capper_only_capper()
 
   Scarcity_stopProduction(season, scarcity)
   return ()
@@ -316,6 +358,18 @@ func createCard{
 
   let (card_id) = RulesCards_create_card(card, metadata)
   return (card_id)
+end
+
+@external
+func packCardModel{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    bitwise_ptr: BitwiseBuiltin*,
+    range_check_ptr
+  }(pack_card_model: PackCardModel):
+  Packer_only_packer()
+  RulesCards_pack_card_model(pack_card_model)
+  return ()
 end
 
 # Ownership

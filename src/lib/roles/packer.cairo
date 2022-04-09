@@ -15,18 +15,18 @@ from lib.roles.AccessControl_base import (
 
 from openzeppelin.utils.constants import TRUE, FALSE
 
-const CAPPER_ROLE = 0x4341505045525F524F4C45 # "CAPPER_ROLE"
+const PACKER_ROLE = 0x5041434B45525F524F4C45 # "PACKER_ROLE"
 
 #
 # Constructor
 #
 
-func Capper_initializer{
+func Packer_initializer{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
   }(admin: felt):
-  _grant_role(CAPPER_ROLE, admin)
+  _grant_role(PACKER_ROLE, admin)
   return ()
 end
 
@@ -34,40 +34,40 @@ end
 # Getters
 #
 
-func Capper_role{}() -> (role: felt):
-  return (CAPPER_ROLE)
+func Packer_role{}() -> (role: felt):
+  return (PACKER_ROLE)
 end
 
 #
 # Externals
 #
 
-func Capper_only_capper{
+func Packer_only_packer{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
   }():
   let (caller) = get_caller_address()
-  let (has_role) = AccessControl_has_role(CAPPER_ROLE, caller)
+  let (has_role) = AccessControl_has_role(PACKER_ROLE, caller)
   assert has_role = TRUE
 
   return ()
 end
 
-func Capper_grant{
+func Packer_grant{
     syscall_ptr : felt*,
     pedersen_ptr : HashBuiltin*,
     range_check_ptr
   }(account: felt):
-  AccessControl_grant_role(CAPPER_ROLE, account)
+  AccessControl_grant_role(PACKER_ROLE, account)
   return ()
 end
 
-func Capper_revoke{
+func Packer_revoke{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(account: felt) -> ():
-  AccessControl_revoke_role(CAPPER_ROLE, account)
+  AccessControl_revoke_role(PACKER_ROLE, account)
   return ()
 end

@@ -7,6 +7,7 @@ from starkware.cairo.common.uint256 import Uint256
 
 from models.metadata import Metadata
 from models.card import Card, CardModel, get_card_id_from_card, card_is_null
+from models.pack import PackCardModel
 
 # Libraries
 
@@ -190,4 +191,20 @@ func RulesCards_create_card{
   cards_metadata_storage.write(card_id, metadata)
 
   return (card_id)
+end
+
+func RulesCards_pack_card_model{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(pack_card_model: PackCardModel):
+  let (available_supply) = RulesCards_card_model_available_supply(pack_card_model.card_model)
+
+  with_attr error_message("Card model quantity too high"):
+    assert_le(pack_card_model.quantity, available_supply)
+  end
+
+  let (packed_supply) = card_models_packed_supply_storage.read(pack_card_model.card_model)
+  card_models_packed_supply_storage.write(pack_card_model.card_model, packed_supply + pack_card_model.quantity)
+  return ()
 end

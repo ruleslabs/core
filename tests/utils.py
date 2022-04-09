@@ -113,14 +113,17 @@ def dict_to_tuple(data):
   return tuple(dict_to_tuple(d) if type(d) is dict else d for d in data.values())
 
 
-def to_flat_tuple(data):
+def to_starknet_args(data):
   items = []
   values = data.values() if type(data) is dict else data
   for d in values:
     if type(d) is dict:
-      items.extend([*to_flat_tuple(d)])
+      items.extend([*to_starknet_args(d)])
     elif type(d) is tuple:
-      items.extend([*to_flat_tuple(d)])
+      items.extend([*to_starknet_args(d)])
+    elif type(d) is list:
+      items.append(len(d))
+      items.extend([*to_starknet_args(*d)])
     else:
       items.append(d)
 

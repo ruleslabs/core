@@ -8,6 +8,10 @@ from models.card import CardModel
 from models.metadata import Metadata
 from models.pack import PackCardModel, get_pack_max_supply
 
+# Interfaces
+
+from contracts.RulesCards.IRulesCards import IRulesCards
+
 # Constants
 
 from openzeppelin.utils.constants import TRUE, FALSE
@@ -171,7 +175,20 @@ func _write_pack_card_models_to_storage{
 
   packs_card_models_quantity_storage.write(pack_id, pack_card_model.card_model, pack_card_model.quantity)
   packs_card_models_storage.write(pack_id, index, pack_card_model)
+
+  _increase_pack_card_model_packed_supply(pack_card_model)
+
   _write_pack_card_models_to_storage(pack_id=pack_id, pack_card_models_len=index, pack_card_models=pack_card_models)
+  return ()
+end
+
+func _increase_pack_card_model_packed_supply{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(pack_card_model: PackCardModel):
+  let (rules_cards_address) = rules_cards_address_storage.read()
+  IRulesCards.packCardModel(rules_cards_address, pack_card_model)
 
   return ()
 end

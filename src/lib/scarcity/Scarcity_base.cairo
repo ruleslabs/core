@@ -6,6 +6,7 @@ from starkware.cairo.common.math_cmp import is_not_zero
 
 # Constants
 
+from models.card import SERIAL_NUMBER_MAX
 from openzeppelin.utils.constants import TRUE, FALSE
 
 const SCARCITY_SUPPLY_DIVISOR = 2
@@ -15,7 +16,7 @@ const SCARCITY_SUPPLY_DIVISOR = 2
 #
 
 @storage_var
-func scarcity_supply_storage(season: felt, scarcity: felt) -> (supply: felt):
+func scarcity_max_supply_storage(season: felt, scarcity: felt) -> (supply: felt):
 end
 
 @storage_var
@@ -42,12 +43,16 @@ end
 # Getters
 #
 
-func Scarcity_supply{
+func Scarcity_max_supply{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(season: felt, scarcity: felt) -> (supply: felt):
-  let (supply) = scarcity_supply_storage.read(season, scarcity)
+  }(season: felt, scarcity: felt) -> (max_supply: felt):
+  if scarcity == 0:
+    return (max_supply=SERIAL_NUMBER_MAX)
+  end
+
+  let (supply) = scarcity_max_supply_storage.read(season, scarcity)
   return (supply)
 end
 
@@ -74,7 +79,7 @@ func Scarcity_addScarcity{
   assert_not_zero(supply)
 
   let (local last_scarcity) = last_scarcity_storage.read(season)
-  let (last_supply) = scarcity_supply_storage.read(season, last_scarcity)
+  let (last_supply) = scarcity_max_supply_storage.read(season, last_scarcity)
 
   let (is_last_supply_set) = is_not_zero(last_supply)
 
@@ -85,7 +90,7 @@ func Scarcity_addScarcity{
     tempvar range_check_ptr = range_check_ptr
   end
 
-  scarcity_supply_storage.write(season, last_scarcity + 1, supply)
+  scarcity_max_supply_storage.write(season, last_scarcity + 1, supply)
   last_scarcity_storage.write(season, last_scarcity + 1)
 
   ScarcityAdded.emit(season, last_scarcity + 1, supply)
