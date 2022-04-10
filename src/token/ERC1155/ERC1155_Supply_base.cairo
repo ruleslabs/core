@@ -47,7 +47,7 @@ end
 # Externals
 #
 
-func ERC1155_Supply_beforeTokenTransfer{
+func ERC1155_Supply_before_token_transfer{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr

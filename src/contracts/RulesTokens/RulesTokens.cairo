@@ -1,13 +1,24 @@
 %lang starknet
 %builtins pedersen range_check
 
-from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.uint256 import Uint256
-from starkware.cairo.common.registers import get_fp_and_pc
 
 from models.metadata import Metadata
 from models.card import Card
+
+# Libraries
+
+from contracts.RulesTokens.library import (
+  RulesTokens_token_uri,
+  RulesTokens_card,
+  RulesTokens_rules_cards,
+  RulesTokens_rules_packs,
+
+  RulesTokens_initializer,
+  RulesTokens_create_and_mint_card,
+  RulesTokens_mint_card,
+)
 
 from token.ERC1155.ERC1155_base import (
   ERC1155_name,
@@ -15,21 +26,16 @@ from token.ERC1155.ERC1155_base import (
   ERC1155_balanceOf,
 
   ERC1155_initializer,
-  ERC1155_mint
 )
 
 from token.ERC1155.ERC1155_Metadata_base import (
-  ERC1155_Metadata_tokenURI,
-  ERC1155_Metadata_baseTokenURI,
+  ERC1155_Metadata_base_token_uri,
 
-  ERC1155_Metadata_setBaseTokenURI
+  ERC1155_Metadata_set_base_token_uri
 )
 
 from token.ERC1155.ERC1155_Supply_base import (
-  ERC1155_Supply_exists,
   ERC1155_Supply_totalSupply,
-
-  ERC1155_Supply_beforeTokenTransfer
 )
 
 from lib.Ownable_base import (
@@ -57,35 +63,6 @@ from lib.roles.minter import (
   Minter_revoke
 )
 
-# Constants
-
-from openzeppelin.utils.constants import TRUE, FALSE
-
-# Interfaces
-
-from contracts.RulesCards.IRulesCards import IRulesCards
-from contracts.rulesPacks.IRulesPacks import IRulesPacks
-
-#
-# Storage
-#
-
-@storage_var
-func rules_cards_address_storage() -> (rules_cards_address: felt):
-end
-
-@storage_var
-func rules_packs_address_storage() -> (rules_cards_address: felt):
-end
-
-#
-# Events
-#
-
-@event
-func Transfer(_from: felt, to: felt, token_id: Uint256, amount: Uint256):
-end
-
 #
 # Constructor
 #
@@ -103,14 +80,11 @@ func constructor{
     _rules_packs_address: felt,
   ):
   ERC1155_initializer(name, symbol)
-
   Ownable_initializer(owner)
   AccessControl_initializer(owner)
   Minter_initializer(owner)
 
-  rules_cards_address_storage.write(_rules_cards_address)
-  rules_packs_address_storage.write(_rules_packs_address)
-
+  RulesTokens_initializer(_rules_cards_address, _rules_packs_address)
   return ()
 end
 
@@ -196,12 +170,7 @@ func tokenURI{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(token_id: Uint256) -> (token_uri_len: felt, token_uri: felt*):
-  let (exists) = ERC1155_Supply_exists(token_id)
-  with_attr error_message("Token does not exist."):
-    assert exists = TRUE
-  end
-
-  let (token_uri_len, token_uri) = ERC1155_Metadata_tokenURI(token_id)
+  let (token_uri_len, token_uri) = RulesTokens_token_uri(token_id)
   return (token_uri_len, token_uri)
 end
 
@@ -211,7 +180,7 @@ func baseTokenURI{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }() -> (base_token_uri_len: felt, base_token_uri: felt*):
-  let (base_token_uri_len, base_token_uri) = ERC1155_Metadata_baseTokenURI()
+  let (base_token_uri_len, base_token_uri) = ERC1155_Metadata_base_token_uri()
   return (base_token_uri_len, base_token_uri)
 end
 
@@ -221,9 +190,7 @@ func getCard{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(card_id: Uint256) -> (card: Card, metadata: Metadata):
-  let (rules_cards_address) = rules_cards_address_storage.read()
-
-  let (card, metadata) = IRulesCards.getCard(rules_cards_address, card_id)
+  let (card, metadata) = RulesTokens_card(card_id)
   return (card, metadata)
 end
 
@@ -235,7 +202,7 @@ func rulesCards{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }() -> (address: felt):
-  let (address) = rules_cards_address_storage.read()
+  let (address) = RulesTokens_rules_cards()
   return (address)
 end
 
@@ -245,7 +212,7 @@ func rulesPacks{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }() -> (address: felt):
-  let (address) = rules_packs_address_storage.read()
+  let (address) = RulesTokens_rules_packs()
   return (address)
 end
 
@@ -272,7 +239,22 @@ func totalSupply{
 end
 
 #
-# Externals
+# Setters
+#
+
+@external
+func setBaseTokenURI{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(base_token_uri_len: felt, base_token_uri: felt*):
+  Ownable_only_owner()
+  ERC1155_Metadata_set_base_token_uri(base_token_uri_len, base_token_uri)
+  return ()
+end
+
+#
+# Business logic
 #
 
 # Roles
@@ -303,16 +285,9 @@ func createAndMintCard{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(card: Card, metadata: Metadata, to: felt) -> (token_id: Uint256):
-  alloc_locals
-
   Minter_only_minter()
-
-  let (rules_cards_address) = rules_cards_address_storage.read()
-  let (local card_id) = IRulesCards.createCard(rules_cards_address, card, metadata)
-
-  _mint_token(to, token_id = card_id, amount = Uint256(1, 0))
-
-  return (token_id = card_id)
+  let (token_id) = RulesTokens_create_and_mint_card(card, metadata, to)
+  return (token_id)
 end
 
 @external
@@ -321,33 +296,9 @@ func mintCard{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(card_id: Uint256, to: felt) -> (token_id: Uint256):
-
   Minter_only_minter()
-
-  let (rules_cards_address) = rules_cards_address_storage.read()
-
-  let (exists) = IRulesCards.cardExists(rules_cards_address, card_id)
-  assert exists = TRUE # card doesn't exist
-
-  let (exists) = ERC1155_Supply_exists(card_id)
-  assert exists = FALSE # token already minted
-
-  _mint_token(to, token_id = card_id, amount = Uint256(1, 0))
-
-  return (token_id = card_id)
-end
-
-@external
-func setBaseTokenURI{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(base_token_uri_len: felt, base_token_uri: felt*):
-
-  Ownable_only_owner()
-
-  ERC1155_Metadata_setBaseTokenURI(base_token_uri_len, base_token_uri)
-  return ()
+  let (token_id) = RulesTokens_mint_card(card_id, to)
+  return (token_id)
 end
 
 # Ownership
@@ -369,29 +320,5 @@ func renounceOwnership{
     range_check_ptr
   }():
   Ownable_transfer_ownership(0)
-  return ()
-end
-
-#
-# Internals
-#
-
-func _mint_token{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(to: felt, token_id: Uint256, amount: Uint256):
-  let (ids: Uint256*) = alloc()
-  assert ids[0] = token_id
-
-  let (amounts: Uint256*) = alloc()
-  assert amounts[0] = amount
-
-  ERC1155_Supply_beforeTokenTransfer(_from = 0, to = to, ids_len = 1, ids = ids, amounts = amounts)
-
-  ERC1155_mint(to, token_id, amount)
-
-  Transfer.emit(_from = 0, to = to, token_id = token_id, amount = amount)
-
   return ()
 end

@@ -52,7 +52,6 @@ async def _get_card_id(ctx, card):
 # Packs
 
 async def _create_pack(ctx, signer_account_name, pack, metadata):
-  print([*to_starknet_args(pack), *to_starknet_args(metadata)])
   await ctx.execute(
     signer_account_name,
     ctx.rulesPacks.contract_address,
