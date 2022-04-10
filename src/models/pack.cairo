@@ -57,6 +57,10 @@ func _total_number_of_cards(pack_card_models_len: felt, pack_card_models: PackCa
     return (0)
   end
 
-  let (total) = _total_number_of_cards(pack_card_models_len=pack_card_models_len - 1, pack_card_models=pack_card_models + 1)
+  # with_attr error_message("{[pack_card_models].quantity}, {pack_card_models_len}"):
+  #   assert_le([pack_card_models].quantity, 20)
+  # end
+
+  let (total) = _total_number_of_cards(pack_card_models_len=pack_card_models_len - 1, pack_card_models=pack_card_models + PackCardModel.SIZE)
   return (total + [pack_card_models].quantity)
 end

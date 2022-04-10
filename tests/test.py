@@ -772,8 +772,8 @@ async def test_settle_where_minter_creates_pack(ctx_factory):
   ctx = ctx_factory()
 
   # Given
-  pack_id = to_uint(1)
-  assert await _pack_exists(ctx, pack_id) == 0
+  assert await _pack_exists(ctx, to_uint(1)) == 0
+  assert await _pack_exists(ctx, to_uint(2)) == 0
 
   # When
   await run_scenario(
@@ -789,7 +789,8 @@ async def test_settle_where_minter_creates_pack(ctx_factory):
   )
 
   # Then
-  assert await _pack_exists(ctx, pack_id) == 1
+  assert await _pack_exists(ctx, to_uint(1)) == 1
+  assert await _pack_exists(ctx, to_uint(2)) == 0
 
 
 @pytest.mark.asyncio
@@ -797,8 +798,7 @@ async def test_settle_where_minter_creates_invalid_pack(ctx_factory):
   ctx = ctx_factory()
 
   # Given
-  pack_id = to_uint(1)
-  assert await _pack_exists(ctx, pack_id) == 0
+  assert await _pack_exists(ctx, to_uint(1)) == 0
 
   # When
   await run_scenario(
@@ -813,7 +813,7 @@ async def test_settle_where_minter_creates_invalid_pack(ctx_factory):
   )
 
   # Then
-  assert await _pack_exists(ctx, pack_id) == 0
+  assert await _pack_exists(ctx, to_uint(1)) == 0
 
 
 @pytest.mark.asyncio
@@ -821,16 +821,20 @@ async def test_settle_where_minter_saturates_card_model_supply(ctx_factory):
   ctx = ctx_factory()
 
   # Given
-  pack_id_1 = to_uint(1)
-  pack_id_2 = to_uint(2)
-  assert await _pack_exists(ctx, pack_id_1) == 0
-  assert await _pack_exists(ctx, pack_id_2) == 0
+  assert await _pack_exists(ctx, to_uint(1)) == 0
+  assert await _pack_exists(ctx, to_uint(2)) == 0
+  assert await _pack_exists(ctx, to_uint(3)) == 0
+  assert await _pack_exists(ctx, to_uint(4)) == 0
 
   NEW_CARD_MODEL = update_dict(CARD_MODEL_1, scarcity=1)
   NEW_CARD = update_dict(CARD_1, model=NEW_CARD_MODEL)
   NEW_PACK = update_dict(
     PACK_1,
-    pack_card_models=PACK_1["pack_card_models"] + [dict(card_model=NEW_CARD_MODEL, quantity=33)]
+    pack_card_models=PACK_1["pack_card_models"] + [dict(card_model=NEW_CARD_MODEL, quantity=20), dict(card_model=NEW_CARD_MODEL, quantity=13)]
+  )
+  NEW_PACK_2 = update_dict(
+    PACK_1,
+    pack_card_models=PACK_1["pack_card_models"] + [dict(card_model=NEW_CARD_MODEL, quantity=32), dict(card_model=CARD_MODEL_1, quantity=1)]
   )
 
   # When
@@ -849,10 +853,15 @@ async def test_settle_where_minter_saturates_card_model_supply(ctx_factory):
       (OWNER, "create_card", dict(card=update_card(NEW_CARD, serial_number=2), metadata=METADATA_1), True),
 
       (OWNER, "create_pack", dict(pack=NEW_PACK, metadata=METADATA_1), False),
+      (OWNER, "create_pack", dict(pack=NEW_PACK_2, metadata=METADATA_1), True),
+
+      (OWNER, "create_card", dict(card=update_card(NEW_CARD, serial_number=3), metadata=METADATA_1), False),
     ]
   )
 
   # Then
-  assert await _pack_exists(ctx, pack_id_1) == 1
-  assert await _pack_exists(ctx, pack_id_2) == 1
-  assert await _get_card_model_available_supply(ctx, NEW_CARD_MODEL) == 32
+  assert await _pack_exists(ctx, to_uint(1)) == 1
+  assert await _pack_exists(ctx, to_uint(2)) == 1
+  assert await _pack_exists(ctx, to_uint(3)) == 1
+  assert await _pack_exists(ctx, to_uint(4)) == 0
+  assert await _get_card_model_available_supply(ctx, NEW_CARD_MODEL) == 0
