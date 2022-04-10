@@ -37,7 +37,7 @@ func ERC1155_symbol_() -> (symbol: felt):
 end
 
 @storage_var
-func ERC721_balances(owner: felt, token_id: Uint256) -> (balance: Uint256):
+func ERC1155_balances(owner: felt, token_id: Uint256) -> (balance: Uint256):
 end
 
 #
@@ -85,7 +85,7 @@ func ERC1155_balanceOf{
   }(account: felt, token_id: Uint256) -> (balance: Uint256):
   uint256_check(token_id)
 
-  let (balance: Uint256) = ERC721_balances.read(account, token_id)
+  let (balance: Uint256) = ERC1155_balances.read(account, token_id)
   return (balance)
 end
 
@@ -109,10 +109,10 @@ func ERC1155_mint{
   assert is_amount_valid = 1 # mint null amount
 
   # Update balances
-  let (balance: Uint256) = ERC721_balances.read(to, token_id)
+  let (balance: Uint256) = ERC1155_balances.read(to, token_id)
 
-  let (new_balance: Uint256, _) = uint256_add(balance, Uint256(1, 0))
-  ERC721_balances.write(to, token_id, new_balance)
+  let (new_balance: Uint256, _) = uint256_add(balance, amount)
+  ERC1155_balances.write(to, token_id, new_balance)
 
   return ()
 end

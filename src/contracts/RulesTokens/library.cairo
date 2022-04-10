@@ -3,6 +3,7 @@
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.uint256 import Uint256
+from starkware.cairo.common.math import assert_le
 
 from models.metadata import Metadata
 from models.card import Card
@@ -19,6 +20,7 @@ from token.ERC1155.ERC1155_Metadata_base import (
 
 from token.ERC1155.ERC1155_Supply_base import (
   ERC1155_Supply_exists,
+  ERC1155_Supply_total_supply,
 
   ERC1155_Supply_before_token_transfer
 )
@@ -155,6 +157,31 @@ func RulesTokens_mint_card{
   return (token_id=card_id)
 end
 
+func RulesTokens_mint_pack{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(pack_id: Uint256, to: felt, amount: felt) -> (token_id: Uint256):
+  alloc_locals
+
+  let (rules_packs_address) = rules_packs_address_storage.read()
+  let (exists) = IRulesPacks.packExists(rules_packs_address, pack_id)
+  with_attr error_message("Pack does not exist"):
+    assert exists = TRUE
+  end
+
+  let (local supply) = ERC1155_Supply_total_supply(pack_id)
+  let (local max_supply) = IRulesPacks.getPackMaxSupply(rules_packs_address, pack_id)
+  local felt_supply = supply.low
+  with_attr error_message("Can't mint {amount} packs, amount too high. supply: {felt_supply}, max supply: {max_supply}"):
+    assert_le(amount + felt_supply, max_supply)
+  end
+
+  _mint_token(to, token_id=pack_id, amount=Uint256(amount, 0))
+
+  return (token_id=pack_id)
+end
+
 #
 # Internals
 #
@@ -170,11 +197,11 @@ func _mint_token{
   let (amounts: Uint256*) = alloc()
   assert amounts[0] = amount
 
-  ERC1155_Supply_before_token_transfer(_from = 0, to = to, ids_len = 1, ids = ids, amounts = amounts)
+  ERC1155_Supply_before_token_transfer(_from=0, to=to, ids_len=1, ids=ids, amounts=amounts)
 
   ERC1155_mint(to, token_id, amount)
 
-  Transfer.emit(_from = 0, to = to, token_id = token_id, amount = amount)
+  Transfer.emit(_from=0, to=to, token_id=token_id, amount=amount)
 
   return ()
 end

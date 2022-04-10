@@ -20,7 +20,7 @@ end
 # Getters
 #
 
-func ERC1155_Supply_totalSupply{
+func ERC1155_Supply_total_supply{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
@@ -36,7 +36,7 @@ func ERC1155_Supply_exists{
   }(token_id: Uint256) -> (res: felt):
   alloc_locals
 
-  let (total_supply) = ERC1155_Supply_totalSupply(token_id)
+  let (total_supply) = ERC1155_Supply_total_supply(token_id)
 
   # exists if 0 < total_supply
   let (exists) = uint256_lt(Uint256(0, 0), total_supply)

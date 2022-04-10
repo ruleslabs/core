@@ -18,6 +18,7 @@ from contracts.RulesTokens.library import (
   RulesTokens_initializer,
   RulesTokens_create_and_mint_card,
   RulesTokens_mint_card,
+  RulesTokens_mint_pack,
 )
 
 from token.ERC1155.ERC1155_base import (
@@ -35,7 +36,7 @@ from token.ERC1155.ERC1155_Metadata_base import (
 )
 
 from token.ERC1155.ERC1155_Supply_base import (
-  ERC1155_Supply_totalSupply,
+  ERC1155_Supply_total_supply,
 )
 
 from lib.Ownable_base import (
@@ -234,7 +235,7 @@ func totalSupply{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(token_id: Uint256) -> (supply: Uint256):
-  let (supply) = ERC1155_Supply_totalSupply(token_id)
+  let (supply) = ERC1155_Supply_total_supply(token_id)
   return (supply)
 end
 
@@ -279,6 +280,8 @@ func revokeMinter{
   return ()
 end
 
+# Cards
+
 @external
 func createAndMintCard{
     syscall_ptr: felt*,
@@ -298,6 +301,19 @@ func mintCard{
   }(card_id: Uint256, to: felt) -> (token_id: Uint256):
   Minter_only_minter()
   let (token_id) = RulesTokens_mint_card(card_id, to)
+  return (token_id)
+end
+
+# Packs
+
+@external
+func mintPack{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(pack_id: Uint256, to: felt, amount: felt) -> (token_id: Uint256):
+  Minter_only_minter()
+  let (token_id) = RulesTokens_mint_pack(pack_id, to, amount)
   return (token_id)
 end
 
