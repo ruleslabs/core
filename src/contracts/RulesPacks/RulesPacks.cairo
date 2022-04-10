@@ -67,6 +67,58 @@ end
 # Getters
 #
 
+# Roles
+
+@view
+func MINTER_ROLE{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }() -> (role: felt):
+  let (role) = Minter_role()
+  return (role)
+end
+
+@view
+func owner{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }() -> (owner: felt):
+  let (owner) = Ownable_get_owner()
+  return (owner)
+end
+
+@view
+func getRoleMember{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(role: felt, index: felt) -> (account: felt):
+  let (account) = AccessControl_role_member(role, index)
+  return (account)
+end
+
+@view
+func getRoleMemberCount{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(role: felt) -> (count: felt):
+  let (count) = AccessControl_roles_count(role)
+  return (count)
+end
+
+@view
+func hasRole{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(role: felt, account: felt) -> (has_role: felt):
+  let (has_role) = AccessControl_has_role(role, account)
+  return (has_role)
+end
+
 @view
 func packExists{
     syscall_ptr: felt*,
@@ -120,8 +172,30 @@ func rulesCards{
 end
 
 #
-# Setters
+# Business logic
 #
+
+# Roles
+
+@external
+func addMinter{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(account: felt):
+  Minter_grant(account)
+  return ()
+end
+
+@external
+func revokeMinter{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(account: felt):
+  Minter_revoke(account)
+  return ()
+end
 
 @external
 func createPack{
@@ -137,4 +211,26 @@ func createPack{
   Minter_only_minter()
   let (pack_id) = RulesPacks_create_pack(cards_per_pack, pack_card_models_len, pack_card_models, metadata)
   return (pack_id)
+end
+
+# Ownership
+
+@external
+func transferOwnership{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+  }(new_owner: felt) -> (new_owner: felt):
+  Ownable_transfer_ownership(new_owner)
+  return (new_owner)
+end
+
+@external
+func renounceOwnership{
+    syscall_ptr : felt*,
+    pedersen_ptr : HashBuiltin*,
+    range_check_ptr
+  }():
+  Ownable_transfer_ownership(0)
+  return ()
 end
