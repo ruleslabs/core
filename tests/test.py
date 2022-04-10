@@ -206,6 +206,14 @@ async def _create_and_mint_card(ctx, signer_account_name, card, metadata, to_acc
     [*to_starknet_args(card), *to_starknet_args(metadata), to_account_address]
   )
 
+async def _mint_pack(ctx, signer_account_name, pack_id, to_account_address, amount):
+  await ctx.execute(
+    signer_account_name,
+    ctx.rulesTokens.contract_address,
+    "mintPack",
+    [*to_starknet_args(pack_id), to_account_address, amount]
+  )
+
 async def _mint_card(ctx, signer_account_name, card_id, to_account_address):
   await ctx.execute(
     signer_account_name,
@@ -251,6 +259,8 @@ class ScenarioState:
   async def create_artist(self, signer_account_name, artist_name):
     await _create_artist(self.ctx, signer_account_name, artist_name)
 
+  # Cards
+
   async def create_card(self, signer_account_name, card, metadata):
     await _create_card(self.ctx, signer_account_name, card, metadata)
 
@@ -264,8 +274,17 @@ class ScenarioState:
 
     await _mint_card(self.ctx, signer_account_name, card_id, to_account_address)
 
+  # Packs
+
   async def create_pack(self, signer_account_name, pack, metadata):
     await _create_pack(self.ctx, signer_account_name, pack, metadata)
+
+  async def mint_pack(self, signer_account_name, pack_id, to_account_name, amount):
+    to_account_address = get_account_address(self.ctx, to_account_name)
+
+    await _mint_pack(self.ctx, signer_account_name, pack_id, to_account_address, amount)
+
+  # Others
 
   async def set_base_token_uri(self, signer_account_name, base_token_uri):
     await _set_base_token_uri(self.ctx, signer_account_name, base_token_uri)
@@ -305,6 +324,8 @@ async def run_scenario(ctx, scenario):
   for (signer_account_name, function_name, kwargs, expect_success) in scenario:
     if signer_account_name not in VALID_ACCOUNT_NAMES:
       raise AttributeError(f"Invalid signer '{signer_account_name}'")
+
+    print(kwargs)
 
     func = getattr(scenario_state, function_name, None)
     if not func:
@@ -447,6 +468,7 @@ async def test_settle_where_owner_set_base_token_uri(ctx_factory):
   "contract_name, role_name, initial_members_count",
   [
     ("rulesTokens", MINTER_ROLE, 2),
+    ("rulesPacks", MINTER_ROLE, 3),
     ("rulesCards", CAPPER_ROLE, 1),
     ("rulesCards", MINTER_ROLE, 3),
     ("rulesData", MINTER_ROLE, 2)
@@ -497,7 +519,7 @@ async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, ro
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("contract_name", ["rulesTokens", "rulesCards", "rulesData"])
+@pytest.mark.parametrize("contract_name", ["rulesTokens", "rulesCards", "rulesData", "rulesPacks"])
 async def test_settle_where_owner_transfer_the_owner_ship(ctx_factory, contract_name):
   ctx = ctx_factory()
 
@@ -521,7 +543,7 @@ async def test_settle_where_owner_transfer_the_owner_ship(ctx_factory, contract_
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("contract_name", ["rulesTokens", "rulesCards", "rulesData"])
+@pytest.mark.parametrize("contract_name", ["rulesTokens", "rulesCards", "rulesData", "rulesPacks"])
 async def test_settle_where_owner_renounce_the_owner_ship(ctx_factory, contract_name):
   ctx = ctx_factory()
 
@@ -779,11 +801,11 @@ async def test_settle_where_minter_creates_pack(ctx_factory):
     ctx,
     [
       (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (OWNER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), False),
+      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), False),
 
       (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
 
-      (OWNER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
     ]
   )
 
@@ -806,8 +828,8 @@ async def test_settle_where_minter_creates_invalid_pack(ctx_factory):
       (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
       (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
 
-      (OWNER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=4), metadata=METADATA_1), False),
-      (OWNER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=15), metadata=METADATA_1), False),
+      (MINTER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=4), metadata=METADATA_1), False),
+      (MINTER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=15), metadata=METADATA_1), False),
     ]
   )
 
@@ -845,16 +867,16 @@ async def test_settle_where_minter_saturates_card_model_supply(ctx_factory):
 
       (OWNER, "add_scarcity_for_season", dict(season=1, supply=100), True),
 
-      (OWNER, "create_pack", dict(pack=NEW_PACK, metadata=METADATA_1), True),
-      (OWNER, "create_pack", dict(pack=NEW_PACK, metadata=METADATA_1), True),
+      (MINTER, "create_pack", dict(pack=NEW_PACK, metadata=METADATA_1), True),
+      (MINTER, "create_pack", dict(pack=NEW_PACK, metadata=METADATA_1), True),
 
-      (OWNER, "create_card", dict(card=update_card(NEW_CARD, serial_number=1), metadata=METADATA_1), True),
-      (OWNER, "create_card", dict(card=update_card(NEW_CARD, serial_number=2), metadata=METADATA_1), True),
+      (MINTER, "create_card", dict(card=update_card(NEW_CARD, serial_number=1), metadata=METADATA_1), True),
+      (MINTER, "create_card", dict(card=update_card(NEW_CARD, serial_number=2), metadata=METADATA_1), True),
 
-      (OWNER, "create_pack", dict(pack=NEW_PACK, metadata=METADATA_1), False),
-      (OWNER, "create_pack", dict(pack=NEW_PACK_2, metadata=METADATA_1), True),
+      (MINTER, "create_pack", dict(pack=NEW_PACK, metadata=METADATA_1), False),
+      (MINTER, "create_pack", dict(pack=NEW_PACK_2, metadata=METADATA_1), True),
 
-      (OWNER, "create_card", dict(card=update_card(NEW_CARD, serial_number=3), metadata=METADATA_1), False),
+      (MINTER, "create_card", dict(card=update_card(NEW_CARD, serial_number=3), metadata=METADATA_1), False),
     ]
   )
 
@@ -864,3 +886,41 @@ async def test_settle_where_minter_saturates_card_model_supply(ctx_factory):
   assert await _pack_exists(ctx, to_uint(3)) == 1
   assert await _pack_exists(ctx, to_uint(4)) == 0
   assert await _get_card_model_available_supply(ctx, NEW_CARD_MODEL) == 0
+
+
+@pytest.mark.asyncio
+async def test_settle_where_minter_create_packs_and_mint_them(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  assert await _balance_of(ctx, MINTER, to_uint(1)) == to_uint(0)
+  assert await _balance_of(ctx, MINTER, to_uint(1)) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, to_uint(2)) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, to_uint(2)) == to_uint(0)
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=MINTER, amount=1), False),
+
+      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=MINTER, amount=3), True),
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2), True),
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1), False),
+
+      (MINTER, "mint_pack", dict(pack_id=to_uint(2), to_account_name=RANDO_1, amount=6), False),
+      (MINTER, "mint_pack", dict(pack_id=to_uint(2), to_account_name=RANDO_1, amount=5), True),
+    ]
+  )
+
+  # Then
+  assert await _balance_of(ctx, MINTER, to_uint(1)) == to_uint(3)
+  assert await _balance_of(ctx, MINTER, to_uint(2)) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(2)
+  assert await _balance_of(ctx, RANDO_1, to_uint(2)) == to_uint(5)

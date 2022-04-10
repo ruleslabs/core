@@ -112,7 +112,7 @@ async def build_copyable_deployment():
     ]
   )
 
-  for contract in [rulesData, rulesCards, rulesTokens]:
+  for contract in [rulesData, rulesCards, rulesTokens, rulesPacks]:
     await signers["owner"].send_transaction(
       accounts.owner,
       contract.contract_address,
@@ -123,6 +123,13 @@ async def build_copyable_deployment():
   await signers["owner"].send_transaction(
     accounts.owner,
     rulesCards.contract_address,
+    "addMinter",
+    [rulesTokens.contract_address]
+  )
+
+  await signers["owner"].send_transaction(
+    accounts.owner,
+    rulesPacks.contract_address,
     "addMinter",
     [rulesTokens.contract_address]
   )
@@ -140,13 +147,6 @@ async def build_copyable_deployment():
     "revokePacker",
     [accounts.owner.contract_address]
   )
-
-  # await signers["owner"].send_transaction(
-  #   accounts.owner,
-  #   rulesPacks.contract_address,
-  #   "addMinter",
-  #   [rulesTokens.contract_address]
-  # )
 
   return SimpleNamespace(
     starknet=starknet,
