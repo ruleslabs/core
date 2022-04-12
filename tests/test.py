@@ -256,6 +256,16 @@ async def _safe_transfer(ctx, signer_account_name, token_id, from_account_addres
     [from_account_address, to_account_address, *to_starknet_args(token_id), *to_starknet_args(amount), 1, 0]
   )
 
+# Approval
+
+async def _set_approve_for_all(ctx, signer_account_name, to_account_address, approved):
+  await ctx.execute(
+    signer_account_name,
+    ctx.rulesTokens.contract_address,
+    "setApprovalForAll",
+    [to_account_address, approved]
+  )
+
 ############
 # SCENARIO #
 ############
@@ -276,6 +286,13 @@ class ScenarioState:
     to_account_address = get_account_address(self.ctx, to_account_name)
 
     await _safe_transfer(self.ctx, signer_account_name, token_id, from_account_address, to_account_address, to_uint(amount))
+
+  # Approval
+
+  async def set_approve_for_all(self, signer_account_name, to_account_name, approved):
+    to_account_address = get_account_address(self.ctx, to_account_name)
+
+    await _set_approve_for_all(self.ctx, signer_account_name, to_account_address, approved)
 
   # Cards
 
@@ -987,3 +1004,52 @@ async def test_settle_where_tokens_are_transfered(ctx_factory):
   assert await _balance_of(ctx, RANDO_3, to_uint(1)) == to_uint(1)
   assert await _balance_of(ctx, RANDO_3, to_uint(2)) == to_uint(0)
   assert await _balance_of(ctx, RANDO_3, to_uint(3)) == to_uint(3)
+
+
+@pytest.mark.asyncio
+async def test_settle_where_tokens_are_approved(ctx_factory):
+  ctx = ctx_factory()
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+
+      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
+
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), False),
+
+      (RANDO_1, "set_approve_for_all", dict(to_account_name=NULL, approved=True), False),
+      (RANDO_1, "set_approve_for_all", dict(to_account_name=NULL, approved=2), False),
+      (RANDO_1, "set_approve_for_all", dict(to_account_name=RANDO_2, approved=True), True),
+
+      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
+      (RANDO_3, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), False),
+
+      (RANDO_1, "set_approve_for_all", dict(to_account_name=RANDO_2, approved=False), True),
+      (RANDO_1, "set_approve_for_all", dict(to_account_name=RANDO_3, approved=True), True),
+
+      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), False),
+      (RANDO_3, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=2), True),
+
+      (RANDO_3, "set_approve_for_all", dict(to_account_name=RANDO_1, approved=True), True),
+
+      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_2, amount=1), True),
+
+      (RANDO_3, "set_approve_for_all", dict(to_account_name=RANDO_1, approved=False), True),
+
+      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_2, amount=1), False),
+      (RANDO_3, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_1, amount=1), True),
+    ]
+  )
+
+  # Then
+  assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(1)
+  assert await _balance_of(ctx, RANDO_2, to_uint(1)) == to_uint(3)
+  assert await _balance_of(ctx, RANDO_3, to_uint(1)) == to_uint(1)
