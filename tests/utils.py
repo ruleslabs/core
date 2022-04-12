@@ -153,6 +153,8 @@ def get_contract(ctx, contract_name):
 def get_account_address(ctx, account_name):
   if account_name == "null":
     return 0
+  elif account_name == "dead":
+    return 0xdead
 
   return (get_contract(ctx, account_name).contract_address)
 

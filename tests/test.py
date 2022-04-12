@@ -246,6 +246,16 @@ async def _get_card_model_available_supply(ctx, card_model):
   ).result
   return available_supply
 
+# Transfer
+
+async def _safe_transfer(ctx, signer_account_name, token_id, from_account_address, to_account_address, amount):
+  await ctx.execute(
+    signer_account_name,
+    ctx.rulesTokens.contract_address,
+    "safeTransferFrom",
+    [from_account_address, to_account_address, *to_starknet_args(token_id), *to_starknet_args(amount), 1, 0]
+  )
+
 ############
 # SCENARIO #
 ############
@@ -258,6 +268,14 @@ class ScenarioState:
 
   async def create_artist(self, signer_account_name, artist_name):
     await _create_artist(self.ctx, signer_account_name, artist_name)
+
+  # Transfer
+
+  async def safe_transfer(self, signer_account_name, token_id, from_account_name, to_account_name, amount):
+    from_account_address = get_account_address(self.ctx, from_account_name)
+    to_account_address = get_account_address(self.ctx, to_account_name)
+
+    await _safe_transfer(self.ctx, signer_account_name, token_id, from_account_address, to_account_address, to_uint(amount))
 
   # Cards
 
@@ -334,11 +352,11 @@ async def run_scenario(ctx, scenario):
     try:
       await func(signer_account_name, **kwargs)
     except StarkException as e:
-      if not expect_success:
-        assert e.code == StarknetErrorCode.TRANSACTION_FAILED
-      else:
-        assert e.code != StarknetErrorCode.TRANSACTION_FAILED
+      if expect_success:
+        assert expect_success == False
         raise e
+      else:
+        assert expect_success == False
     else:
       assert expect_success == True
 
@@ -347,6 +365,7 @@ async def run_scenario(ctx, scenario):
 ##########
 
 NULL = "null"
+DEAD = "dead"
 MINTER = "minter"
 OWNER = "owner"
 RANDO_1 = "rando1"
@@ -924,3 +943,47 @@ async def test_settle_where_minter_create_packs_and_mint_them(ctx_factory):
   assert await _balance_of(ctx, MINTER, to_uint(2)) == to_uint(0)
   assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(2)
   assert await _balance_of(ctx, RANDO_1, to_uint(2)) == to_uint(5)
+
+
+@pytest.mark.asyncio
+async def test_settle_where_tokens_are_transfered(ctx_factory):
+  ctx = ctx_factory()
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+
+      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
+      (MINTER, "mint_pack", dict(pack_id=to_uint(2), to_account_name=RANDO_2, amount=5), True),
+      (MINTER, "mint_pack", dict(pack_id=to_uint(3), to_account_name=RANDO_3, amount=5), True),
+
+      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=NULL, amount=5), False),
+      (RANDO_3, "safe_transfer", dict(token_id=to_uint(3), from_account_name=RANDO_1, to_account_name=DEAD, amount=5), False),
+      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=5), True),
+      (RANDO_3, "safe_transfer", dict(token_id=to_uint(3), from_account_name=RANDO_3, to_account_name=RANDO_1, amount=2), True),
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_2, to_account_name=RANDO_3, amount=2), True),
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(2), from_account_name=RANDO_2, to_account_name=RANDO_1, amount=3), True),
+      (RANDO_3, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_1, amount=1), True),
+      (RANDO_3, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_1, amount=2), False),
+    ]
+  )
+
+  # Then
+  assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(1)
+  assert await _balance_of(ctx, RANDO_1, to_uint(2)) == to_uint(3)
+  assert await _balance_of(ctx, RANDO_1, to_uint(3)) == to_uint(2)
+
+  assert await _balance_of(ctx, RANDO_2, to_uint(1)) == to_uint(3)
+  assert await _balance_of(ctx, RANDO_2, to_uint(2)) == to_uint(2)
+  assert await _balance_of(ctx, RANDO_2, to_uint(3)) == to_uint(0)
+
+  assert await _balance_of(ctx, RANDO_3, to_uint(1)) == to_uint(1)
+  assert await _balance_of(ctx, RANDO_3, to_uint(2)) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_3, to_uint(3)) == to_uint(3)

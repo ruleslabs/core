@@ -149,11 +149,17 @@ end
 
 # Mint
 
-func ERC1155_mint{
+func ERC1155_safe_mint{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(to: felt, token_id: Uint256, amount: Uint256):
+  }(
+    to: felt,
+    token_id: Uint256,
+    amount: Uint256,
+    data_len: felt,
+    data: felt*
+  ):
   alloc_locals
   with_attr error_message("ERC1155: token_id is not a valid Uint256"):
     uint256_check(token_id)
@@ -172,23 +178,6 @@ func ERC1155_mint{
   let (new_balance: Uint256, _) = uint256_add(balance, amount)
   ERC1155_balances.write(to, token_id, new_balance)
 
-  return ()
-end
-
-func ERC1155_safe_mint{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(
-    to: felt,
-    token_id: Uint256,
-    amount: Uint256,
-    data_len: felt,
-    data: felt*
-  ):
-  alloc_locals
-  ERC1155_mint(to, token_id, amount)
-
   let (caller) = get_caller_address()
 
   _safe_transfer_acceptance_check(
@@ -204,26 +193,6 @@ func ERC1155_safe_mint{
 end
 
 # Transfer
-
-func ERC1155_transfer_from{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(_from: felt, to: felt, token_id: Uint256, amount: Uint256):
-  alloc_locals
-  with_attr error_message("ERC1155: token_id is not a valid Uint256"):
-    uint256_check(token_id)
-  end
-
-  let (caller) = get_caller_address()
-  let (is_approved) = _is_approved_or_owner(owner=_from, spender=caller, token_id=token_id, amount=amount)
-  with_attr error_message("ERC1155: either is not approved or the caller is the zero address"):
-    assert_not_zero(caller * is_approved)
-  end
-
-  _transfer(_from, to, token_id, amount)
-  return ()
-end
 
 func ERC1155_safe_transfer_from{
     syscall_ptr: felt*,
@@ -360,7 +329,7 @@ func _transfer{
   }(_from: felt, to: felt, token_id: Uint256, amount: Uint256):
   alloc_locals
 
-  # ownerOf ensures 'from_' is not the zero address
+  # ensures 'to' is not the zero address
   with_attr error_message("ERC1155: cannot transfer to the zero address"):
     assert_not_zero(to)
   end
@@ -373,7 +342,7 @@ func _transfer{
   # Increase receiver balance
   let (receiver_balance) = ERC1155_balances.read(to, token_id)
   let (new_balance: Uint256) = uint256_checked_add(receiver_balance, amount)
-  ERC1155_balances.write(to, token_id, receiver_balance)
+  ERC1155_balances.write(to, token_id, new_balance)
 
   # Update approval
   let (local operator) = ERC1155_token_approval_operator.read(_from, token_id)

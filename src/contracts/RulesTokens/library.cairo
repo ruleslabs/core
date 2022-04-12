@@ -11,7 +11,6 @@ from models.card import Card
 # Libraries
 
 from token.ERC1155.ERC1155_base import (
-  ERC1155_mint,
   ERC1155_safe_mint,
 )
 
@@ -124,7 +123,8 @@ func RulesTokens_create_and_mint_card{
   let (rules_cards_address) = rules_cards_address_storage.read()
   let (local card_id) = IRulesCards.createCard(rules_cards_address, card, metadata)
 
-  _mint(to, token_id=card_id, amount=Uint256(1, 0))
+  let data = cast(0, felt*)
+  _safe_mint(to, token_id=card_id, amount=Uint256(1, 0), data_len=0, data=data)
 
   return (token_id=card_id)
 end
@@ -180,23 +180,6 @@ end
 #
 # Internals
 #
-
-func _mint{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(to: felt, token_id: Uint256, amount: Uint256):
-  let (ids: Uint256*) = alloc()
-  assert ids[0] = token_id
-
-  let (amounts: Uint256*) = alloc()
-  assert amounts[0] = amount
-
-  ERC1155_Supply_before_token_transfer(_from=0, to=to, ids_len=1, ids=ids, amounts=amounts)
-
-  ERC1155_mint(to, token_id, amount)
-  return ()
-end
 
 func _safe_mint{
     syscall_ptr: felt*,

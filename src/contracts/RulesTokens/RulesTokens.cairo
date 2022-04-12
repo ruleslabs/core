@@ -31,7 +31,6 @@ from token.ERC1155.ERC1155_base import (
   ERC1155_initializer,
   ERC1155_set_approve_for_all,
   ERC1155_approve,
-  ERC1155_transfer_from,
   ERC1155_safe_transfer_from,
 )
 
@@ -368,16 +367,6 @@ func mintPack{
 end
 
 # Transfer
-
-@external
-func transferFrom{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(_from: felt, to: felt, token_id: Uint256, amount: Uint256):
-  ERC1155_transfer_from(_from, to, token_id, amount)
-  return ()
-end
 
 @external
 func safeTransferFrom{
