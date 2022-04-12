@@ -25,14 +25,20 @@ from token.ERC1155.ERC1155_base import (
   ERC1155_name,
   ERC1155_symbol,
   ERC1155_balanceOf,
+  ERC1155_approved_for_all,
+  ERC1155_approved,
 
   ERC1155_initializer,
+  ERC1155_set_approve_for_all,
+  ERC1155_approve,
+  ERC1155_transfer_from,
+  ERC1155_safe_transfer_from,
 )
 
 from token.ERC1155.ERC1155_Metadata_base import (
   ERC1155_Metadata_base_token_uri,
 
-  ERC1155_Metadata_set_base_token_uri
+  ERC1155_Metadata_set_base_token_uri,
 )
 
 from token.ERC1155.ERC1155_Supply_base import (
@@ -239,6 +245,28 @@ func totalSupply{
   return (supply)
 end
 
+# Approval
+
+@view
+func isApprovedForAll{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(owner: felt, operator: felt) -> (is_approved: felt):
+  let (is_approved) = ERC1155_approved_for_all(owner, operator)
+  return (is_approved)
+end
+
+@view
+func getApproved{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(owner: felt, token_id: Uint256) -> (operator: felt, amount: Uint256):
+  let (operator, amount) = ERC1155_approved(owner, token_id)
+  return (operator, amount)
+end
+
 #
 # Setters
 #
@@ -251,6 +279,28 @@ func setBaseTokenURI{
   }(base_token_uri_len: felt, base_token_uri: felt*):
   Ownable_only_owner()
   ERC1155_Metadata_set_base_token_uri(base_token_uri_len, base_token_uri)
+  return ()
+end
+
+# Approval
+
+@external
+func setApprovalForAll{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(operator: felt, approved: felt):
+  ERC1155_set_approve_for_all(operator, approved)
+  return ()
+end
+
+@external
+func approve{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(to: felt, token_id: Uint256, amount: Uint256):
+  ERC1155_approve(to, token_id, amount)
   return ()
 end
 
@@ -315,6 +365,28 @@ func mintPack{
   Minter_only_minter()
   let (token_id) = RulesTokens_mint_pack(pack_id, to, amount)
   return (token_id)
+end
+
+# Transfer
+
+@external
+func transferFrom{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(_from: felt, to: felt, token_id: Uint256, amount: Uint256):
+  ERC1155_transfer_from(_from, to, token_id, amount)
+  return ()
+end
+
+@external
+func safeTransferFrom{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(_from: felt, to: felt, token_id: Uint256, amount: Uint256, data_len: felt, data: felt*):
+  ERC1155_safe_transfer_from(_from, to, token_id, amount, data_len, data)
+  return ()
 end
 
 # Ownership

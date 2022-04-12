@@ -26,7 +26,6 @@ namespace IERC1155_Receiver:
   ) -> (selector: felt):
   end
 
-
   # ERC1155's `safeTransferFrom` requires a means of differentiating between account and
   # non-account contracts. Currently, StarkNet does not support error handling from the
   # contract level; therefore, this ERC1155 implementation requires that all contracts that

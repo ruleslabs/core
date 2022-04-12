@@ -11,7 +11,8 @@ from models.card import Card
 # Libraries
 
 from token.ERC1155.ERC1155_base import (
-  ERC1155_mint
+  ERC1155_mint,
+  ERC1155_safe_mint,
 )
 
 from token.ERC1155.ERC1155_Metadata_base import (
@@ -44,14 +45,6 @@ end
 
 @storage_var
 func rules_packs_address_storage() -> (rules_cards_address: felt):
-end
-
-#
-# Events
-#
-
-@event
-func Transfer(_from: felt, to: felt, token_id: Uint256, amount: Uint256):
 end
 
 #
@@ -131,7 +124,7 @@ func RulesTokens_create_and_mint_card{
   let (rules_cards_address) = rules_cards_address_storage.read()
   let (local card_id) = IRulesCards.createCard(rules_cards_address, card, metadata)
 
-  _mint_token(to, token_id=card_id, amount=Uint256(1, 0))
+  _mint(to, token_id=card_id, amount=Uint256(1, 0))
 
   return (token_id=card_id)
 end
@@ -152,7 +145,8 @@ func RulesTokens_mint_card{
     assert exists = FALSE
   end
 
-  _mint_token(to, token_id=card_id, amount=Uint256(1, 0))
+  let data = cast(0, felt*)
+  _safe_mint(to, token_id=card_id, amount=Uint256(1, 0), data_len=0, data=data)
 
   return (token_id=card_id)
 end
@@ -177,7 +171,8 @@ func RulesTokens_mint_pack{
     assert_le(amount + felt_supply, max_supply)
   end
 
-  _mint_token(to, token_id=pack_id, amount=Uint256(amount, 0))
+  let data = cast(0, felt*)
+  _safe_mint(to, token_id=pack_id, amount=Uint256(amount, 0), data_len=0, data=data)
 
   return (token_id=pack_id)
 end
@@ -186,7 +181,7 @@ end
 # Internals
 #
 
-func _mint_token{
+func _mint{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
@@ -200,8 +195,22 @@ func _mint_token{
   ERC1155_Supply_before_token_transfer(_from=0, to=to, ids_len=1, ids=ids, amounts=amounts)
 
   ERC1155_mint(to, token_id, amount)
+  return ()
+end
 
-  Transfer.emit(_from=0, to=to, token_id=token_id, amount=amount)
+func _safe_mint{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(to: felt, token_id: Uint256, amount: Uint256, data_len: felt, data: felt*):
+  let (ids: Uint256*) = alloc()
+  assert ids[0] = token_id
 
+  let (amounts: Uint256*) = alloc()
+  assert amounts[0] = amount
+
+  ERC1155_Supply_before_token_transfer(_from=0, to=to, ids_len=1, ids=ids, amounts=amounts)
+
+  ERC1155_safe_mint(to, token_id, amount, data_len, data)
   return ()
 end
