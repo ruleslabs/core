@@ -313,7 +313,7 @@ func _is_approved_or_owner{
 
   let (operator, approved_amount) = ERC1155_approved(owner, token_id)
   if operator == spender:
-    let (valid_amount) = uint256_le(approved_amount, amount)
+    let (valid_amount) = uint256_le(amount, approved_amount)
     return (valid_amount)
   end
 
@@ -344,23 +344,26 @@ func _transfer{
   let (new_balance: Uint256) = uint256_checked_add(receiver_balance, amount)
   ERC1155_balances.write(to, token_id, new_balance)
 
+  # Emit transfer before update approval to avoid revoked implicit arguments
+  Transfer.emit(_from, to, token_id, amount)
+
   # Update approval
+  let (caller) = get_caller_address()
   let (local operator) = ERC1155_token_approval_operator.read(_from, token_id)
   let (approved_amount) = ERC1155_token_approval_amount.read(_from, token_id)
-  let (approved_amount_too_high) = uint256_lt(amount, approved_amount)
 
-  if approved_amount_too_high == TRUE:
-    _approve(owner=_from, operator=operator, token_id=token_id, amount=amount)
-    tempvar syscall_ptr = syscall_ptr
-    tempvar pedersen_ptr = pedersen_ptr
-    tempvar range_check_ptr = range_check_ptr
+  if operator == caller:
+    let (new_approved_amount) = uint256_checked_sub_le(approved_amount, amount)
+    _approve(owner=_from, operator=operator, token_id=token_id, amount=new_approved_amount)
+    return ()
   else:
-    tempvar syscall_ptr = syscall_ptr
-    tempvar pedersen_ptr = pedersen_ptr
-    tempvar range_check_ptr = range_check_ptr
+    let (approved_amount_too_high) = uint256_lt(amount, approved_amount)
+    if approved_amount_too_high == TRUE:
+      _approve(owner=_from, operator=operator, token_id=token_id, amount=amount)
+      return ()
+    end
   end
 
-  Transfer.emit(_from, to, token_id, amount)
   return ()
 end
 
