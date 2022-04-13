@@ -33,6 +33,10 @@ func get_pack_max_supply{
   assert_cards_per_pack_is_valid(cards_per_pack)
 
   let (local total) = _total_number_of_cards(pack_card_models_len, pack_card_models)
+  with_attr error_message("Can't create an empty pack"):
+    assert_not_zero(total)
+  end
+
   let (quotient, remainder) = unsigned_div_rem(total, cards_per_pack)
   with_attr error_message("card models quantities and cards per pack are not compatible: {total} / {cards_per_pack}"):
     assert remainder = 0

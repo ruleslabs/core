@@ -166,9 +166,30 @@ func RulesTokens_mint_pack{
 
   let (local supply) = ERC1155_Supply_total_supply(pack_id)
   let (local max_supply) = IRulesPacks.getPackMaxSupply(rules_packs_address, pack_id)
-  local felt_supply = supply.low
-  with_attr error_message("Can't mint {amount} packs, amount too high. supply: {felt_supply}, max supply: {max_supply}"):
-    assert_le(amount + felt_supply, max_supply)
+
+  if max_supply == 0:
+    # the pack is a common pack
+    let (rules_cards_address) = rules_cards_address_storage.read()
+    let (stopped) = IRulesCards.productionStoppedForSeasonAndScarcity(rules_cards_address, season=pack_id.high, scarcity=0)
+
+    with_attr error_message("RulesTokens: Production stopped for the common cards of this season"):
+      assert stopped = FALSE
+    end
+
+    tempvar syscall_ptr = syscall_ptr
+    tempvar pedersen_ptr = pedersen_ptr
+    tempvar range_check_ptr = range_check_ptr
+  else:
+    # the pack is a classic pack
+    local felt_supply = supply.low
+
+    with_attr error_message("RulesTokens: Can't mint {amount} packs, amount too high. supply: {felt_supply}, max supply: {max_supply}"):
+      assert_le(amount + felt_supply, max_supply)
+    end
+
+    tempvar syscall_ptr = syscall_ptr
+    tempvar pedersen_ptr = pedersen_ptr
+    tempvar range_check_ptr = range_check_ptr
   end
 
   let data = cast(0, felt*)

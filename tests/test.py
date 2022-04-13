@@ -899,6 +899,7 @@ async def test_settle_where_minter_creates_invalid_pack(ctx_factory):
 
       (MINTER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=4), metadata=METADATA_1), False),
       (MINTER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=15), metadata=METADATA_1), False),
+      (MINTER, "create_pack", dict(pack=update_dict(PACK_1, pack_card_models=[]), metadata=METADATA_1), False),
     ]
   )
 
@@ -1155,3 +1156,41 @@ async def test_settle_where_minter_create_valid_and_invalid_common_packs(ctx_fac
   assert await _pack_exists(ctx, to_uint(42 << 128)) == 1
   assert await _pack_exists(ctx, to_uint(41 << 128)) == 1
   assert await _pack_exists(ctx, to_uint(40 << 128)) == 0
+
+
+@pytest.mark.asyncio
+async def test_settle_where_minter_create_packs_and_mint_them(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  assert await _balance_of(ctx, MINTER, to_uint(1)) == to_uint(0)
+  assert await _balance_of(ctx, MINTER, to_uint(1)) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, to_uint(2)) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, to_uint(2)) == to_uint(0)
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1), False),
+
+      (MINTER, "create_common_pack", dict(cards_per_pack=3, season=1, metadata=METADATA_1), True),
+
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1000000), True),
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=RANDO_1, amount=1), True),
+      (MINTER, "mint_pack", dict(pack_id=to_uint(2 << 128), to_account_name=MINTER, amount=1000000), False),
+
+      (OWNER, "stop_production_for_season_and_scarcity", dict(season=1, scarcity=1), True),
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1), True),
+
+      (OWNER, "stop_production_for_season_and_scarcity", dict(season=2, scarcity=0), True),
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1), True),
+
+      (OWNER, "stop_production_for_season_and_scarcity", dict(season=1, scarcity=0), True),
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1), False),
+    ]
+  )
+
+  # Then
+  assert await _balance_of(ctx, MINTER, to_uint(1 << 128)) == to_uint(1000002)
+  assert await _balance_of(ctx, RANDO_1, to_uint(1 << 128)) == to_uint(1)

@@ -19,6 +19,9 @@ namespace IRulesCards:
   func cardExists(card_id: Uint256) -> (res: felt):
   end
 
+  func productionStoppedForSeasonAndScarcity(season: felt, scarcity: felt) -> (stopped: felt):
+  end
+
   #
   # Business logic
   #
