@@ -60,6 +60,15 @@ async def _create_pack(ctx, signer_account_name, pack, metadata):
   )
 
 
+async def _create_common_pack(ctx, signer_account_name, cards_per_pack, season, metadata):
+  await ctx.execute(
+    signer_account_name,
+    ctx.rulesPacks.contract_address,
+    "createCommonPack",
+    [cards_per_pack, season, *to_starknet_args(metadata)]
+  )
+
+
 async def _pack_exists(ctx, pack_id):
   (exists,) = (
     await ctx.rulesPacks.packExists(pack_id).call()
@@ -334,6 +343,9 @@ class ScenarioState:
 
   async def create_pack(self, signer_account_name, pack, metadata):
     await _create_pack(self.ctx, signer_account_name, pack, metadata)
+
+  async def create_common_pack(self, signer_account_name, cards_per_pack, season, metadata):
+    await _create_common_pack(self.ctx, signer_account_name, cards_per_pack, season, metadata)
 
   async def mint_pack(self, signer_account_name, pack_id, to_account_name, amount):
     to_account_address = get_account_address(self.ctx, to_account_name)
@@ -1113,3 +1125,33 @@ async def test_settle_where_tokens_are_approved(ctx_factory):
   assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(1)
   assert await _balance_of(ctx, RANDO_2, to_uint(1)) == to_uint(4)
   assert await _get_approved(ctx, RANDO_1, to_uint(1)) == (rando_3_address, to_uint(1))
+
+
+@pytest.mark.asyncio
+async def test_settle_where_minter_create_valid_and_invalid_common_packs(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  assert await _pack_exists(ctx, to_uint(1)) == 0
+  assert await _pack_exists(ctx, to_uint(2)) == 0
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "create_common_pack", dict(cards_per_pack=3, season=0, metadata=METADATA_1), False),
+      (MINTER, "create_common_pack", dict(cards_per_pack=3, season=1, metadata=METADATA_1), True),
+      (MINTER, "create_common_pack", dict(cards_per_pack=3, season=1, metadata=METADATA_1), False),
+      (MINTER, "create_common_pack", dict(cards_per_pack=3, season=42, metadata=METADATA_1), True),
+      (MINTER, "create_common_pack", dict(cards_per_pack=1, season=41, metadata=METADATA_1), True),
+      (MINTER, "create_common_pack", dict(cards_per_pack=0, season=41, metadata=METADATA_1), False),
+      (MINTER, "create_common_pack", dict(cards_per_pack=11, season=40, metadata=METADATA_1), False),
+    ]
+  )
+
+  # Then
+  assert await _pack_exists(ctx, to_uint(1 << 128)) == 1
+  assert await _pack_exists(ctx, to_uint(2 << 128)) == 0
+  assert await _pack_exists(ctx, to_uint(42 << 128)) == 1
+  assert await _pack_exists(ctx, to_uint(41 << 128)) == 1
+  assert await _pack_exists(ctx, to_uint(40 << 128)) == 0

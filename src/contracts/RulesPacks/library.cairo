@@ -4,9 +4,9 @@ from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256
 
-from models.card import CardModel
+from models.card import CardModel, assert_season_is_valid
 from models.metadata import Metadata
-from models.pack import PackCardModel, get_pack_max_supply
+from models.pack import PackCardModel, get_pack_max_supply, assert_cards_per_pack_is_valid
 
 # Interfaces
 
@@ -153,6 +153,26 @@ func RulesPacks_create_pack{
   _write_pack_card_models_to_storage(pack_id, pack_card_models_len, pack_card_models)
 
   packs_supply_storage.write(value=supply + 1)
+
+  return (pack_id)
+end
+
+func RulesPacks_create_common_pack{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(cards_per_pack: felt, season: felt, metadata: Metadata) -> (pack_id: Uint256):
+  assert_season_is_valid(season)
+  assert_cards_per_pack_is_valid(cards_per_pack)
+
+  let pack_id = Uint256(0, season)
+  let (exists) = RulesPacks_pack_exists(pack_id)
+  with_attr error_message("RulesPacks: a common pack already exists for this season"):
+    assert exists = FALSE
+  end
+
+  packs_cards_per_pack_storage.write(pack_id, cards_per_pack)
+  packs_metadata_storage.write(pack_id, metadata)
 
   return (pack_id)
 end

@@ -19,6 +19,7 @@ from contracts.RulesPacks.library import (
 
   RulesPacks_initializer,
   RulesPacks_create_pack,
+  RulesPacks_create_common_pack,
 )
 
 from lib.Ownable_base import (
@@ -210,6 +211,17 @@ func createPack{
   ) -> (pack_id: Uint256):
   Minter_only_minter()
   let (pack_id) = RulesPacks_create_pack(cards_per_pack, pack_card_models_len, pack_card_models, metadata)
+  return (pack_id)
+end
+
+@external
+func createCommonPack{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(cards_per_pack: felt, season: felt, metadata: Metadata) -> (pack_id: Uint256):
+  Minter_only_minter()
+  let (pack_id) = RulesPacks_create_common_pack(cards_per_pack, season, metadata)
   return (pack_id)
 end
 

@@ -133,24 +133,56 @@ func get_card_id_from_card{
   return (card_id = Uint256(low, high))
 end
 
-#
+func assert_season_is_valid{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(season: felt):
+  with_attr error_message("Invalid season"):
+    assert_le(season, SEASON_MAX)
+    assert_le(SEASON_MIN, season)
+  end
+  return ()
+end
+
+func assert_scarcity_is_valid{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(scarcity: felt):
+  with_attr error_message("Invalid scarcity"):
+    assert_le(scarcity, SCARCITY_MAX)
+    assert_le(SCARCITY_MIN, scarcity)
+  end
+  return ()
+end
+
+func assert_serial_number_is_valid{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(serial_number: felt):
+  with_attr error_message("Invalid serial number"):
+    assert_le(serial_number, SERIAL_NUMBER_MAX)
+    assert_le(SERIAL_NUMBER_MIN, serial_number)
+  end
+  return ()
+end
+
 # Internals
-#
 
 func _assert_card_well_formed{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(card: Card):
-  uint256_check(card.model.artist_name)
+  with_attr error_message("Invalid artist name"):
+    uint256_check(card.model.artist_name)
+  end
 
-  assert_le(card.model.season, SEASON_MAX)
-  assert_le(card.model.scarcity, SCARCITY_MAX)
-  assert_le(card.serial_number, SERIAL_NUMBER_MAX)
-
-  assert_le(SEASON_MIN, card.model.season)
-  assert_le(SCARCITY_MIN, card.model.scarcity)
-  assert_le(SERIAL_NUMBER_MIN, card.serial_number)
+  assert_season_is_valid(card.model.season)
+  assert_scarcity_is_valid(card.model.scarcity)
+  assert_serial_number_is_valid(card.serial_number)
 
   return ()
 end

@@ -30,7 +30,7 @@ func get_pack_max_supply{
   }(cards_per_pack: felt, pack_card_models_len: felt, pack_card_models: PackCardModel*) -> (max_supply: felt):
   alloc_locals
 
-  _assert_pack_well_formed(cards_per_pack)
+  assert_cards_per_pack_is_valid(cards_per_pack)
 
   let (local total) = _total_number_of_cards(pack_card_models_len, pack_card_models)
   let (quotient, remainder) = unsigned_div_rem(total, cards_per_pack)
@@ -41,16 +41,17 @@ func get_pack_max_supply{
   return (quotient)
 end
 
+func assert_cards_per_pack_is_valid{ range_check_ptr }(cards_per_pack: felt):
+  with_attr error_message("Invalid cards per pack"):
+    assert_le(cards_per_pack, CARDS_PER_PACK_MAX)
+    assert_le(CARDS_PER_PACK_MIN, cards_per_pack)
+  end
+  return ()
+end
+
 #
 # Internals
 #
-
-func _assert_pack_well_formed{ range_check_ptr }(cards_per_pack: felt):
-  assert_le(cards_per_pack, CARDS_PER_PACK_MAX)
-  assert_le(CARDS_PER_PACK_MIN, cards_per_pack)
-
-  return ()
-end
 
 func _total_number_of_cards(pack_card_models_len: felt, pack_card_models: PackCardModel*) -> (total: felt):
   if pack_card_models_len == 0:
