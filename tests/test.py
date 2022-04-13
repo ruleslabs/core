@@ -44,10 +44,10 @@ async def _card_exists(ctx, card_id):
 
 
 async def _get_card_id(ctx, card):
-  card_id = (
+  (card_id,) = (
     await ctx.rulesCards.getCardId(dict_to_tuple(card)).call()
   ).result
-  return tuple(tuple(card_id)[0])
+  return card_id
 
 # Packs
 
@@ -266,6 +266,22 @@ async def _set_approve_for_all(ctx, signer_account_name, to_account_address, app
     [to_account_address, approved]
   )
 
+async def _approve(ctx, signer_account_name, token_id, to_account_address, amount):
+  await ctx.execute(
+    signer_account_name,
+    ctx.rulesTokens.contract_address,
+    "approve",
+    [to_account_address, *to_starknet_args(token_id), *to_starknet_args(amount)]
+  )
+
+async def _get_approved(ctx, account_name, token_id):
+  account_address = get_account_address(ctx, account_name)
+
+  (operator, amount) = (
+    await ctx.rulesTokens.getApproved(account_address, token_id).call()
+  ).result
+  return (operator, amount)
+
 ############
 # SCENARIO #
 ############
@@ -293,6 +309,11 @@ class ScenarioState:
     to_account_address = get_account_address(self.ctx, to_account_name)
 
     await _set_approve_for_all(self.ctx, signer_account_name, to_account_address, approved)
+
+  async def approve(self, signer_account_name, token_id, to_account_name, amount):
+    to_account_address = get_account_address(self.ctx, to_account_name)
+
+    await _approve(self.ctx, signer_account_name, token_id, to_account_address, to_uint(amount))
 
   # Cards
 
@@ -1007,7 +1028,7 @@ async def test_settle_where_tokens_are_transfered(ctx_factory):
 
 
 @pytest.mark.asyncio
-async def test_settle_where_tokens_are_approved(ctx_factory):
+async def test_settle_where_tokens_are_all_approved(ctx_factory):
   ctx = ctx_factory()
 
   # When
@@ -1053,3 +1074,42 @@ async def test_settle_where_tokens_are_approved(ctx_factory):
   assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(1)
   assert await _balance_of(ctx, RANDO_2, to_uint(1)) == to_uint(3)
   assert await _balance_of(ctx, RANDO_3, to_uint(1)) == to_uint(1)
+
+
+@pytest.mark.asyncio
+async def test_settle_where_tokens_are_approved(ctx_factory):
+  ctx = ctx_factory()
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+
+      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
+
+      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=1), True),
+
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=2), False),
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), True),
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), False),
+
+      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=5), False),
+      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=4), True),
+      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_3, amount=3), True),
+
+      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=2), True),
+      (RANDO_3, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), True),
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), False),
+    ]
+  )
+
+  # Then
+  rando_3_address = get_account_address(ctx, RANDO_3)
+
+  assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(1)
+  assert await _balance_of(ctx, RANDO_2, to_uint(1)) == to_uint(4)
+  assert await _get_approved(ctx, RANDO_1, to_uint(1)) == (rando_3_address, to_uint(1))
