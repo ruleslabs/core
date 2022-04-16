@@ -385,9 +385,9 @@ func openPackFrom{
     pedersen_ptr: HashBuiltin*,
     bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
-  }(_from: felt, pack_id: Uint256, cards_len: felt, cards: Card*):
+  }(_from: felt, pack_id: Uint256, cards_len: felt, cards: Card*, metadatas_len: felt, metadatas: Metadata*):
   Minter_only_minter()
-  RulesTokens_open_pack(_from, pack_id, cards_len, cards)
+  RulesTokens_open_pack(_from, pack_id, cards_len, cards, metadatas_len, metadatas)
   return ()
 end
 

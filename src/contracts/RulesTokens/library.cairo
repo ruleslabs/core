@@ -8,7 +8,7 @@ from starkware.starknet.common.syscalls import get_caller_address
 from lib.memset import uint256_memset
 
 from models.metadata import Metadata
-from models.card import Card, get_card_ids_from_cards
+from models.card import Card
 
 # Libraries
 
@@ -241,8 +241,11 @@ func RulesTokens_open_pack{
     pedersen_ptr: HashBuiltin*,
     bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
-  }(_from: felt, pack_id: Uint256, cards_len: felt, cards: Card*):
+  }(_from: felt, pack_id: Uint256, cards_len: felt, cards: Card*, metadatas_len: felt, metadatas: Metadata*):
   alloc_locals
+  with_attr error_message("RulesTokens: cards count and metadata count doesn't match"):
+    assert cards_len = metadatas_len
+  end
 
   let (local caller) = get_caller_address()
   let (is_approved) = _is_approved_to_open_pack(owner=_from, opener=caller, pack_id=pack_id)
@@ -259,14 +262,16 @@ func RulesTokens_open_pack{
   end
   _assert_cards_presence_in_pack(rules_packs_address, pack_id, cards_len, cards)
 
-  # Mint cards to pack holder
+  # Create cards
+  let (rules_cards_address) = rules_cards_address_storage.read()
   let (card_ids: Uint256*) = alloc()
-  get_card_ids_from_cards(cards_len, cards, card_ids)
+  _create_cards_batch(rules_cards_address, cards_len, cards, metadatas, card_ids)
 
+  # Mint cards to pack holder
   let (amounts: Uint256*) = alloc()
   uint256_memset(dst=amounts, value=Uint256(1, 0), n=cards_len)
   let data = cast(0, felt*)
-  _safe_mint_batch(to=caller, ids_len=cards_len, ids=card_ids, amounts_len=cards_len, amounts=amounts, data_len=0, data=data)
+  _safe_mint_batch(to=_from, ids_len=cards_len, ids=card_ids, amounts_len=cards_len, amounts=amounts, data_len=0, data=data)
 
   # Burn openned pack
   ERC1155_burn(_from, pack_id, amount=Uint256(1, 0))
@@ -349,5 +354,23 @@ func _safe_mint_batch{
   ERC1155_Supply_before_token_transfer(_from=0, to=to, ids_len=ids_len, ids=ids, amounts=amounts)
 
   ERC1155_safe_mint_batch(to, ids_len, ids, amounts_len, amounts, data_len, data)
+  return ()
+end
+
+func _create_cards_batch{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(rules_cards_address: felt, cards_len: felt, cards: Card*, metadatas: Metadata*, card_ids: Uint256*):
+  if cards_len == 0:
+    return ()
+  end
+
+  let (card_id) = IRulesCards.createCard(rules_cards_address, [cards], [metadatas])
+  assert [card_ids] = card_id
+
+  _create_cards_batch(
+    rules_cards_address, cards_len - 1, cards + Card.SIZE, metadatas + Metadata.SIZE, card_ids + Uint256.SIZE
+  )
   return ()
 end

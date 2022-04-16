@@ -14,8 +14,7 @@ func uint256_memset(dst: Uint256*, value: Uint256, n: felt):
 
   loop:
   let frame = [cast(ap - LoopFrame.SIZE, LoopFrame*)]
-  assert [frame.dst].low = value.low
-  assert [frame.dst].high = value.high
+  assert [frame.dst] = value
 
   let continue_loop = [ap]
   # Reserve space for continue_loop.

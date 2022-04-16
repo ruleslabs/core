@@ -291,6 +291,24 @@ async def _get_approved(ctx, account_name, token_id):
   ).result
   return (operator, amount)
 
+# Pack opening
+
+async def _open_pack(ctx, signer_account_name, pack_id, cards, metadatas, from_account_address):
+  await ctx.execute(
+    signer_account_name,
+    ctx.rulesTokens.contract_address,
+    "openPackFrom",
+    [from_account_address, *to_starknet_args(pack_id), len(cards), *to_starknet_args(cards), len(metadatas), *to_starknet_args(metadatas)]
+  )
+
+async def _approve_pack_opening(ctx, signer_account_name, pack_id, to_account_address):
+  await ctx.execute(
+    signer_account_name,
+    ctx.rulesTokens.contract_address,
+    "approvePackOpening",
+    [to_account_address, *to_starknet_args(pack_id)]
+  )
+
 ############
 # SCENARIO #
 ############
@@ -351,6 +369,18 @@ class ScenarioState:
     to_account_address = get_account_address(self.ctx, to_account_name)
 
     await _mint_pack(self.ctx, signer_account_name, pack_id, to_account_address, amount)
+
+  # Packs opening
+
+  async def open_pack(self, signer_account_name, pack_id, cards, metadatas, from_account_name):
+    from_account_address = get_account_address(self.ctx, from_account_name)
+
+    await _open_pack(self.ctx, signer_account_name, pack_id, cards, metadatas, from_account_address)
+
+  async def approve_pack_opening(self, signer_account_name, pack_id, to_account_name):
+    to_account_address = get_account_address(self.ctx, to_account_name)
+
+    await _approve_pack_opening(self.ctx, signer_account_name, pack_id, to_account_address)
 
   # Others
 
@@ -436,6 +466,7 @@ CARD_MODEL_1 = dict(artist_name=ARTIST_1, season=1, scarcity=0)
 CARD_MODEL_2 = dict(artist_name=ARTIST_2, season=1, scarcity=0)
 
 CARD_1 = dict(model=CARD_MODEL_1, serial_number=1)
+CARD_2 = dict(model=CARD_MODEL_2, serial_number=1)
 
 PACK_CARD_MODELS=[
   dict(card_model=CARD_MODEL_1, quantity=10),
@@ -1090,7 +1121,35 @@ async def test_settle_where_tokens_are_all_approved(ctx_factory):
 
 
 @pytest.mark.asyncio
-async def test_settle_where_tokens_are_approved(ctx_factory):
+async def test_settle_where_tokens_are_approved_1(ctx_factory):
+  ctx = ctx_factory()
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+
+      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
+
+      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=5), True),
+
+      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), True),
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=2), True),
+    ]
+  )
+
+  # Then
+  rando_2_address = get_account_address(ctx, RANDO_2)
+
+  await _get_approved(ctx, RANDO_1, to_uint(1)) == (rando_2_address, to_uint(2))
+
+
+@pytest.mark.asyncio
+async def test_settle_where_tokens_are_approved_2(ctx_factory):
   ctx = ctx_factory()
 
   # When
@@ -1193,4 +1252,59 @@ async def test_settle_where_minter_create_packs_and_mint_them(ctx_factory):
 
   # Then
   assert await _balance_of(ctx, MINTER, to_uint(1 << 128)) == to_uint(1000002)
+  assert await _balance_of(ctx, RANDO_1, to_uint(1 << 128)) == to_uint(1)
+
+
+@pytest.mark.asyncio
+async def test_settle_where_owner_open_common_packs(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  CARD_1_2 = update_card(CARD_1, serial_number=2)
+  CARD_2_2 = update_card(CARD_2, serial_number=2)
+
+  card_id_1 = await _get_card_id(ctx, CARD_1)
+  card_id_2 = await _get_card_id(ctx, CARD_2)
+  card_id_1_2 = await _get_card_id(ctx, CARD_1_2)
+  card_id_2_2 = await _get_card_id(ctx, CARD_2_2)
+
+  assert await _balance_of(ctx, RANDO_1, card_id_1) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, card_id_2) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, card_id_1_2) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, card_id_2_2) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, to_uint(1 << 128)) == to_uint(0)
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+
+      (MINTER, "create_common_pack", dict(cards_per_pack=2, season=1, metadata=METADATA_1), True),
+
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=RANDO_1, amount=3), True),
+
+      (RANDO_1, "approve_pack_opening", dict(pack_id=to_uint(1 << 128), to_account_name=OWNER), True),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadatas=[METADATA_1], from_account_name=RANDO_1), False),
+
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1], metadatas=[METADATA_1], from_account_name=RANDO_1), False),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_1], metadatas=[METADATA_1, METADATA_1], from_account_name=RANDO_1), False),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadatas=[METADATA_1, METADATA_1], from_account_name=RANDO_1), True),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[update_card(CARD_1, serial_number=2), CARD_2_2], metadatas=[METADATA_1, METADATA_1], from_account_name=RANDO_1), False),
+
+      (RANDO_1, "approve_pack_opening", dict(pack_id=to_uint(1 << 128), to_account_name=OWNER), True),
+
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, update_card(CARD_2, serial_number=2)], metadatas=[METADATA_1, METADATA_1], from_account_name=RANDO_1), False),
+
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1_2, CARD_2_2], metadatas=[METADATA_1, METADATA_1], from_account_name=RANDO_1), True),
+    ]
+  )
+
+  # Then
+  assert await _balance_of(ctx, RANDO_1, card_id_1) == to_uint(1)
+  assert await _balance_of(ctx, RANDO_1, card_id_2) == to_uint(1)
+  assert await _balance_of(ctx, RANDO_1, card_id_1_2) == to_uint(1)
+  assert await _balance_of(ctx, RANDO_1, card_id_2_2) == to_uint(1)
   assert await _balance_of(ctx, RANDO_1, to_uint(1 << 128)) == to_uint(1)

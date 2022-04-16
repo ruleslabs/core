@@ -163,12 +163,15 @@ func ERC1155_safe_mint{
     uint256_check(token_id)
   end
 
-  with_attr error_message("ERC1155: minting to null address is not allowed"):
-    assert_not_zero(to)
+  let (caller) = get_caller_address()
+  with_attr error_message("ERC1155: minting to null address or from null caller is not allowed"):
+    assert_not_zero(to * caller)
   end
 
   let (is_amount_valid) = uint256_lt(Uint256(0, 0), amount)
-  assert is_amount_valid = 1 # mint null amount
+  with_attr error_message("ERC1155: minting null amount is not allowed"):
+    assert is_amount_valid = TRUE
+  end
 
   # Update balances
   let (balance: Uint256) = ERC1155_balances.read(to, token_id)
@@ -176,17 +179,7 @@ func ERC1155_safe_mint{
   let (new_balance: Uint256, _) = uint256_add(balance, amount)
   ERC1155_balances.write(to, token_id, new_balance)
 
-  let (caller) = get_caller_address()
-
-  _safe_transfer_acceptance_check(
-    _from = 0,
-    to = to,
-    token_id = token_id,
-    amount = amount,
-    data_len = data_len,
-    data = data
-  )
-
+  _safe_transfer_acceptance_check(_from=0, to=to, token_id=token_id, amount=amount, data_len=data_len, data=data)
   return ()
 end
 
@@ -195,6 +188,19 @@ func ERC1155_safe_mint_batch{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*, data_len: felt, data: felt*):
+  alloc_locals
+  with_attr error_message("ERC1155: different amounts_len and ids_len"):
+    assert amounts_len = ids_len
+  end
+
+  let (caller) = get_caller_address()
+  with_attr error_message("ERC1155: minting to null address or from null caller is not allowed"):
+    assert_not_zero(to * caller)
+  end
+
+  _safe_mint_batch(
+    operator=caller, to=to, ids_len=ids_len, ids=ids, amounts_len=amounts_len, amounts=amounts, data_len=data_len, data=data
+  )
   return ()
 end
 
@@ -308,8 +314,27 @@ func ERC1155_burn{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(_from: felt, token_id: Uint256, amount: Uint256):
+  alloc_locals
   let (caller) = get_caller_address()
-  _transfer(operator=caller, _from=_from, to=0, token_id=token_id, amount=amount)
+
+  # Decrease owner balance
+  let (owner_balance) = ERC1155_balances.read(_from, token_id)
+  let (new_balance: Uint256) = uint256_checked_sub_le(owner_balance, amount)
+  ERC1155_balances.write(_from, token_id, new_balance)
+
+  # Emit transfer before update approval to avoid revoked implicit arguments
+  TransferSingle.emit(caller, _from, 0, token_id, amount)
+
+  # Update approval
+  let (operator) = ERC1155_token_approval_operator.read(_from, token_id)
+  let (approved_amount) = ERC1155_token_approval_amount.read(_from, token_id)
+
+  let (approved_amount_too_high) = uint256_lt(new_balance, approved_amount)
+  if approved_amount_too_high == TRUE:
+    _approve(owner=_from, operator=operator, token_id=token_id, amount=new_balance)
+    return ()
+  end
+
   return ()
 end
 
@@ -403,13 +428,13 @@ func _transfer{
 
   # Decrease owner balance
   let (owner_balance) = ERC1155_balances.read(_from, token_id)
-  let (new_balance: Uint256) = uint256_checked_sub_le(owner_balance, amount)
-  ERC1155_balances.write(_from, token_id, new_balance)
+  let (new_owner_balance: Uint256) = uint256_checked_sub_le(owner_balance, amount)
+  ERC1155_balances.write(_from, token_id, new_owner_balance)
 
   # Increase receiver balance
   let (receiver_balance) = ERC1155_balances.read(to, token_id)
-  let (new_balance: Uint256) = uint256_checked_add(receiver_balance, amount)
-  ERC1155_balances.write(to, token_id, new_balance)
+  let (new_receiver_balance: Uint256) = uint256_checked_add(receiver_balance, amount)
+  ERC1155_balances.write(to, token_id, new_receiver_balance)
 
   # Emit transfer before update approval to avoid revoked implicit arguments
   TransferSingle.emit(operator, _from, to, token_id, amount)
@@ -424,9 +449,9 @@ func _transfer{
     _approve(owner=_from, operator=operator, token_id=token_id, amount=new_approved_amount)
     return ()
   else:
-    let (approved_amount_too_high) = uint256_lt(amount, approved_amount)
+    let (approved_amount_too_high) = uint256_lt(new_owner_balance, approved_amount)
     if approved_amount_too_high == TRUE:
-      _approve(owner=_from, operator=operator, token_id=token_id, amount=amount)
+      _approve(owner=_from, operator=operator, token_id=token_id, amount=new_owner_balance)
       return ()
     end
   end
@@ -513,6 +538,51 @@ func _safe_batch_transfer_loop{
   _safe_batch_transfer_loop(
     _from, to, ids_len - 1, ids + Uint256.SIZE, amounts_len - 1, amounts + Uint256.SIZE
   )
+  return ()
+end
+
+# Mint
+
+func _safe_mint_batch{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(operator: felt, to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*, data_len: felt, data: felt*):
+  alloc_locals
+  _safe_mint_batch_loop(to, ids_len, ids, amounts)
+
+  TransferBatch.emit(operator, _from=0, to=to, ids_len=ids_len, ids=ids, amounts_len=amounts_len, amounts=amounts)
+  _safe_batch_transfer_acceptance_check(
+    _from=0, to=to, ids_len=ids_len, ids=ids, amounts_len=amounts_len, amounts=amounts, data_len=data_len, data=data
+  )
+  return ()
+end
+
+func _safe_mint_batch_loop{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(to: felt, ids_len: felt, ids: Uint256*, amounts: Uint256*):
+  if ids_len == 0:
+    return ()
+  end
+
+  with_attr error_message("ERC1155: token_id is not a valid Uint256"):
+    uint256_check([ids])
+  end
+
+  let (is_amount_valid) = uint256_lt(Uint256(0, 0), [amounts])
+  with_attr error_message("ERC1155: minting null amount is not allowed"):
+    assert is_amount_valid = TRUE
+  end
+
+  # Update balances
+  let (balance: Uint256) = ERC1155_balances.read(to, [ids])
+
+  let (new_balance: Uint256, _) = uint256_add(balance, [amounts])
+  ERC1155_balances.write(to, [ids], new_balance)
+
+  _safe_mint_batch_loop(to, ids_len=ids_len - 1, ids=ids + Uint256.SIZE, amounts=amounts + Uint256.SIZE)
   return ()
 end
 
