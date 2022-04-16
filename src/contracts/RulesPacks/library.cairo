@@ -14,6 +14,7 @@ from contracts.RulesCards.IRulesCards import IRulesCards
 
 # Constants
 
+from models.card import SERIAL_NUMBER_MAX, SCARCITY_MIN
 from openzeppelin.utils.constants import TRUE, FALSE
 
 #
@@ -92,8 +93,23 @@ func RulesPacks_pack_card_model_quantity{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(pack_id: Uint256, card_model: CardModel) -> (res: felt):
-  let (quantity) = packs_card_models_quantity_storage.read(pack_id, card_model)
-  return (quantity)
+  if pack_id.low == 0:
+    let (cards_per_pack) = packs_cards_per_pack_storage.read(pack_id)
+    if cards_per_pack == 0:
+      return (0)
+    end
+
+    if card_model.season != pack_id.high:
+      return (0)
+    end
+    if card_model.scarcity != SCARCITY_MIN:
+      return (0)
+    end
+    return (SERIAL_NUMBER_MAX)
+  else:
+    let (quantity) = packs_card_models_quantity_storage.read(pack_id, card_model)
+    return (quantity)
+  end
 end
 
 func RulesPacks_pack_max_supply{

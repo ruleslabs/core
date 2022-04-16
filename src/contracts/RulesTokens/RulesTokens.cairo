@@ -1,5 +1,5 @@
 %lang starknet
-%builtins pedersen range_check
+%builtins pedersen range_check bitwise
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.uint256 import Uint256
@@ -19,12 +19,14 @@ from contracts.RulesTokens.library import (
   RulesTokens_create_and_mint_card,
   RulesTokens_mint_card,
   RulesTokens_mint_pack,
+  RulesTokens_approve_pack_opening,
+  RulesTokens_open_pack,
 )
 
 from token.ERC1155.ERC1155_base import (
   ERC1155_name,
   ERC1155_symbol,
-  ERC1155_balanceOf,
+  ERC1155_balance_of,
   ERC1155_approved_for_all,
   ERC1155_approved,
 
@@ -32,6 +34,7 @@ from token.ERC1155.ERC1155_base import (
   ERC1155_set_approve_for_all,
   ERC1155_approve,
   ERC1155_safe_transfer_from,
+  ERC1155_safe_batch_transfer_from,
 )
 
 from token.ERC1155.ERC1155_Metadata_base import (
@@ -230,7 +233,7 @@ func balanceOf{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(account: felt, token_id: Uint256) -> (balance: Uint256):
-  let (balance) = ERC1155_balanceOf(account, token_id)
+  let (balance) = ERC1155_balance_of(account, token_id)
   return (balance)
 end
 
@@ -303,6 +306,16 @@ func approve{
   return ()
 end
 
+@external
+func approvePackOpening{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(to: felt, pack_id: Uint256):
+  RulesTokens_approve_pack_opening(to, pack_id)
+  return ()
+end
+
 #
 # Business logic
 #
@@ -366,6 +379,18 @@ func mintPack{
   return (token_id)
 end
 
+@external
+func openPackFrom{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    bitwise_ptr: BitwiseBuiltin*,
+    range_check_ptr
+  }(_from: felt, pack_id: Uint256, cards_len: felt, cards: Card*):
+  Minter_only_minter()
+  RulesTokens_open_pack(_from, pack_id, cards_len, cards)
+  return ()
+end
+
 # Transfer
 
 @external
@@ -375,6 +400,16 @@ func safeTransferFrom{
     range_check_ptr
   }(_from: felt, to: felt, token_id: Uint256, amount: Uint256, data_len: felt, data: felt*):
   ERC1155_safe_transfer_from(_from, to, token_id, amount, data_len, data)
+  return ()
+end
+
+@external
+func safeBatchTransferFrom{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(_from: felt, to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*, data_len: felt, data: felt*):
+  ERC1155_safe_batch_transfer_from(_from, to, ids_len, ids, amounts_len, amounts, data_len, data)
   return ()
 end
 

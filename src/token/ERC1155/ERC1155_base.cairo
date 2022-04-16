@@ -34,7 +34,11 @@ from token.ERC1155.IERC1155_Receiver import IERC1155_Receiver
 #
 
 @event
-func Transfer(from_: felt, to: felt, token_id: Uint256, amount: Uint256):
+func TransferSingle(operator: felt, _from: felt, to: felt, token_id: Uint256, amount: Uint256):
+end
+
+@event
+func TransferBatch(operator: felt, _from: felt, to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*):
 end
 
 @event
@@ -111,7 +115,7 @@ func ERC1155_symbol{
   return (symbol)
 end
 
-func ERC1155_balanceOf{
+func ERC1155_balance_of{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
@@ -153,13 +157,7 @@ func ERC1155_safe_mint{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(
-    to: felt,
-    token_id: Uint256,
-    amount: Uint256,
-    data_len: felt,
-    data: felt*
-  ):
+  }(to: felt, token_id: Uint256, amount: Uint256, data_len: felt, data: felt*):
   alloc_locals
   with_attr error_message("ERC1155: token_id is not a valid Uint256"):
     uint256_check(token_id)
@@ -192,6 +190,14 @@ func ERC1155_safe_mint{
   return ()
 end
 
+func ERC1155_safe_mint_batch{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*, data_len: felt, data: felt*):
+  return ()
+end
+
 # Transfer
 
 func ERC1155_safe_transfer_from{
@@ -210,7 +216,31 @@ func ERC1155_safe_transfer_from{
     assert_not_zero(caller * is_approved)
   end
 
-  _safe_transfer(_from, to, token_id, amount, data_len, data)
+  _safe_transfer(operator=caller, _from=_from, to=to, token_id=token_id, amount=amount, data_len=data_len, data=data)
+  return ()
+end
+
+func ERC1155_safe_batch_transfer_from{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(_from: felt, to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*, data_len: felt, data: felt*):
+  alloc_locals
+  with_attr error_message("ERC1155: different amounts_len and ids_len"):
+    assert amounts_len = ids_len
+  end
+
+  let (local caller) = get_caller_address()
+  let (is_approved) = _is_approved_or_owner_of_batch(
+    owner=_from, spender=caller, ids_len=ids_len, ids=ids, amounts_len=amounts_len, amounts=amounts
+  )
+  with_attr error_message("ERC1155: either is not approved or the caller is the zero address"):
+    assert_not_zero(caller * is_approved)
+  end
+
+  _safe_batch_transfer(
+    operator=caller, _from=_from, to=to, ids_len=ids_len, ids=ids, amounts_len=amounts_len, amounts=amounts, data_len=data_len, data=data
+  )
   return ()
 end
 
@@ -247,7 +277,7 @@ func ERC1155_approve{
     range_check_ptr
   }(to: felt, token_id: Uint256, amount: Uint256):
   alloc_locals
-  with_attr error_mesage("ERC1155: token_id is not a valid Uint256"):
+  with_attr error_message("ERC1155: token_id is not a valid Uint256"):
     uint256_check(token_id)
   end
 
@@ -270,6 +300,16 @@ func ERC1155_approve{
   end
 
   _approve(owner=caller, operator=to, token_id=token_id, amount=amount)
+  return ()
+end
+
+func ERC1155_burn{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(_from: felt, token_id: Uint256, amount: Uint256):
+  let (caller) = get_caller_address()
+  _transfer(operator=caller, _from=_from, to=0, token_id=token_id, amount=amount)
   return ()
 end
 
@@ -320,13 +360,40 @@ func _is_approved_or_owner{
   return (FALSE)
 end
 
+func _is_approved_or_owner_of_batch{
+    pedersen_ptr: HashBuiltin*,
+    syscall_ptr: felt*,
+    range_check_ptr
+  }(owner: felt, spender: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*) -> (res: felt):
+  alloc_locals
+
+  if ids_len == 0:
+    return (TRUE)
+  end
+
+  alloc_locals
+  with_attr error_message("ERC1155: token_id is not a valid Uint256"):
+    uint256_check([ids])
+  end
+
+  let (is_approved) = _is_approved_or_owner(owner, spender, [ids], [amounts])
+  if is_approved == FALSE:
+    return (FALSE)
+  end
+
+  let (is_approved) = _is_approved_or_owner_of_batch(
+    owner, spender, ids_len - 1, ids + Uint256.SIZE, amounts_len - 1, amounts + Uint256.SIZE
+  )
+  return (is_approved)
+end
+
 # Transfer
 
 func _transfer{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(_from: felt, to: felt, token_id: Uint256, amount: Uint256):
+  }(operator: felt, _from: felt, to: felt, token_id: Uint256, amount: Uint256):
   alloc_locals
 
   # ensures 'to' is not the zero address
@@ -345,7 +412,7 @@ func _transfer{
   ERC1155_balances.write(to, token_id, new_balance)
 
   # Emit transfer before update approval to avoid revoked implicit arguments
-  Transfer.emit(_from, to, token_id, amount)
+  TransferSingle.emit(operator, _from, to, token_id, amount)
 
   # Update approval
   let (caller) = get_caller_address()
@@ -371,9 +438,81 @@ func _safe_transfer{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(_from: felt, to: felt, token_id: Uint256, amount: Uint256, data_len: felt, data: felt*):
-  _transfer(_from, to, token_id, amount)
+  }(operator: felt, _from: felt, to: felt, token_id: Uint256, amount: Uint256, data_len: felt, data: felt*):
+  _transfer(operator, _from, to, token_id, amount)
   _safe_transfer_acceptance_check(_from, to, token_id, amount, data_len, data)
+  return ()
+end
+
+func _safe_batch_transfer{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(operator: felt, _from: felt, to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*, data_len: felt, data: felt*):
+  alloc_locals
+  _safe_batch_transfer_loop(_from, to, ids_len, ids, amounts_len, amounts)
+
+  TransferBatch.emit(operator, _from, to, ids_len, ids, amounts_len, amounts)
+  _safe_batch_transfer_acceptance_check(_from, to, ids_len, ids, amounts_len, amounts, data_len ,data)
+  return ()
+end
+
+func _safe_batch_transfer_loop{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(_from: felt, to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*):
+  alloc_locals
+
+  if ids_len == 0:
+    return ()
+  end
+
+  # ensures 'to' is not the zero address
+  with_attr error_message("ERC1155: cannot transfer to the zero address"):
+    assert_not_zero(to)
+  end
+
+  # Decrease owner balance
+  let (owner_balance) = ERC1155_balances.read(_from, [ids])
+  let (new_balance: Uint256) = uint256_checked_sub_le(owner_balance, [amounts])
+  ERC1155_balances.write(_from, [ids], new_balance)
+
+  # Increase receiver balance
+  let (receiver_balance) = ERC1155_balances.read(to, [ids])
+  let (new_balance: Uint256) = uint256_checked_add(receiver_balance, [amounts])
+  ERC1155_balances.write(to, [ids], new_balance)
+
+  # Update approval
+  let (caller) = get_caller_address()
+  let (local operator) = ERC1155_token_approval_operator.read(_from, [ids])
+  let (approved_amount) = ERC1155_token_approval_amount.read(_from, [ids])
+
+  if operator == caller:
+    let (new_approved_amount) = uint256_checked_sub_le(approved_amount, [amounts])
+    _approve(owner=_from, operator=operator, token_id=[ids], amount=new_approved_amount)
+
+    tempvar syscall_ptr = syscall_ptr
+    tempvar pedersen_ptr = pedersen_ptr
+    tempvar range_check_ptr = range_check_ptr
+  else:
+    let (approved_amount_too_high) = uint256_lt([amounts], approved_amount)
+    if approved_amount_too_high == TRUE:
+      _approve(owner=_from, operator=operator, token_id=[ids], amount=[amounts])
+
+      tempvar syscall_ptr = syscall_ptr
+      tempvar pedersen_ptr = pedersen_ptr
+      tempvar range_check_ptr = range_check_ptr
+    else:
+      tempvar syscall_ptr = syscall_ptr
+      tempvar pedersen_ptr = pedersen_ptr
+      tempvar range_check_ptr = range_check_ptr
+    end
+  end
+
+  _safe_batch_transfer_loop(
+    _from, to, ids_len - 1, ids + Uint256.SIZE, amounts_len - 1, amounts + Uint256.SIZE
+  )
   return ()
 end
 
@@ -388,6 +527,21 @@ func _safe_transfer_acceptance_check{
   # and return the acceptance magic value.
   let (success) = _check_onERC1155Received(_from, to, token_id, amount, data_len, data)
   with_attr error_message("ERC1155: transfer to non ERC1155Receiver implementer"):
+    assert success = TRUE
+  end
+
+  return ()
+end
+
+func _safe_batch_transfer_acceptance_check{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(_from: felt, to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*, data_len: felt, data: felt*):
+  # If `to` refers to a smart contract, it must implement {IERC1155_Receiver-onERC1155Received}
+  # and return the acceptance magic value.
+  let (success) = _check_onERC1155BatchReceived(_from, to, ids_len, ids, amounts_len, amounts, data_len, data)
+  with_attr error_message("ERC1155: transfer to non ERC1155BatchReceiver implementer"):
     assert success = TRUE
   end
 

@@ -133,6 +133,23 @@ func get_card_id_from_card{
   return (card_id = Uint256(low, high))
 end
 
+func get_card_ids_from_cards{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    bitwise_ptr: BitwiseBuiltin*,
+    range_check_ptr
+  }(cards_len: felt, cards: Card*, card_ids: Uint256*):
+  if cards_len == 0:
+    return ()
+  end
+
+  let (card_id) = get_card_id_from_card([cards])
+  assert [card_ids] = card_id
+
+  get_card_ids_from_cards(cards_len=cards_len - 1, cards=cards + Card.SIZE, card_ids=card_ids + Uint256.SIZE)
+  return ()
+end
+
 func assert_season_is_valid{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
