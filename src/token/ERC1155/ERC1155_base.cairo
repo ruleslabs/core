@@ -179,6 +179,8 @@ func ERC1155_safe_mint{
   let (new_balance: Uint256, _) = uint256_add(balance, amount)
   ERC1155_balances.write(to, token_id, new_balance)
 
+  TransferSingle.emit(caller, 0, to, token_id, amount)
+
   _safe_transfer_acceptance_check(_from=0, to=to, token_id=token_id, amount=amount, data_len=data_len, data=data)
   return ()
 end

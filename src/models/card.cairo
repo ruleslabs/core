@@ -74,34 +74,36 @@ func get_card_id_from_card{
   }(card: Card) -> (card_id: Uint256):
   alloc_locals
 
-  _assert_card_well_formed(card)
+  with_attr error_message("card: Card not well formed"):
+    _assert_card_well_formed(card)
+  end
 
   let (local keccak_ptr : felt*) = alloc()
   let (local keccak_input : felt*) = alloc()
 
   # artist_name
 
-  assert bitwise_ptr[0].x = card.model.artist_name.low
+  assert bitwise_ptr[0].x = card.model.artist_name.high
   assert bitwise_ptr[0].y = MASK
-  assert keccak_input[0] = bitwise_ptr[0].x_and_y
-
-  let (res, _) = unsigned_div_rem(card.model.artist_name.low, SHIFT)
-  assert keccak_input[1] = res
-
-  assert bitwise_ptr[1].x = card.model.artist_name.high
-  assert bitwise_ptr[1].y = MASK
-  assert keccak_input[2] = bitwise_ptr[1].x_and_y
+  assert keccak_input[1] = bitwise_ptr[0].x_and_y
 
   let (res, _) = unsigned_div_rem(card.model.artist_name.high, SHIFT)
-  assert keccak_input[3] = res
+  assert keccak_input[0] = res
+
+  assert bitwise_ptr[1].x = card.model.artist_name.low
+  assert bitwise_ptr[1].y = MASK
+  assert keccak_input[3] = bitwise_ptr[1].x_and_y
+
+  let (res, _) = unsigned_div_rem(card.model.artist_name.low, SHIFT)
+  assert keccak_input[2] = res
 
   let bitwise_ptr = bitwise_ptr + 2 * BitwiseBuiltin.SIZE
 
-  # [XX X XXXX 0]
-  #  |  |  |
-  #  |  |   -> serial_number
-  #  |   ----> scarcity
-  #   -------> season
+  # [0 XX X XXXX]
+  #    |  |  |
+  #    |  |   -> serial_number
+  #    |   ----> scarcity
+  #     -------> season
 
   assert bitwise_ptr[0].x = card.model.season
   assert bitwise_ptr[0].y = 0xffff
@@ -127,8 +129,8 @@ func get_card_id_from_card{
 
   let (keccak_output) = keccak256{keccak_ptr = keccak_ptr}(input = keccak_input, n_bytes = 39)
 
-  let low = keccak_output[0] * SHIFT + keccak_output[1]
-  let high = keccak_output[2] * SHIFT + keccak_output[3]
+  let low = keccak_output[2] * SHIFT + keccak_output[3]
+  let high = keccak_output[0] * SHIFT + keccak_output[1]
 
   return (card_id = Uint256(low, high))
 end

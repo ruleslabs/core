@@ -175,7 +175,9 @@ func RulesCards_create_card{
   let (is_supply_set) = is_not_zero(supply)
 
   if is_supply_set == TRUE:
-    assert_le(card.serial_number, supply) # Invalid serial
+    with_attr error_message("RulesCards: Invalid Serial"):
+      assert_le(card.serial_number, supply)
+    end
     tempvar range_check_ptr = range_check_ptr
   else:
     tempvar range_check_ptr = range_check_ptr
@@ -183,9 +185,11 @@ func RulesCards_create_card{
 
   # Check if card already exists
   let (local card_id) = get_card_id_from_card(card)
-
   let (exists) = RulesCards_card_exists(card_id)
-  assert exists = FALSE # Card already exists
+
+  with_attr error_message("RulesCards: card already exists"):
+    assert exists = FALSE
+  end
 
   let (supply) = card_models_supply_storage.read(card.model)
   card_models_supply_storage.write(card.model, supply + 1)
