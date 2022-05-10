@@ -21,6 +21,6 @@ tox tests/test.py
 ```bash
 nile deploy RulesData <owner>
 nile deploy RulesCards <owner> <rules_data>
-nile deploy RulesPacks <owner> <rules_cards>
+nile deploy RulesPacks <owner> <rules_data> <rules_cards>
 nile deploy RulesTokens <name> <symbol> <owner> <rules_cards> <rules_packs>
 ```

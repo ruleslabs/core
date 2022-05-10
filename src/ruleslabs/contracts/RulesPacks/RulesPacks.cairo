@@ -46,11 +46,11 @@ func constructor{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(owner: felt, rules_cards_address: felt):
+  }(owner: felt, _rules_data_address: felt, _rules_cards_address: felt):
   Ownable_initializer(owner)
   AccessControl_initializer(owner)
   Minter_initializer(owner)
-  RulesPacks.initializer(rules_cards_address)
+  RulesPacks.initializer(_rules_data_address, _rules_cards_address)
   return ()
 end
 

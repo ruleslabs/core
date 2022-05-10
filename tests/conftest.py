@@ -97,6 +97,7 @@ async def build_copyable_deployment():
     contract_def=defs.rulesPacks,
     constructor_calldata=[
       accounts.owner.contract_address, # owner
+      rulesData.contract_address,
       rulesCards.contract_address
     ]
   )

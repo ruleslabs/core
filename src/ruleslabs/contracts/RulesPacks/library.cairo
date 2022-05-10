@@ -11,6 +11,7 @@ from ruleslabs.models.pack import PackCardModel, get_pack_max_supply, assert_car
 
 # Interfaces
 
+from ruleslabs.contracts.RulesData.IRulesData import IRulesData
 from ruleslabs.contracts.RulesCards.IRulesCards import IRulesCards
 
 # Constants
@@ -50,6 +51,10 @@ func packs_metadata_storage(pack_id: Uint256) -> (metadata: Metadata):
 end
 
 @storage_var
+func rules_data_address_storage() -> (rules_data_address: felt):
+end
+
+@storage_var
 func rules_cards_address_storage() -> (rules_cards_address: felt):
 end
 
@@ -63,7 +68,8 @@ namespace RulesPacks:
       syscall_ptr : felt*,
       pedersen_ptr : HashBuiltin*,
       range_check_ptr
-    }(_rules_cards_address: felt):
+    }(_rules_data_address: felt, _rules_cards_address: felt):
+    rules_data_address_storage.write(_rules_data_address)
     rules_cards_address_storage.write(_rules_cards_address)
     return ()
   end
@@ -105,6 +111,13 @@ namespace RulesPacks:
         return (0)
       end
       if card_model.scarcity != SCARCITY_MIN:
+        return (0)
+      end
+
+      # Check if artist exists
+      let (rules_data_address) = rules_data_address_storage.read()
+      let (artist_exists) = IRulesData.artistExists(rules_data_address, card_model.artist_name)
+      if artist_exists == FALSE:
         return (0)
       end
       return (SERIAL_NUMBER_MAX)
