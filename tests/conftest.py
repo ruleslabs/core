@@ -56,11 +56,11 @@ async def build_copyable_deployment():
   set_block_timestamp(starknet.state, round(time.time()))
 
   defs = SimpleNamespace(
-    account=get_contract_def("openzeppelin/account/Account.cairo"),
-    rulesData=get_contract_def("contracts/RulesData/RulesData.cairo"),
-    rulesCards=get_contract_def("contracts/RulesCards/RulesCards.cairo"),
-    rulesPacks=get_contract_def("contracts/RulesPacks/RulesPacks.cairo"),
-    rulesTokens=get_contract_def("contracts/RulesTokens/RulesTokens.cairo")
+    account=get_contract_def("mocks/account/Account.cairo"),
+    rulesData=get_contract_def("ruleslabs/contracts/RulesData/RulesData.cairo"),
+    rulesCards=get_contract_def("ruleslabs/contracts/RulesCards/RulesCards.cairo"),
+    rulesPacks=get_contract_def("ruleslabs/contracts/RulesPacks/RulesPacks.cairo"),
+    rulesTokens=get_contract_def("ruleslabs/contracts/RulesTokens/RulesTokens.cairo")
   )
 
   signers = dict(

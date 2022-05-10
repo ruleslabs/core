@@ -16,19 +16,25 @@ _root = Path(__file__).parent.parent
 
 
 def contract_path(name):
-  if name.startswith("tests/"):
-    return str(_root / name)
+  if name.startswith("mocks/"):
+    return str(_root / "tests" / name)
   else:
     return str(_root / "src" / name)
 
 
 def get_contract_def(path):
   """Returns the contract definition from the contract path"""
+  if path.startswith("mocks/"):
+    cairo_path_leaf = "tests"
+  else:
+    cairo_path_leaf = "src"
+
   path = contract_path(path)
+
   contract_def = compile_starknet_files(
     files=[path],
     debug_info=True,
-    cairo_path=[str(_root / "src")]
+    cairo_path=[str(_root / cairo_path_leaf)]
   )
   return contract_def
 

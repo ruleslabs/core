@@ -7,7 +7,7 @@ Core smart contracts of the Rules V1 protocol, for marketplace contracts, see [m
 ### Compile contracts
 
 ```bash
-nile compile src/contracts/Rules*/Rules*.cairo --directory src
+nile compile src/ruleslabs/contracts/Rules*/Rules*.cairo --directory src
 ```
 
 ### Run tests
