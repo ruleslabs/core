@@ -19,7 +19,6 @@ from contracts.RulesTokens.library import (
   RulesTokens_create_and_mint_card,
   RulesTokens_mint_card,
   RulesTokens_mint_pack,
-  RulesTokens_approve_pack_opening,
   RulesTokens_open_pack,
 )
 
@@ -306,16 +305,6 @@ func approve{
   return ()
 end
 
-@external
-func approvePackOpening{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(to: felt, pack_id: Uint256):
-  RulesTokens_approve_pack_opening(to, pack_id)
-  return ()
-end
-
 #
 # Business logic
 #
@@ -380,14 +369,14 @@ func mintPack{
 end
 
 @external
-func openPackFrom{
+func openPackTo{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
-  }(_from: felt, pack_id: Uint256, cards_len: felt, cards: Card*, metadatas_len: felt, metadatas: Metadata*):
+  }(to: felt, pack_id: Uint256, cards_len: felt, cards: Card*, metadatas_len: felt, metadatas: Metadata*):
   Minter_only_minter()
-  RulesTokens_open_pack(_from, pack_id, cards_len, cards, metadatas_len, metadatas)
+  RulesTokens_open_pack(to, pack_id, cards_len, cards, metadatas_len, metadatas)
   return ()
 end
 

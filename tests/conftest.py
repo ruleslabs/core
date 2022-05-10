@@ -20,8 +20,8 @@ def get_block_timestamp(starknet_state):
 
 
 def set_block_timestamp(starknet_state, timestamp):
-  starknet_state.state.block_info = BlockInfo(
-    starknet_state.state.block_info.block_number, timestamp, 0
+  starknet_state.state.block_info = BlockInfo.create_for_testing(
+    starknet_state.state.block_info.block_number, timestamp
   )
 
 

@@ -206,6 +206,27 @@ func ERC1155_safe_mint_batch{
   return ()
 end
 
+func ERC1155_mint_batch{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*, data_len: felt, data: felt*):
+  alloc_locals
+  with_attr error_message("ERC1155: different amounts_len and ids_len"):
+    assert amounts_len = ids_len
+  end
+
+  let (caller) = get_caller_address()
+  with_attr error_message("ERC1155: minting to null address or from null caller is not allowed"):
+    assert_not_zero(to * caller)
+  end
+
+  _safe_mint_batch(
+    operator=caller, to=to, ids_len=ids_len, ids=ids, amounts_len=amounts_len, amounts=amounts, data_len=data_len, data=data
+  )
+  return ()
+end
+
 # Transfer
 
 func ERC1155_safe_transfer_from{
@@ -551,7 +572,7 @@ func _safe_mint_batch{
     range_check_ptr
   }(operator: felt, to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*, data_len: felt, data: felt*):
   alloc_locals
-  _safe_mint_batch_loop(to, ids_len, ids, amounts)
+  _mint_batch_loop(to, ids_len, ids, amounts)
 
   TransferBatch.emit(operator, _from=0, to=to, ids_len=ids_len, ids=ids, amounts_len=amounts_len, amounts=amounts)
   _safe_batch_transfer_acceptance_check(
@@ -560,7 +581,19 @@ func _safe_mint_batch{
   return ()
 end
 
-func _safe_mint_batch_loop{
+func _mint_batch{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(operator: felt, to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*, data_len: felt, data: felt*):
+  alloc_locals
+  _mint_batch_loop(to, ids_len, ids, amounts)
+
+  TransferBatch.emit(operator, _from=0, to=to, ids_len=ids_len, ids=ids, amounts_len=amounts_len, amounts=amounts)
+  return ()
+end
+
+func _mint_batch_loop{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
@@ -584,7 +617,7 @@ func _safe_mint_batch_loop{
   let (new_balance: Uint256, _) = uint256_add(balance, [amounts])
   ERC1155_balances.write(to, [ids], new_balance)
 
-  _safe_mint_batch_loop(to, ids_len=ids_len - 1, ids=ids + Uint256.SIZE, amounts=amounts + Uint256.SIZE)
+  _mint_batch_loop(to, ids_len=ids_len - 1, ids=ids + Uint256.SIZE, amounts=amounts + Uint256.SIZE)
   return ()
 end
 

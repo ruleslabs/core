@@ -17,7 +17,8 @@ from token.ERC1155.ERC1155_base import (
 
   ERC1155_safe_mint,
   ERC1155_safe_mint_batch,
-  ERC1155_burn
+  ERC1155_mint_batch,
+  ERC1155_burn,
 )
 
 from token.ERC1155.ERC1155_Metadata_base import (
@@ -50,10 +51,6 @@ end
 
 @storage_var
 func rules_packs_address_storage() -> (rules_cards_address: felt):
-end
-
-@storage_var
-func packs_opening_approvals_storage(owner: felt, pack_id: Uint256) -> (operator: felt):
 end
 
 #
@@ -210,47 +207,24 @@ end
 
 # Opening
 
-func RulesTokens_approve_pack_opening{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(operator: felt, pack_id: Uint256):
-  alloc_locals
-
-  # Ensures caller is neither zero address nor operator
-  let (local caller) = get_caller_address()
-  with_attr error_message("ERC1155: either the caller or operator is the zero address"):
-    assert_not_zero(caller * operator)
-  end
-
-  with_attr error_message("ERC1155: approve to caller"):
-    assert_not_equal(caller, operator)
-  end
-
-  let (balance) = ERC1155_balance_of(caller, pack_id)
-  with_attr error_message("RulesTokens: caller does not own this pack"):
-    uint256_le(Uint256(1, 0), balance)
-  end
-
-  packs_opening_approvals_storage.write(owner=caller, pack_id=pack_id, value=operator)
-  return ()
-end
-
 func RulesTokens_open_pack{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
-  }(_from: felt, pack_id: Uint256, cards_len: felt, cards: Card*, metadatas_len: felt, metadatas: Metadata*):
+  }(to: felt, pack_id: Uint256, cards_len: felt, cards: Card*, metadatas_len: felt, metadatas: Metadata*):
   alloc_locals
   with_attr error_message("RulesTokens: cards count and metadata count doesn't match"):
     assert cards_len = metadatas_len
   end
 
   let (local caller) = get_caller_address()
-  let (is_approved) = _is_approved_to_open_pack(owner=_from, opener=caller, pack_id=pack_id)
-  with_attr error_message("RulesTokens: opening not allowed"):
-    assert is_approved = TRUE
+
+  # Ensures 'owner' hold at least one pack
+  let (balance) = ERC1155_balance_of(caller, pack_id)
+  let (valid_amount) = uint256_le(Uint256(1, 0), balance)
+  with_attr error_message("RulesTokens: caller does not own this pack"):
+    assert valid_amount = TRUE
   end
 
   # Check if card models are in the pack and `cards_len == cards_per_pack`
@@ -267,49 +241,21 @@ func RulesTokens_open_pack{
   let (card_ids: Uint256*) = alloc()
   _create_cards_batch(rules_cards_address, cards_len, cards, metadatas, card_ids)
 
-  # Mint cards to pack holder
+  # Mint cards to receipent
   let (amounts: Uint256*) = alloc()
   uint256_memset(dst=amounts, value=Uint256(1, 0), n=cards_len)
   let data = cast(0, felt*)
-  _safe_mint_batch(to=_from, ids_len=cards_len, ids=card_ids, amounts_len=cards_len, amounts=amounts, data_len=0, data=data)
+  # Unsafe to avoid Reetrancy attack which could cancel the opening
+  _mint_batch(to=to, ids_len=cards_len, ids=card_ids, amounts_len=cards_len, amounts=amounts, data_len=0, data=data)
 
   # Burn openned pack
-  ERC1155_burn(_from, pack_id, amount=Uint256(1, 0))
-
-  # Reset pack opening approval
-  packs_opening_approvals_storage.write(owner=_from, pack_id=pack_id, value=0)
+  ERC1155_burn(caller, pack_id, amount=Uint256(1, 0))
   return ()
 end
 
 #
 # Internals
 #
-
-func _is_approved_to_open_pack{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(owner: felt, opener: felt, pack_id: Uint256) -> (res: felt):
-  alloc_locals
-
-  # Ensures 'owner' hold at least one pack
-  let (balance) = ERC1155_balance_of(owner, pack_id)
-  let (valid_amount) = uint256_le(Uint256(1, 0), balance)
-  if valid_amount == FALSE:
-    return (FALSE)
-  end
-
-  if owner == opener:
-    return (TRUE)
-  end
-
-  let (operator) = packs_opening_approvals_storage.read(owner, pack_id)
-  if operator == opener:
-      return (TRUE)
-  end
-
-  return (FALSE)
-end
 
 func _assert_cards_presence_in_pack{
     syscall_ptr: felt*,
@@ -354,6 +300,17 @@ func _safe_mint_batch{
   ERC1155_Supply_before_token_transfer(_from=0, to=to, ids_len=ids_len, ids=ids, amounts=amounts)
 
   ERC1155_safe_mint_batch(to, ids_len, ids, amounts_len, amounts, data_len, data)
+  return ()
+end
+
+func _mint_batch{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*, data_len: felt, data: felt*):
+  ERC1155_Supply_before_token_transfer(_from=0, to=to, ids_len=ids_len, ids=ids, amounts=amounts)
+
+  ERC1155_mint_batch(to, ids_len, ids, amounts_len, amounts, data_len, data)
   return ()
 end
 
