@@ -49,7 +49,9 @@ func Capper_only_capper{
   }():
   let (caller) = get_caller_address()
   let (has_role) = AccessControl_has_role(CAPPER_ROLE, caller)
-  assert has_role = TRUE
+  with_attr error_message("AccessControl: only cappers are authorized to perform this action"):
+    assert has_role = TRUE
+  end
 
   return ()
 end

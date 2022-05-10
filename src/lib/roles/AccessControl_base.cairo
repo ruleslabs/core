@@ -94,7 +94,9 @@ func AccessControl_only_admin{
   }():
   let (caller) = get_caller_address()
   let (has_role) = AccessControl_has_role(ADMIN_ROLE, caller)
-  assert has_role = TRUE
+  with_attr error_message("AccessControl: only admin is authorized to perform this action"):
+    assert has_role = TRUE
+  end
 
   return ()
 end

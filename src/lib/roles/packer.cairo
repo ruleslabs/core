@@ -49,7 +49,9 @@ func Packer_only_packer{
   }():
   let (caller) = get_caller_address()
   let (has_role) = AccessControl_has_role(PACKER_ROLE, caller)
-  assert has_role = TRUE
+  with_attr error_message("AccessControl: only packers are authorized to perform this action"):
+    assert has_role = TRUE
+  end
 
   return ()
 end

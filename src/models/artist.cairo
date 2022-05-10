@@ -18,10 +18,14 @@ func assert_artist_name_well_formed{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(artist_name: Uint256):
-  uint256_check(artist_name)
+  with_attr error_message("artist_name is not a valid Uint256"):
+    uint256_check(artist_name)
+  end
 
-  let (is_null) = uint256_eq(artist_name, Uint256(0, 0))
-  assert is_null = FALSE
+  with_attr error_message("artist_name cannot be null"):
+    let (is_null) = uint256_eq(artist_name, Uint256(0, 0))
+    assert is_null = FALSE
+  end
 
   return ()
 end

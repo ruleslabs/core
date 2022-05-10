@@ -49,7 +49,9 @@ func Minter_only_minter{
   }():
   let (caller) = get_caller_address()
   let (has_role) = AccessControl_has_role(MINTER_ROLE, caller)
-  assert has_role = TRUE
+  with_attr error_message("AccessControl: only minters are authorized to perform this action"):
+    assert has_role = TRUE
+  end
 
   return ()
 end
