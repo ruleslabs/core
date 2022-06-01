@@ -20,6 +20,8 @@ from ruleslabs.token.ERC1155.ERC1155_base import (
   ERC1155_safe_mint_batch,
   ERC1155_mint_batch,
   ERC1155_burn,
+  ERC1155_approve,
+  _inc_approve,
 )
 
 from ruleslabs.token.ERC1155.ERC1155_Metadata_base import (
@@ -161,7 +163,7 @@ namespace RulesTokens:
       syscall_ptr: felt*,
       pedersen_ptr: HashBuiltin*,
       range_check_ptr
-    }(pack_id: Uint256, to: felt, amount: felt) -> (token_id: Uint256):
+    }(pack_id: Uint256, to: felt, amount: felt, operator: felt) -> (token_id: Uint256):
     alloc_locals
 
     let (rules_packs_address) = rules_packs_address_storage.read()
@@ -200,6 +202,11 @@ namespace RulesTokens:
 
     let data = cast(0, felt*)
     _safe_mint(to, token_id=pack_id, amount=Uint256(amount, 0), data_len=0, data=data)
+
+    # Anticipated opening approve
+    if operator != 0:
+      _inc_approve(owner=to, operator=operator, token_id=pack_id, amount=Uint256(amount, 0))
+    end
 
     return (token_id=pack_id)
   end

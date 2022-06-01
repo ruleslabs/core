@@ -215,12 +215,12 @@ async def _create_and_mint_card(ctx, signer_account_name, card, metadata, to_acc
     [*to_starknet_args(card), *to_starknet_args(metadata), to_account_address]
   )
 
-async def _mint_pack(ctx, signer_account_name, pack_id, to_account_address, amount):
+async def _mint_pack(ctx, signer_account_name, pack_id, to_account_address, amount, operator_address):
   await ctx.execute(
     signer_account_name,
     ctx.rulesTokens.contract_address,
     "mintPack",
-    [*to_starknet_args(pack_id), to_account_address, amount]
+    [*to_starknet_args(pack_id), to_account_address, amount, operator_address]
   )
 
 async def _mint_card(ctx, signer_account_name, card_id, to_account_address):
@@ -301,6 +301,40 @@ async def _open_pack(ctx, signer_account_name, pack_id, cards, metadatas, to_acc
     [to_account_address, *to_starknet_args(pack_id), len(cards), *to_starknet_args(cards), len(metadatas), *to_starknet_args(metadatas)]
   )
 
+##########
+# CONSTS #
+##########
+
+NULL = "null"
+DEAD = "dead"
+MINTER = "minter"
+OWNER = "owner"
+RANDO_1 = "rando1"
+RANDO_2 = "rando2"
+RANDO_3 = "rando3"
+VALID_ACCOUNT_NAMES = [MINTER, OWNER, RANDO_1, RANDO_2, RANDO_3, NULL]
+
+MINTER_ROLE = "MINTER_ROLE"
+CAPPER_ROLE = "CAPPER_ROLE"
+ROLES = dict(MINTER_ROLE="Minter", CAPPER_ROLE="Capper")
+
+METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
+
+ARTIST_1 = (0x416C7068612057616E6E, 0)
+ARTIST_2 = (0x5A6575, 0)
+
+CARD_MODEL_1 = dict(artist_name=ARTIST_1, season=1, scarcity=0)
+CARD_MODEL_2 = dict(artist_name=ARTIST_2, season=1, scarcity=0)
+
+CARD_1 = dict(model=CARD_MODEL_1, serial_number=1)
+CARD_2 = dict(model=CARD_MODEL_2, serial_number=1)
+
+PACK_CARD_MODELS=[
+dict(card_model=CARD_MODEL_1, quantity=10),
+dict(card_model=CARD_MODEL_2, quantity=5),
+]
+PACK_1 = dict(cards_per_pack=3, pack_card_models=PACK_CARD_MODELS)
+
 ############
 # SCENARIO #
 ############
@@ -357,10 +391,11 @@ class ScenarioState:
   async def create_common_pack(self, signer_account_name, cards_per_pack, season, metadata):
     await _create_common_pack(self.ctx, signer_account_name, cards_per_pack, season, metadata)
 
-  async def mint_pack(self, signer_account_name, pack_id, to_account_name, amount):
+  async def mint_pack(self, signer_account_name, pack_id, to_account_name, amount, operator_name =NULL):
     to_account_address = get_account_address(self.ctx, to_account_name)
+    operator_address = get_account_address(self.ctx, operator_name)
 
-    await _mint_pack(self.ctx, signer_account_name, pack_id, to_account_address, amount)
+    await _mint_pack(self.ctx, signer_account_name, pack_id, to_account_address, amount, operator_address)
 
   # Packs opening
 
@@ -426,40 +461,6 @@ async def run_scenario(ctx, scenario):
         assert expect_success == False
     else:
       assert expect_success == True
-
-##########
-# CONSTS #
-##########
-
-NULL = "null"
-DEAD = "dead"
-MINTER = "minter"
-OWNER = "owner"
-RANDO_1 = "rando1"
-RANDO_2 = "rando2"
-RANDO_3 = "rando3"
-VALID_ACCOUNT_NAMES = [MINTER, OWNER, RANDO_1, RANDO_2, RANDO_3, NULL]
-
-MINTER_ROLE = "MINTER_ROLE"
-CAPPER_ROLE = "CAPPER_ROLE"
-ROLES = dict(MINTER_ROLE="Minter", CAPPER_ROLE="Capper")
-
-METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
-
-ARTIST_1 = (0x416C7068612057616E6E, 0)
-ARTIST_2 = (0x5A6575, 0)
-
-CARD_MODEL_1 = dict(artist_name=ARTIST_1, season=1, scarcity=0)
-CARD_MODEL_2 = dict(artist_name=ARTIST_2, season=1, scarcity=0)
-
-CARD_1 = dict(model=CARD_MODEL_1, serial_number=1)
-CARD_2 = dict(model=CARD_MODEL_2, serial_number=1)
-
-PACK_CARD_MODELS=[
-  dict(card_model=CARD_MODEL_1, quantity=10),
-  dict(card_model=CARD_MODEL_2, quantity=5),
-]
-PACK_1 = dict(cards_per_pack=3, pack_card_models=PACK_CARD_MODELS)
 
 #########
 # TESTS #
@@ -1300,21 +1301,13 @@ async def test_settle_where_owner_open_common_packs_1(ctx_factory):
 
 
 @pytest.mark.asyncio
-async def test_settle_where_owner_open_classic_packs_1(ctx_factory):
+async def test_settle_where_owner_mint_packs_with_operator(ctx_factory):
   ctx = ctx_factory()
 
   # Given
-  CARD_1_2 = update_card(CARD_1, serial_number=2)
-  CARD_3 = update_card(CARD_1, scarcity=1)
-
-  card_id_1 = await _get_card_id(ctx, CARD_1)
-  card_id_2 = await _get_card_id(ctx, CARD_2)
-  card_id_1_2 = await _get_card_id(ctx, CARD_1_2)
-
-  assert await _balance_of(ctx, RANDO_1, card_id_1) == to_uint(0)
-  assert await _balance_of(ctx, RANDO_1, card_id_2) == to_uint(0)
-  assert await _balance_of(ctx, RANDO_1, card_id_1_2) == to_uint(0)
-  assert await _balance_of(ctx, RANDO_1, to_uint(1 << 128)) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_2, to_uint(1)) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_3, to_uint(1)) == to_uint(0)
 
   # When
   await run_scenario(
@@ -1323,25 +1316,23 @@ async def test_settle_where_owner_open_classic_packs_1(ctx_factory):
       (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
       (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
 
-      (MINTER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=3), metadata=METADATA_1), True),
+      (MINTER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=1), metadata=METADATA_1), True),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=3), True),
-      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=3), True),
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2, operator_name=RANDO_2), True),
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
 
-      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=OWNER, amount=1), True),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_3], metadatas=[METADATA_1, METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_1_2], metadatas=[METADATA_1, METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True)
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1, operator_name=RANDO_2), True),
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=2), True),
+
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2), True),
+      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=1), True),
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1, operator_name=RANDO_2), True),
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=3), False),
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=2), True),
     ]
   )
 
   # Then
-  rando_2_address = get_account_address(ctx, RANDO_2)
-
-  assert await _balance_of(ctx, RANDO_1, card_id_1) == to_uint(1)
-  assert await _balance_of(ctx, RANDO_1, card_id_2) == to_uint(1)
-  assert await _balance_of(ctx, RANDO_1, card_id_1_2) == to_uint(1)
-
   assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(1)
-  assert await _balance_of(ctx, RANDO_3, to_uint(1)) == to_uint(1)
-  assert await _get_approved(ctx, RANDO_1, to_uint(1)) == (rando_2_address, to_uint(1))
+  assert await _balance_of(ctx, RANDO_2, to_uint(1)) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_3, to_uint(1)) == to_uint(5)

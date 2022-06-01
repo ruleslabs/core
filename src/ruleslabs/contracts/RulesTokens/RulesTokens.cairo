@@ -351,9 +351,9 @@ func mintPack{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(pack_id: Uint256, to: felt, amount: felt) -> (token_id: Uint256):
+  }(pack_id: Uint256, to: felt, amount: felt, operator: felt) -> (token_id: Uint256):
   Minter_only_minter()
-  let (token_id) = RulesTokens.mint_pack(pack_id, to, amount)
+  let (token_id) = RulesTokens.mint_pack(pack_id, to, amount, operator)
   return (token_id)
 end
 

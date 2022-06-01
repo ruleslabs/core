@@ -366,6 +366,26 @@ end
 # Internals
 #
 
+func _inc_approve{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(owner: felt, operator: felt, token_id: Uint256, amount: Uint256):
+  let (current_operator) = ERC1155_token_approval_operator.read(owner, token_id)
+
+  if current_operator == operator:
+    let (current_amount) = ERC1155_token_approval_amount.read(owner, token_id)
+    let (new_amount: Uint256, _) = uint256_add(current_amount, amount)
+    ERC1155_token_approval_amount.write(owner, token_id, new_amount)
+  else:
+    ERC1155_token_approval_operator.write(owner, token_id, operator)
+    ERC1155_token_approval_amount.write(owner, token_id, amount)
+  end
+
+  Approval.emit(owner, operator, token_id, amount)
+  return ()
+end
+
 func _approve{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
