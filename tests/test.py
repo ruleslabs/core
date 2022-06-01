@@ -1301,6 +1301,54 @@ async def test_settle_where_owner_open_common_packs_1(ctx_factory):
 
 
 @pytest.mark.asyncio
+async def test_settle_where_owner_open_classic_packs_1(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  CARD_1_2 = update_card(CARD_1, serial_number=2)
+  CARD_3 = update_card(CARD_1, scarcity=1)
+
+  card_id_1 = await _get_card_id(ctx, CARD_1)
+  card_id_2 = await _get_card_id(ctx, CARD_2)
+  card_id_1_2 = await _get_card_id(ctx, CARD_1_2)
+
+  assert await _balance_of(ctx, RANDO_1, card_id_1) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, card_id_2) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, card_id_1_2) == to_uint(0)
+  assert await _balance_of(ctx, RANDO_1, to_uint(1 << 128)) == to_uint(0)
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+
+      (MINTER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=3), metadata=METADATA_1), True),
+
+      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=3), True),
+      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=3), True),
+
+      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=OWNER, amount=1), True),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_3], metadatas=[METADATA_1, METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_1_2], metadatas=[METADATA_1, METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
+      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True)
+    ]
+  )
+
+  # Then
+  rando_2_address = get_account_address(ctx, RANDO_2)
+
+  assert await _balance_of(ctx, RANDO_1, card_id_1) == to_uint(1)
+  assert await _balance_of(ctx, RANDO_1, card_id_2) == to_uint(1)
+  assert await _balance_of(ctx, RANDO_1, card_id_1_2) == to_uint(1)
+
+  assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(1)
+  assert await _balance_of(ctx, RANDO_3, to_uint(1)) == to_uint(1)
+  assert await _get_approved(ctx, RANDO_1, to_uint(1)) == (rando_2_address, to_uint(1))
+
+
+@pytest.mark.asyncio
 async def test_settle_where_owner_mint_packs_with_operator(ctx_factory):
   ctx = ctx_factory()
 
