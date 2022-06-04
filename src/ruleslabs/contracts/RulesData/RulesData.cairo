@@ -7,6 +7,7 @@ from starkware.cairo.common.uint256 import Uint256
 # Libraries
 
 from ruleslabs.contracts.RulesData.library import RulesData
+from openzeppelin.upgrades.library import Proxy
 
 from ruleslabs.lib.Ownable_base import (
   Ownable_get_owner,
@@ -34,11 +35,11 @@ from ruleslabs.lib.roles.minter import (
 )
 
 #
-# Constructor
+# Initializer
 #
 
-@constructor
-func constructor{
+@external
+func initialize{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
@@ -47,12 +48,41 @@ func constructor{
   AccessControl_initializer(owner)
   Minter_initializer(owner)
 
+  Proxy.initializer(owner)
+  return ()
+end
+
+#
+# Upgrade
+#
+
+@external
+func upgrade{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }(new_implementation: felt):
+  Proxy.assert_only_admin()
+  Proxy._set_implementation(new_implementation)
+
   return ()
 end
 
 #
 # Getters
 #
+
+# Proxy
+
+@view
+func getImplementation{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    range_check_ptr
+  }() -> (role: felt):
+  let (address) = Proxy.get_implementation()
+  return (address)
+end
 
 # Roles
 
@@ -163,6 +193,8 @@ func transferOwnership{
     range_check_ptr
   }(new_owner: felt) -> (new_owner: felt):
   Ownable_transfer_ownership(new_owner)
+  Proxy._set_admin(new_owner) # no need to assert only admin, Ownable already did it
+
   return (new_owner)
 end
 
@@ -173,5 +205,7 @@ func renounceOwnership{
     range_check_ptr
   }():
   Ownable_transfer_ownership(0)
+  Proxy._set_admin(0) # no need to assert only admin, Ownable already did it
+
   return ()
 end

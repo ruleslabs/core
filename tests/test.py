@@ -301,6 +301,24 @@ async def _open_pack(ctx, signer_account_name, pack_id, cards, metadatas, to_acc
     [to_account_address, *to_starknet_args(pack_id), len(cards), *to_starknet_args(cards), len(metadatas), *to_starknet_args(metadatas)]
   )
 
+# Proxy
+
+async def _initialize(ctx, signer_account_name, contract, params):
+  await ctx.execute(
+    signer_account_name,
+    contract.contract_address,
+    "initialize",
+    params
+  )
+
+async def _upgrade(ctx, signer_account_name, contract, new_contract):
+  await ctx.execute(
+    signer_account_name,
+    contract.contract_address,
+    "upgrade",
+    [new_contract.contract_address]
+  )
+
 ##########
 # CONSTS #
 ##########
@@ -347,6 +365,19 @@ class ScenarioState:
 
   async def create_artist(self, signer_account_name, artist_name):
     await _create_artist(self.ctx, signer_account_name, artist_name)
+
+  # Proxy
+
+  async def initialize(self, signer_account_name, contract_name, params):
+    contract = get_contract(self.ctx, contract_name)
+
+    await _initialize(self.ctx, signer_account_name, contract, params)
+
+  async def upgrade(self, signer_account_name, contract_name, new_contract_name):
+    contract = get_contract(self.ctx, contract_name)
+    new_contract = get_contract(self.ctx, new_contract_name)
+
+    await _upgrade(self.ctx, signer_account_name, contract, new_contract)
 
   # Transfer
 
@@ -1384,3 +1415,72 @@ async def test_settle_where_owner_mint_packs_with_operator(ctx_factory):
   assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(1)
   assert await _balance_of(ctx, RANDO_2, to_uint(1)) == to_uint(0)
   assert await _balance_of(ctx, RANDO_3, to_uint(1)) == to_uint(5)
+
+# Proxy
+
+@pytest.mark.asyncio
+async def test_double_initialization(ctx_factory):
+  ctx = ctx_factory()
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (OWNER, "initialize", dict(contract_name=contract_name, ), False),
+    ]
+  )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+  "contract_name, params",
+  [
+    ("rulesTokens", [0, 0, 0, 0, 0]),
+    ("rulesPacks", [0, 0, 0]),
+    ("rulesCards", [0, 0]),
+    ("rulesData", [0])
+  ]
+)
+async def test_double_initialization(ctx_factory, contract_name, params):
+  ctx = ctx_factory()
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (OWNER, "initialize", dict(contract_name=contract_name, params=params), False),
+    ]
+  )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+  "contract_name, params",
+  [
+    ("rulesData", [0])
+  ]
+)
+async def test_upgrade(ctx_factory, contract_name, params):
+  ctx = ctx_factory()
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (OWNER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (RANDO_1, "create_artist", dict(artist_name=ARTIST_2), False),
+
+      (RANDO_1, "upgrade", dict(contract_name=contract_name, new_contract_name=contract_name + 'Mock'), False),
+      (OWNER, "upgrade", dict(contract_name=contract_name, new_contract_name=contract_name + 'Mock'), True),
+
+      (RANDO_1, "initialize", dict(contract_name=contract_name, params=params), False),
+      (OWNER, "initialize", dict(contract_name=contract_name, params=params), True),
+
+      (RANDO_1, "create_artist", dict(artist_name=ARTIST_1), False),
+      (RANDO_1, "create_artist", dict(artist_name=ARTIST_2), True),
+    ]
+  )
+
+  # Then
+  assert await _artist_exists(ctx, artist_name=ARTIST_1) == 1
+  assert await _artist_exists(ctx, artist_name=ARTIST_2) == 1

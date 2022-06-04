@@ -47,10 +47,10 @@ end
 namespace Account:
 
   #
-  # Constructor
+  # Initializer
   #
 
-  func constructor{
+  func initializer{
       syscall_ptr : felt*,
       pedersen_ptr : HashBuiltin*,
       range_check_ptr
@@ -154,6 +154,11 @@ namespace Account:
       nonce: felt
     ) -> (response_len: felt, response: felt*):
     alloc_locals
+
+    let (caller) = get_caller_address()
+    with_attr error_message("Account: no reentrant call"):
+      assert caller = 0
+    end
 
     let (__fp__, _) = get_fp_and_pc()
     let (tx_info) = get_tx_info()

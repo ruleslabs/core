@@ -24,7 +24,9 @@ def contract_path(name):
 
 def get_contract_def(path):
   """Returns the contract definition from the contract path"""
-  if path.startswith("mocks/"):
+  if path.startswith("mocks/upgrades/"):
+    cairo_path_leaf = "src"
+  elif path.startswith("mocks/"):
     cairo_path_leaf = "tests"
   else:
     cairo_path_leaf = "src"

@@ -57,10 +57,12 @@ async def build_copyable_deployment():
 
   defs = SimpleNamespace(
     account=get_contract_def("mocks/account/Account.cairo"),
+    proxy=get_contract_def("openzeppelin/upgrades/Proxy.cairo"),
     rulesData=get_contract_def("ruleslabs/contracts/RulesData/RulesData.cairo"),
     rulesCards=get_contract_def("ruleslabs/contracts/RulesCards/RulesCards.cairo"),
     rulesPacks=get_contract_def("ruleslabs/contracts/RulesPacks/RulesPacks.cairo"),
-    rulesTokens=get_contract_def("ruleslabs/contracts/RulesTokens/RulesTokens.cairo")
+    rulesTokens=get_contract_def("ruleslabs/contracts/RulesTokens/RulesTokens.cairo"),
+    rulesDataMock=get_contract_def("mocks/upgrades/RulesDataMock.cairo")
   )
 
   signers = dict(
@@ -78,42 +80,70 @@ async def build_copyable_deployment():
     }
   )
 
-  rulesData = await starknet.deploy(
-    contract_def=defs.rulesData,
-    constructor_calldata=[
+  # Implementations
+  rulesData = await starknet.deploy(contract_def=defs.rulesData, constructor_calldata=[])
+  rulesCards = await starknet.deploy(contract_def=defs.rulesCards, constructor_calldata=[])
+  rulesPacks = await starknet.deploy(contract_def=defs.rulesPacks, constructor_calldata=[])
+  rulesTokens = await starknet.deploy(contract_def=defs.rulesTokens, constructor_calldata=[])
+
+  # Mocks
+  rulesDataMock = await starknet.deploy(contract_def=defs.rulesDataMock, constructor_calldata=[])
+
+  # Proxies
+  rulesDataProxy = await starknet.deploy(contract_def=defs.proxy, constructor_calldata=[rulesData.contract_address])
+  rulesCardsProxy = await starknet.deploy(contract_def=defs.proxy, constructor_calldata=[rulesCards.contract_address])
+  rulesPacksProxy = await starknet.deploy(contract_def=defs.proxy, constructor_calldata=[rulesPacks.contract_address])
+  rulesTokensProxy = await starknet.deploy(contract_def=defs.proxy, constructor_calldata=[rulesTokens.contract_address])
+
+  # RulesDataMock
+  await signers["owner"].send_transaction(
+    accounts.owner,
+    rulesDataProxy.contract_address,
+    "initialize",
+    [
       accounts.owner.contract_address # owner
     ]
   )
 
-  rulesCards = await starknet.deploy(
-    contract_def=defs.rulesCards,
-    constructor_calldata=[
+  # RulesCards
+  await signers["owner"].send_transaction(
+    accounts.owner,
+    rulesCardsProxy.contract_address,
+    "initialize",
+    [
       accounts.owner.contract_address, # owner
-      rulesData.contract_address
+      rulesDataProxy.contract_address
     ]
   )
 
-  rulesPacks = await starknet.deploy(
-    contract_def=defs.rulesPacks,
-    constructor_calldata=[
+  # RulesPacks
+  await signers["owner"].send_transaction(
+    accounts.owner,
+    rulesPacksProxy.contract_address,
+    "initialize",
+    [
       accounts.owner.contract_address, # owner
-      rulesData.contract_address,
-      rulesCards.contract_address
+      rulesDataProxy.contract_address,
+      rulesCardsProxy.contract_address
     ]
   )
 
-  rulesTokens = await starknet.deploy(
-    contract_def=defs.rulesTokens,
-    constructor_calldata=[
+  # RulesTokens
+  await signers["owner"].send_transaction(
+    accounts.owner,
+    rulesTokensProxy.contract_address,
+    "initialize",
+    [
       0x5374616D70656465, # name
       0x5354414D50, # symbol
       accounts.owner.contract_address, # owner
-      rulesCards.contract_address,
-      rulesPacks.contract_address
+      rulesCardsProxy.contract_address,
+      rulesPacksProxy.contract_address
     ]
   )
 
-  for contract in [rulesData, rulesCards, rulesTokens, rulesPacks]:
+  # Configure access control
+  for contract in [rulesDataProxy, rulesCardsProxy, rulesTokensProxy, rulesPacksProxy]:
     await signers["owner"].send_transaction(
       accounts.owner,
       contract.contract_address,
@@ -123,28 +153,28 @@ async def build_copyable_deployment():
 
   await signers["owner"].send_transaction(
     accounts.owner,
-    rulesCards.contract_address,
+    rulesCardsProxy.contract_address,
     "addMinter",
-    [rulesTokens.contract_address]
+    [rulesTokensProxy.contract_address]
   )
 
   await signers["owner"].send_transaction(
     accounts.owner,
-    rulesPacks.contract_address,
+    rulesPacksProxy.contract_address,
     "addMinter",
-    [rulesTokens.contract_address]
+    [rulesTokensProxy.contract_address]
   )
 
   await signers["owner"].send_transaction(
     accounts.owner,
-    rulesCards.contract_address,
+    rulesCardsProxy.contract_address,
     "addPacker",
-    [rulesPacks.contract_address]
+    [rulesPacksProxy.contract_address]
   )
 
   await signers["owner"].send_transaction(
     accounts.owner,
-    rulesCards.contract_address,
+    rulesCardsProxy.contract_address,
     "revokePacker",
     [accounts.owner.contract_address]
   )
@@ -158,10 +188,11 @@ async def build_copyable_deployment():
       rando2=serialize_contract(accounts.rando2, defs.account.abi),
       rando3=serialize_contract(accounts.rando3, defs.account.abi),
       minter=serialize_contract(accounts.minter, defs.account.abi),
-      rulesData=serialize_contract(rulesData, defs.rulesData.abi),
-      rulesCards=serialize_contract(rulesCards, defs.rulesCards.abi),
-      rulesPacks=serialize_contract(rulesPacks, defs.rulesPacks.abi),
-      rulesTokens=serialize_contract(rulesTokens, defs.rulesTokens.abi)
+      rulesData=serialize_contract(rulesDataProxy, defs.rulesData.abi),
+      rulesCards=serialize_contract(rulesCardsProxy, defs.rulesCards.abi),
+      rulesPacks=serialize_contract(rulesPacksProxy, defs.rulesPacks.abi),
+      rulesTokens=serialize_contract(rulesTokensProxy, defs.rulesTokens.abi),
+      rulesDataMock=serialize_contract(rulesDataMock, defs.rulesDataMock.abi)
     )
   )
 
