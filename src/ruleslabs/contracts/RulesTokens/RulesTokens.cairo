@@ -108,18 +108,6 @@ end
 # Getters
 #
 
-# Proxy
-
-@view
-func getImplementation{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }() -> (role: felt):
-  let (address) = Proxy.get_implementation()
-  return (address)
-end
-
 # Name & Symbol
 
 @view

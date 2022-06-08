@@ -6,10 +6,11 @@ import sys
 from types import SimpleNamespace
 import time
 
-from starkware.starknet.testing.starknet import Starknet, StarknetContract
+from starkware.starknet.testing.starknet import Starknet
 from starkware.starknet.business_logic.state.state import BlockInfo
+from starkware.starknet.testing.contract import DeclaredClass, StarknetContract
 
-from utils import Signer, get_contract_def, _root
+from utils import Signer, get_contract_class, _root
 
 # pytest-xdest only shows stderr
 sys.stdout = sys.stderr
@@ -27,7 +28,7 @@ def set_block_timestamp(starknet_state, timestamp):
 
 async def deploy_account(starknet, signer, account_def):
   return await starknet.deploy(
-    contract_def=account_def,
+    contract_class=account_def,
     constructor_calldata=[signer.public_key]
   )
 
@@ -40,8 +41,19 @@ def serialize_contract(contract, abi):
   )
 
 
+def serialize_class(declared_class):
+  return dict(
+    class_hash=declared_class.class_hash,
+    abi=declared_class.abi
+  )
+
+
 def unserialize_contract(starknet_state, serialized_contract):
   return StarknetContract(state=starknet_state, **serialized_contract)
+
+
+def unserialize_class(serialized_class):
+  return DeclaredClass(**serialized_class)
 
 
 @pytest.fixture(scope="session")
@@ -55,14 +67,14 @@ async def build_copyable_deployment():
   # initialize realistic timestamp
   set_block_timestamp(starknet.state, round(time.time()))
 
-  defs = SimpleNamespace(
-    account=get_contract_def("mocks/account/Account.cairo"),
-    proxy=get_contract_def("openzeppelin/upgrades/Proxy.cairo"),
-    rulesData=get_contract_def("ruleslabs/contracts/RulesData/RulesData.cairo"),
-    rulesCards=get_contract_def("ruleslabs/contracts/RulesCards/RulesCards.cairo"),
-    rulesPacks=get_contract_def("ruleslabs/contracts/RulesPacks/RulesPacks.cairo"),
-    rulesTokens=get_contract_def("ruleslabs/contracts/RulesTokens/RulesTokens.cairo"),
-    rulesDataMock=get_contract_def("mocks/upgrades/RulesDataMock.cairo")
+  contract_classes = SimpleNamespace(
+    account=get_contract_class("mocks/account/Account.cairo"),
+    proxy=get_contract_class("openzeppelin/upgrades/Proxy.cairo"),
+    rulesData=get_contract_class("ruleslabs/contracts/RulesData/RulesData.cairo"),
+    rulesCards=get_contract_class("ruleslabs/contracts/RulesCards/RulesCards.cairo"),
+    rulesPacks=get_contract_class("ruleslabs/contracts/RulesPacks/RulesPacks.cairo"),
+    rulesTokens=get_contract_class("ruleslabs/contracts/RulesTokens/RulesTokens.cairo"),
+    rulesDataMock=get_contract_class("mocks/upgrades/RulesDataMock.cairo")
   )
 
   signers = dict(
@@ -75,27 +87,27 @@ async def build_copyable_deployment():
 
   accounts = SimpleNamespace(
     **{
-      name: (await deploy_account(starknet, signer, defs.account))
+      name: (await deploy_account(starknet, signer, contract_classes.account))
       for name, signer in signers.items()
     }
   )
 
   # Implementations
-  rulesData = await starknet.deploy(contract_def=defs.rulesData, constructor_calldata=[])
-  rulesCards = await starknet.deploy(contract_def=defs.rulesCards, constructor_calldata=[])
-  rulesPacks = await starknet.deploy(contract_def=defs.rulesPacks, constructor_calldata=[])
-  rulesTokens = await starknet.deploy(contract_def=defs.rulesTokens, constructor_calldata=[])
+  rulesData = await starknet.declare(contract_class=contract_classes.rulesData)
+  rulesCards = await starknet.declare(contract_class=contract_classes.rulesCards)
+  rulesPacks = await starknet.declare(contract_class=contract_classes.rulesPacks)
+  rulesTokens = await starknet.declare(contract_class=contract_classes.rulesTokens)
 
   # Mocks
-  rulesDataMock = await starknet.deploy(contract_def=defs.rulesDataMock, constructor_calldata=[])
+  rulesDataMock = await starknet.declare(contract_class=contract_classes.rulesDataMock)
 
   # Proxies
-  rulesDataProxy = await starknet.deploy(contract_def=defs.proxy, constructor_calldata=[rulesData.contract_address])
-  rulesCardsProxy = await starknet.deploy(contract_def=defs.proxy, constructor_calldata=[rulesCards.contract_address])
-  rulesPacksProxy = await starknet.deploy(contract_def=defs.proxy, constructor_calldata=[rulesPacks.contract_address])
-  rulesTokensProxy = await starknet.deploy(contract_def=defs.proxy, constructor_calldata=[rulesTokens.contract_address])
+  rulesDataProxy = await starknet.deploy(contract_class=contract_classes.proxy, constructor_calldata=[rulesData.class_hash])
+  rulesCardsProxy = await starknet.deploy(contract_class=contract_classes.proxy, constructor_calldata=[rulesCards.class_hash])
+  rulesPacksProxy = await starknet.deploy(contract_class=contract_classes.proxy, constructor_calldata=[rulesPacks.class_hash])
+  rulesTokensProxy = await starknet.deploy(contract_class=contract_classes.proxy, constructor_calldata=[rulesTokens.class_hash])
 
-  # RulesDataMock
+  # RulesData
   await signers["owner"].send_transaction(
     accounts.owner,
     rulesDataProxy.contract_address,
@@ -183,16 +195,18 @@ async def build_copyable_deployment():
     starknet=starknet,
     signers=signers,
     serialized_contracts=dict(
-      owner=serialize_contract(accounts.owner, defs.account.abi),
-      rando1=serialize_contract(accounts.rando1, defs.account.abi),
-      rando2=serialize_contract(accounts.rando2, defs.account.abi),
-      rando3=serialize_contract(accounts.rando3, defs.account.abi),
-      minter=serialize_contract(accounts.minter, defs.account.abi),
-      rulesData=serialize_contract(rulesDataProxy, defs.rulesData.abi),
-      rulesCards=serialize_contract(rulesCardsProxy, defs.rulesCards.abi),
-      rulesPacks=serialize_contract(rulesPacksProxy, defs.rulesPacks.abi),
-      rulesTokens=serialize_contract(rulesTokensProxy, defs.rulesTokens.abi),
-      rulesDataMock=serialize_contract(rulesDataMock, defs.rulesDataMock.abi)
+      owner=serialize_contract(accounts.owner, contract_classes.account.abi),
+      rando1=serialize_contract(accounts.rando1, contract_classes.account.abi),
+      rando2=serialize_contract(accounts.rando2, contract_classes.account.abi),
+      rando3=serialize_contract(accounts.rando3, contract_classes.account.abi),
+      minter=serialize_contract(accounts.minter, contract_classes.account.abi),
+      rulesData=serialize_contract(rulesDataProxy, contract_classes.rulesData.abi),
+      rulesCards=serialize_contract(rulesCardsProxy, contract_classes.rulesCards.abi),
+      rulesPacks=serialize_contract(rulesPacksProxy, contract_classes.rulesPacks.abi),
+      rulesTokens=serialize_contract(rulesTokensProxy, contract_classes.rulesTokens.abi),
+    ),
+    serialized_classes=dict(
+      rulesDataMock=serialize_class(rulesDataMock)
     )
   )
 
@@ -215,6 +229,7 @@ async def copyable_deployment(request):
 @pytest.fixture(scope="session")
 async def ctx_factory(copyable_deployment):
   serialized_contracts = copyable_deployment.serialized_contracts
+  serialized_classes = copyable_deployment.serialized_classes
   signers = copyable_deployment.signers
 
   def make():
@@ -222,6 +237,10 @@ async def ctx_factory(copyable_deployment):
     contracts = {
       name: unserialize_contract(starknet_state, serialized_contract)
       for name, serialized_contract in serialized_contracts.items()
+    }
+    classes = {
+      name: unserialize_class(serialized_class)
+      for name, serialized_class in serialized_classes.items()
     }
 
     async def execute(account_name, contract_address, selector_name, calldata):
@@ -235,6 +254,7 @@ async def ctx_factory(copyable_deployment):
     return SimpleNamespace(
       starknet=Starknet(starknet_state),
       execute=execute,
+      **classes,
       **contracts
     )
 

@@ -19,8 +19,6 @@ func initialize{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(owner: felt):
-  # Should already have an admin since it's an upgraded implementation
-  Proxy.assert_only_admin()
   Proxy.initializer(owner)
   return ()
 end

@@ -5,7 +5,7 @@ from starkware.starknet.definitions.error_codes import StarknetErrorCode
 
 from utils import (
   dict_to_tuple, to_starknet_args, update_card, get_contract, get_method, to_uint, get_account_address,
-  felts_to_string, felts_to_ascii, from_uint, update_dict, SERIAL_NUMBER_MAX
+  felts_to_string, felts_to_ascii, from_uint, update_dict, SERIAL_NUMBER_MAX, get_declared_class
 )
 
 # Artist
@@ -311,12 +311,12 @@ async def _initialize(ctx, signer_account_name, contract, params):
     params
   )
 
-async def _upgrade(ctx, signer_account_name, contract, new_contract):
+async def _upgrade(ctx, signer_account_name, contract, new_declared_class):
   await ctx.execute(
     signer_account_name,
     contract.contract_address,
     "upgrade",
-    [new_contract.contract_address]
+    [new_declared_class.class_hash]
   )
 
 ##########
@@ -373,11 +373,11 @@ class ScenarioState:
 
     await _initialize(self.ctx, signer_account_name, contract, params)
 
-  async def upgrade(self, signer_account_name, contract_name, new_contract_name):
+  async def upgrade(self, signer_account_name, contract_name, new_declared_class_name):
     contract = get_contract(self.ctx, contract_name)
-    new_contract = get_contract(self.ctx, new_contract_name)
+    new_declared_class = get_declared_class(self.ctx, new_declared_class_name)
 
-    await _upgrade(self.ctx, signer_account_name, contract, new_contract)
+    await _upgrade(self.ctx, signer_account_name, contract, new_declared_class)
 
   # Transfer
 
@@ -1470,11 +1470,10 @@ async def test_upgrade(ctx_factory, contract_name, params):
       (OWNER, "create_artist", dict(artist_name=ARTIST_1), True),
       (RANDO_1, "create_artist", dict(artist_name=ARTIST_2), False),
 
-      (RANDO_1, "upgrade", dict(contract_name=contract_name, new_contract_name=contract_name + 'Mock'), False),
-      (OWNER, "upgrade", dict(contract_name=contract_name, new_contract_name=contract_name + 'Mock'), True),
+      (RANDO_1, "upgrade", dict(contract_name=contract_name, new_declared_class_name=contract_name + 'Mock'), False),
+      (OWNER, "upgrade", dict(contract_name=contract_name, new_declared_class_name=contract_name + 'Mock'), True),
 
-      (RANDO_1, "initialize", dict(contract_name=contract_name, params=params), False),
-      (OWNER, "initialize", dict(contract_name=contract_name, params=params), True),
+      (OWNER, "initialize", dict(contract_name=contract_name, params=params), False),
 
       (RANDO_1, "create_artist", dict(artist_name=ARTIST_1), False),
       (RANDO_1, "create_artist", dict(artist_name=ARTIST_2), True),

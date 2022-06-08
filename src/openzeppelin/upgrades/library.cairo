@@ -65,7 +65,6 @@ namespace Proxy:
       pedersen_ptr: HashBuiltin*,
       range_check_ptr
     }(new_implementation: felt):
-    Proxy_initialized.write(FALSE)
     Proxy_implementation_address.write(new_implementation)
     Upgraded.emit(new_implementation)
     return ()

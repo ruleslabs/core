@@ -1,5 +1,7 @@
 """Utilities for testing Cairo contracts."""
 
+import os
+
 from pathlib import Path
 from functools import reduce
 from starkware.starknet.compiler.compile import compile_starknet_files
@@ -15,14 +17,14 @@ TRANSACTION_VERSION = 0
 _root = Path(__file__).parent.parent
 
 
-def contract_path(name):
+def get_contract_source(name):
   if name.startswith("mocks/"):
     return str(_root / "tests" / name)
   else:
     return str(_root / "src" / name)
 
 
-def get_contract_def(path):
+def get_contract_class(path):
   """Returns the contract definition from the contract path"""
   if path.startswith("mocks/upgrades/"):
     cairo_path_leaf = "src"
@@ -31,14 +33,14 @@ def get_contract_def(path):
   else:
     cairo_path_leaf = "src"
 
-  path = contract_path(path)
+  source = get_contract_source(path)
 
-  contract_def = compile_starknet_files(
-    files=[path],
+  contract_class = compile_starknet_files(
+    files=[source],
     debug_info=True,
     cairo_path=[str(_root / cairo_path_leaf)]
   )
-  return contract_def
+  return contract_class
 
 
 def from_call_to_call_array(calls):
@@ -156,6 +158,14 @@ def get_contract(ctx, contract_name):
     raise AttributeError(f"ctx.'{contract_name}' doesn't exists.")
 
   return (contract)
+
+
+def get_declared_class(ctx, contract_class_name):
+  contract_class = getattr(ctx, contract_class_name, None)
+  if not contract_class:
+    raise AttributeError(f"ctx.'{contract_class_name}' doesn't exists.")
+
+  return (contract_class)
 
 
 def get_account_address(ctx, account_name):
