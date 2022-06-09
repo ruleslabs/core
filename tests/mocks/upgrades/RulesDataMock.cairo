@@ -7,7 +7,7 @@ from starkware.cairo.common.uint256 import Uint256
 # Libraries
 
 from ruleslabs.contracts.RulesData.library import RulesData
-from openzeppelin.upgrades.library import Proxy
+from ruleslabs.upgrades.library import Proxy
 
 #
 # Initializer

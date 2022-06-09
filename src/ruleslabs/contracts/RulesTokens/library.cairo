@@ -218,10 +218,10 @@ namespace RulesTokens:
       pedersen_ptr: HashBuiltin*,
       bitwise_ptr: BitwiseBuiltin*,
       range_check_ptr
-    }(to: felt, pack_id: Uint256, cards_len: felt, cards: Card*, metadatas_len: felt, metadatas: Metadata*):
+    }(to: felt, pack_id: Uint256, cards_len: felt, cards: Card*, metadata_len: felt, metadata: Metadata*):
     alloc_locals
     with_attr error_message("RulesTokens: cards count and metadata count doesn't match"):
-      assert cards_len = metadatas_len
+      assert cards_len = metadata_len
     end
 
     let (local caller) = get_caller_address()
@@ -245,7 +245,7 @@ namespace RulesTokens:
     # Create cards
     let (rules_cards_address) = rules_cards_address_storage.read()
     let (card_ids: Uint256*) = alloc()
-    _create_cards_batch(rules_cards_address, cards_len, cards, metadatas, card_ids)
+    _create_cards_batch(rules_cards_address, cards_len, cards, metadata, card_ids)
 
     # Mint cards to receipent
     let (amounts: Uint256*) = alloc()
@@ -324,16 +324,16 @@ namespace RulesTokens:
       syscall_ptr: felt*,
       pedersen_ptr: HashBuiltin*,
       range_check_ptr
-    }(rules_cards_address: felt, cards_len: felt, cards: Card*, metadatas: Metadata*, card_ids: Uint256*):
+    }(rules_cards_address: felt, cards_len: felt, cards: Card*, metadata: Metadata*, card_ids: Uint256*):
     if cards_len == 0:
       return ()
     end
 
-    let (card_id) = IRulesCards.createCard(rules_cards_address, [cards], [metadatas])
+    let (card_id) = IRulesCards.createCard(rules_cards_address, [cards], [metadata])
     assert [card_ids] = card_id
 
     _create_cards_batch(
-      rules_cards_address, cards_len - 1, cards + Card.SIZE, metadatas + Metadata.SIZE, card_ids + Uint256.SIZE
+      rules_cards_address, cards_len - 1, cards + Card.SIZE, metadata + Metadata.SIZE, card_ids + Uint256.SIZE
     )
     return ()
   end

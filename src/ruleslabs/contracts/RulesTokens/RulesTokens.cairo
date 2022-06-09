@@ -10,7 +10,7 @@ from ruleslabs.models.card import Card
 # Libraries
 
 from ruleslabs.contracts.RulesTokens.library import RulesTokens
-from openzeppelin.upgrades.library import Proxy
+from ruleslabs.upgrades.library import Proxy
 
 from ruleslabs.token.ERC1155.ERC1155_base import (
   ERC1155_name,
@@ -384,9 +384,9 @@ func openPackTo{
     pedersen_ptr: HashBuiltin*,
     bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
-  }(to: felt, pack_id: Uint256, cards_len: felt, cards: Card*, metadatas_len: felt, metadatas: Metadata*):
+  }(to: felt, pack_id: Uint256, cards_len: felt, cards: Card*, metadata_len: felt, metadata: Metadata*):
   Minter_only_minter()
-  RulesTokens.open_pack(to, pack_id, cards_len, cards, metadatas_len, metadatas)
+  RulesTokens.open_pack(to, pack_id, cards_len, cards, metadata_len, metadata)
   return ()
 end
 

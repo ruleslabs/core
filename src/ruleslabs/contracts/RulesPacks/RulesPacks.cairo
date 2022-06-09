@@ -11,7 +11,7 @@ from ruleslabs.models.pack import PackCardModel
 # Libraries
 
 from ruleslabs.contracts.RulesPacks.library import RulesPacks
-from openzeppelin.upgrades.library import Proxy
+from ruleslabs.upgrades.library import Proxy
 
 from ruleslabs.lib.Ownable_base import (
   Ownable_get_owner,

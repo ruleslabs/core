@@ -5,7 +5,7 @@
 
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.starknet.common.syscalls import library_call_l1_handler, library_call
-from openzeppelin.upgrades.library import Proxy
+from ruleslabs.upgrades.library import Proxy
 
 #
 # Constructor

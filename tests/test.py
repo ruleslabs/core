@@ -293,12 +293,12 @@ async def _get_approved(ctx, account_name, token_id):
 
 # Pack opening
 
-async def _open_pack(ctx, signer_account_name, pack_id, cards, metadatas, to_account_address):
+async def _open_pack(ctx, signer_account_name, pack_id, cards, metadata, to_account_address):
   await ctx.execute(
     signer_account_name,
     ctx.rulesTokens.contract_address,
     "openPackTo",
-    [to_account_address, *to_starknet_args(pack_id), len(cards), *to_starknet_args(cards), len(metadatas), *to_starknet_args(metadatas)]
+    [to_account_address, *to_starknet_args(pack_id), len(cards), *to_starknet_args(cards), len(metadata), *to_starknet_args(metadata)]
   )
 
 # Proxy
@@ -430,10 +430,10 @@ class ScenarioState:
 
   # Packs opening
 
-  async def open_pack(self, signer_account_name, pack_id, cards, metadatas, to_account_name):
+  async def open_pack(self, signer_account_name, pack_id, cards, metadata, to_account_name):
     to_account_address = get_account_address(self.ctx, to_account_name)
 
-    await _open_pack(self.ctx, signer_account_name, pack_id, cards, metadatas, to_account_address)
+    await _open_pack(self.ctx, signer_account_name, pack_id, cards, metadata, to_account_address)
 
   # Others
 
@@ -1305,21 +1305,21 @@ async def test_settle_where_owner_open_common_packs_1(ctx_factory):
       (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=RANDO_1, amount=3), True),
 
       (RANDO_1, "safe_transfer", dict(token_id=to_uint(1 << 128), from_account_name=RANDO_1, to_account_name=OWNER, amount=1), True),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadatas=[METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadata=[METADATA_1], to_account_name=RANDO_1), False),
 
       (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
 
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1], metadatas=[METADATA_1], to_account_name=RANDO_1), False),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_1], metadatas=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_3], metadatas=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadatas=[METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[update_card(CARD_1, serial_number=2), CARD_2_2], metadatas=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1], metadata=[METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_1], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_3], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[update_card(CARD_1, serial_number=2), CARD_2_2], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
 
       (RANDO_1, "safe_transfer", dict(token_id=to_uint(1 << 128), from_account_name=RANDO_1, to_account_name=OWNER, amount=1), True),
 
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, update_card(CARD_2, serial_number=2)], metadatas=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, update_card(CARD_2, serial_number=2)], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
 
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1_2, CARD_2_2], metadatas=[METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1_2, CARD_2_2], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
     ]
   )
 
@@ -1361,8 +1361,8 @@ async def test_settle_where_owner_open_classic_packs_1(ctx_factory):
       (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=3), True),
 
       (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=OWNER, amount=1), True),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_3], metadatas=[METADATA_1, METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_1_2], metadatas=[METADATA_1, METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_3], metadata=[METADATA_1, METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, "open_pack", dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_1_2], metadata=[METADATA_1, METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
       (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True)
     ]
   )
