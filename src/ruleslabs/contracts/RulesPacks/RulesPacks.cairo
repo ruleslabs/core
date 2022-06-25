@@ -11,7 +11,6 @@ from ruleslabs.models.pack import PackCardModel
 # Libraries
 
 from ruleslabs.contracts.RulesPacks.library import RulesPacks
-from ruleslabs.upgrades.library import Proxy
 
 from ruleslabs.lib.Ownable_base import (
   Ownable_get_owner,
@@ -52,8 +51,6 @@ func initialize{
   AccessControl_initializer(owner)
   Minter_initializer(owner)
 
-  Proxy.initializer(owner)
-
   RulesPacks.initializer(_rules_data_address, _rules_cards_address)
   return ()
 end
@@ -67,10 +64,8 @@ func upgrade{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
-  }(new_implementation: felt):
-  Proxy.assert_only_admin()
-  Proxy._set_implementation(new_implementation)
-
+  }(implementation: felt):
+  RulesPacks.upgrade(implementation)
   return ()
 end
 
@@ -244,8 +239,6 @@ func transferOwnership{
     range_check_ptr
   }(new_owner: felt) -> (new_owner: felt):
   Ownable_transfer_ownership(new_owner)
-  Proxy._set_admin(new_owner) # no need to assert only admin, Ownable already did it
-
   return (new_owner)
 end
 
@@ -256,7 +249,5 @@ func renounceOwnership{
     range_check_ptr
   }():
   Ownable_transfer_ownership(0)
-  Proxy._set_admin(0) # no need to assert only admin, Ownable already did it
-
   return ()
 end

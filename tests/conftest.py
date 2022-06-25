@@ -9,8 +9,9 @@ import time
 from starkware.starknet.testing.starknet import Starknet
 from starkware.starknet.business_logic.state.state import BlockInfo
 from starkware.starknet.testing.contract import DeclaredClass, StarknetContract
+from starkware.starknet.compiler.compile import get_selector_from_name
 
-from utils import Signer, get_contract_class, _root
+from utils import Signer, get_contract_class, get_periphery_contract_class, _root
 
 # pytest-xdest only shows stderr
 sys.stdout = sys.stderr
@@ -27,10 +28,9 @@ def set_block_timestamp(starknet_state, timestamp):
 
 
 async def deploy_account(starknet, signer, account_def):
-  return await starknet.deploy(
-    contract_class=account_def,
-    constructor_calldata=[signer.public_key]
-  )
+  account = await starknet.deploy(contract_class=account_def)
+  await account.initialize(signer.public_key, 0).invoke()
+  return account
 
 
 def serialize_contract(contract, abi):
@@ -68,8 +68,8 @@ async def build_copyable_deployment():
   set_block_timestamp(starknet.state, round(time.time()))
 
   contract_classes = SimpleNamespace(
-    account=get_contract_class("mocks/account/Account.cairo"),
-    proxy=get_contract_class("openzeppelin/upgrades/Proxy.cairo"),
+    account=get_periphery_contract_class("account/Account.cairo"),
+    proxy=get_periphery_contract_class("proxy/Proxy.cairo"),
     rulesData=get_contract_class("ruleslabs/contracts/RulesData/RulesData.cairo"),
     rulesCards=get_contract_class("ruleslabs/contracts/RulesCards/RulesCards.cairo"),
     rulesPacks=get_contract_class("ruleslabs/contracts/RulesPacks/RulesPacks.cairo"),
@@ -102,55 +102,47 @@ async def build_copyable_deployment():
   rulesDataMock = await starknet.declare(contract_class=contract_classes.rulesDataMock)
 
   # Proxies
-  rulesDataProxy = await starknet.deploy(contract_class=contract_classes.proxy, constructor_calldata=[rulesData.class_hash])
-  rulesCardsProxy = await starknet.deploy(contract_class=contract_classes.proxy, constructor_calldata=[rulesCards.class_hash])
-  rulesPacksProxy = await starknet.deploy(contract_class=contract_classes.proxy, constructor_calldata=[rulesPacks.class_hash])
-  rulesTokensProxy = await starknet.deploy(contract_class=contract_classes.proxy, constructor_calldata=[rulesTokens.class_hash])
-
-  # RulesData
-  await signers["owner"].send_transaction(
-    accounts.owner,
-    rulesDataProxy.contract_address,
-    "initialize",
-    [
-      accounts.owner.contract_address # owner
+  rulesDataProxy = await starknet.deploy(
+    contract_class=contract_classes.proxy,
+    constructor_calldata=[
+      rulesData.class_hash,
+      get_selector_from_name('initialize'),
+      1,
+      accounts.owner.contract_address,
     ]
   )
-
-  # RulesCards
-  await signers["owner"].send_transaction(
-    accounts.owner,
-    rulesCardsProxy.contract_address,
-    "initialize",
-    [
-      accounts.owner.contract_address, # owner
-      rulesDataProxy.contract_address
-    ]
-  )
-
-  # RulesPacks
-  await signers["owner"].send_transaction(
-    accounts.owner,
-    rulesPacksProxy.contract_address,
-    "initialize",
-    [
-      accounts.owner.contract_address, # owner
+  rulesCardsProxy = await starknet.deploy(
+    contract_class=contract_classes.proxy,
+    constructor_calldata=[
+      rulesCards.class_hash,
+      get_selector_from_name('initialize'),
+      2,
+      accounts.owner.contract_address,
       rulesDataProxy.contract_address,
-      rulesCardsProxy.contract_address
     ]
   )
-
-  # RulesTokens
-  await signers["owner"].send_transaction(
-    accounts.owner,
-    rulesTokensProxy.contract_address,
-    "initialize",
-    [
+  rulesPacksProxy = await starknet.deploy(
+    contract_class=contract_classes.proxy,
+    constructor_calldata=[
+      rulesPacks.class_hash,
+      get_selector_from_name('initialize'),
+      3,
+      accounts.owner.contract_address,
+      rulesDataProxy.contract_address,
+      rulesCardsProxy.contract_address,
+    ]
+  )
+  rulesTokensProxy = await starknet.deploy(
+    contract_class=contract_classes.proxy,
+    constructor_calldata=[
+      rulesTokens.class_hash,
+      get_selector_from_name('initialize'),
+      5,
       0x5374616D70656465, # name
       0x5354414D50, # symbol
       accounts.owner.contract_address, # owner
       rulesCardsProxy.contract_address,
-      rulesPacksProxy.contract_address
+      rulesPacksProxy.contract_address,
     ]
   )
 

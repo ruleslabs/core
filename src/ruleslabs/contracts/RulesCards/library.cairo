@@ -17,6 +17,12 @@ from ruleslabs.lib.scarcity.Scarcity_base import (
   Scarcity_productionStopped,
 )
 
+from ruleslabs.lib.Ownable_base import (
+  Ownable_only_owner,
+)
+
+from periphery.proxy.library import Proxy
+
 # Interfaces
 
 from ruleslabs.contracts.RulesData.IRulesData import IRulesData
@@ -119,7 +125,6 @@ namespace RulesCards:
     return (card_id)
   end
 
-
   func card_model_available_supply{
       syscall_ptr: felt*,
       pedersen_ptr: HashBuiltin*,
@@ -150,6 +155,28 @@ namespace RulesCards:
     let (supply) = card_models_supply_storage.read(card_model)
 
     return (max_supply - supply - packed_supply)
+  end
+
+  #
+  # Setters
+  #
+
+  func upgrade{
+      syscall_ptr : felt*,
+      pedersen_ptr : HashBuiltin*,
+      range_check_ptr
+    }(implementation: felt):
+    # only called by owner
+    Ownable_only_owner()
+
+    # make sure the target is an account
+    with_attr error_message("RulesCards: new implementation cannot be null"):
+      assert_not_zero(implementation)
+    end
+
+    # change implementation
+    Proxy.set_implementation(implementation)
+    return ()
   end
 
   #

@@ -303,14 +303,6 @@ async def _open_pack(ctx, signer_account_name, pack_id, cards, metadata, to_acco
 
 # Proxy
 
-async def _initialize(ctx, signer_account_name, contract, params):
-  await ctx.execute(
-    signer_account_name,
-    contract.contract_address,
-    "initialize",
-    params
-  )
-
 async def _upgrade(ctx, signer_account_name, contract, new_declared_class):
   await ctx.execute(
     signer_account_name,
@@ -367,11 +359,6 @@ class ScenarioState:
     await _create_artist(self.ctx, signer_account_name, artist_name)
 
   # Proxy
-
-  async def initialize(self, signer_account_name, contract_name, params):
-    contract = get_contract(self.ctx, contract_name)
-
-    await _initialize(self.ctx, signer_account_name, contract, params)
 
   async def upgrade(self, signer_account_name, contract_name, new_declared_class_name):
     contract = get_contract(self.ctx, contract_name)
@@ -1419,41 +1406,6 @@ async def test_settle_where_owner_mint_packs_with_operator(ctx_factory):
 # Proxy
 
 @pytest.mark.asyncio
-async def test_double_initialization(ctx_factory):
-  ctx = ctx_factory()
-
-  # When
-  await run_scenario(
-    ctx,
-    [
-      (OWNER, "initialize", dict(contract_name=contract_name, ), False),
-    ]
-  )
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-  "contract_name, params",
-  [
-    ("rulesTokens", [0, 0, 0, 0, 0]),
-    ("rulesPacks", [0, 0, 0]),
-    ("rulesCards", [0, 0]),
-    ("rulesData", [0])
-  ]
-)
-async def test_double_initialization(ctx_factory, contract_name, params):
-  ctx = ctx_factory()
-
-  # When
-  await run_scenario(
-    ctx,
-    [
-      (OWNER, "initialize", dict(contract_name=contract_name, params=params), False),
-    ]
-  )
-
-
-@pytest.mark.asyncio
 @pytest.mark.parametrize(
   "contract_name, params",
   [
@@ -1472,8 +1424,6 @@ async def test_upgrade(ctx_factory, contract_name, params):
 
       (RANDO_1, "upgrade", dict(contract_name=contract_name, new_declared_class_name=contract_name + 'Mock'), False),
       (OWNER, "upgrade", dict(contract_name=contract_name, new_declared_class_name=contract_name + 'Mock'), True),
-
-      (OWNER, "initialize", dict(contract_name=contract_name, params=params), False),
 
       (RANDO_1, "create_artist", dict(artist_name=ARTIST_1), False),
       (RANDO_1, "create_artist", dict(artist_name=ARTIST_2), True),

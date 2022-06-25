@@ -123,7 +123,7 @@ We are calling these packs **common packs**
 
 ##### `createPack`
 
-Create a new pack with a deduced max supply, card models from with any valid season and scarcity levels can be provided as long as the available supply of these card models is enough regarding to the pack card models quantities
+Create a new pack with a deduced max supply, card models with any valid season and scarcity levels can be provided as long as the available supply of these card models is enough regarding to the pack card models quantities
 
 ```cairo
 struct PackCardModel:
@@ -180,8 +180,8 @@ The transfer of cards to the recipient address is not safe, this is done to avoi
 contract to make the pack opening fail during the transfer acceptance check, if the selected cards does not suit it.
 
 Also, to ensure the impossibility of invalidating an opening transaction in progress, it is important to make sure that the pack
-has been moved to a secure pack opening contract. See the [pack-opener](https://github.com/ruleslabs/pack-opener) repository
-for more information
+has been moved to a secure pack opening contract. See the pack opener contract at [periphery](https://github.com/ruleslabs/periphery)
+for more information.
 
 - ###### parameters
   - `to: felt`: address to send the newly minted cards.

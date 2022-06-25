@@ -3,8 +3,17 @@
 from starkware.cairo.common.bool import TRUE
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256
+from starkware.cairo.common.math import assert_not_zero
 
 from ruleslabs.models.artist import assert_artist_name_well_formed
+
+# Libraries
+
+from ruleslabs.lib.Ownable_base import (
+  Ownable_only_owner,
+)
+
+from periphery.proxy.library import Proxy
 
 #
 # Storage
@@ -27,6 +36,28 @@ namespace RulesData:
     }(artist_name: Uint256) -> (res: felt):
     let (exists) = artists_storage.read(artist_name)
     return (exists)
+  end
+
+  #
+  # Setters
+  #
+
+  func upgrade{
+      syscall_ptr : felt*,
+      pedersen_ptr : HashBuiltin*,
+      range_check_ptr
+    }(implementation: felt):
+    # only called by owner
+    Ownable_only_owner()
+
+    # make sure the target is an account
+    with_attr error_message("RulesData: new implementation cannot be null"):
+      assert_not_zero(implementation)
+    end
+
+    # change implementation
+    Proxy.set_implementation(implementation)
+    return ()
   end
 
   #

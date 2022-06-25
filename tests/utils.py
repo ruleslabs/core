@@ -1,6 +1,8 @@
 """Utilities for testing Cairo contracts."""
 
+import inspect
 import os
+import periphery
 
 from pathlib import Path
 from functools import reduce
@@ -15,6 +17,16 @@ SERIAL_NUMBER_MAX = 2 ** 32 - 1
 TRANSACTION_VERSION = 0
 
 _root = Path(__file__).parent.parent
+
+
+def get_periphery_contract_class(path):
+  """Returns the contract definition from libraries"""
+  path = os.path.abspath(os.path.dirname(inspect.getfile(periphery))) + "/" + path
+  contract_class = compile_starknet_files(
+    files=[path],
+    debug_info=True
+  )
+  return contract_class
 
 
 def get_contract_source(name):

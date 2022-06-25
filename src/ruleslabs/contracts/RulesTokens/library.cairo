@@ -35,6 +35,12 @@ from ruleslabs.token.ERC1155.ERC1155_Supply_base import (
   ERC1155_Supply_before_token_transfer,
 )
 
+from ruleslabs.lib.Ownable_base import (
+  Ownable_only_owner,
+)
+
+from periphery.proxy.library import Proxy
+
 # Interfaces
 
 from ruleslabs.contracts.RulesCards.IRulesCards import IRulesCards
@@ -115,6 +121,28 @@ namespace RulesTokens:
     }() -> (address: felt):
     let (address) = rules_packs_address_storage.read()
     return (address)
+  end
+
+  #
+  # Setters
+  #
+
+  func upgrade{
+      syscall_ptr : felt*,
+      pedersen_ptr : HashBuiltin*,
+      range_check_ptr
+    }(implementation: felt):
+    # only called by owner
+    Ownable_only_owner()
+
+    # make sure the target is an account
+    with_attr error_message("RulesTokens: new implementation cannot be null"):
+      assert_not_zero(implementation)
+    end
+
+    # change implementation
+    Proxy.set_implementation(implementation)
+    return ()
   end
 
   #
