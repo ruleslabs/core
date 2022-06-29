@@ -44,7 +44,7 @@ from periphery.proxy.library import Proxy
 # Interfaces
 
 from ruleslabs.contracts.RulesCards.IRulesCards import IRulesCards
-from ruleslabs.contracts.rulesPacks.IRulesPacks import IRulesPacks
+from ruleslabs.contracts.RulesPacks.IRulesPacks import IRulesPacks
 
 #
 # Storage
