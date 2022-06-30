@@ -17,10 +17,6 @@ from ruleslabs.lib.scarcity.Scarcity_base import (
   Scarcity_productionStopped,
 )
 
-from ruleslabs.lib.Ownable_base import (
-  Ownable_only_owner,
-)
-
 from periphery.proxy.library import Proxy
 
 # Interfaces
@@ -179,9 +175,6 @@ namespace RulesCards:
       pedersen_ptr : HashBuiltin*,
       range_check_ptr
     }(implementation: felt):
-    # only called by owner
-    Ownable_only_owner()
-
     # make sure the target is not null
     with_attr error_message("RulesCards: new implementation cannot be null"):
       assert_not_zero(implementation)

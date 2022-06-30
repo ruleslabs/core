@@ -65,6 +65,7 @@ func upgrade{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(implementation: felt):
+  Ownable_only_owner()
   RulesPacks.upgrade(implementation)
   return ()
 end

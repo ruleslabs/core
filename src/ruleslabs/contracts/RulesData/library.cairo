@@ -9,10 +9,6 @@ from ruleslabs.models.artist import assert_artist_name_well_formed
 
 # Libraries
 
-from ruleslabs.lib.Ownable_base import (
-  Ownable_only_owner,
-)
-
 from periphery.proxy.library import Proxy
 
 #
@@ -74,9 +70,6 @@ namespace RulesData:
       pedersen_ptr : HashBuiltin*,
       range_check_ptr
     }(implementation: felt):
-    # only called by owner
-    Ownable_only_owner()
-
     # make sure the target is not null
     with_attr error_message("RulesData: new implementation cannot be null"):
       assert_not_zero(implementation)

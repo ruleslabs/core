@@ -13,7 +13,7 @@ from ruleslabs.lib.Ownable_base import (
 
   Ownable_initializer,
   Ownable_only_owner,
-  Ownable_transfer_ownership
+  Ownable_transfer_ownership,
 )
 
 from ruleslabs.lib.roles.AccessControl_base import (
@@ -61,6 +61,7 @@ func upgrade{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(implementation: felt):
+  Ownable_only_owner()
   RulesData.upgrade(implementation)
   return ()
 end

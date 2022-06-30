@@ -17,7 +17,8 @@ from ruleslabs.lib.Ownable_base import (
   Ownable_get_owner,
 
   Ownable_initializer,
-  Ownable_transfer_ownership
+  Ownable_only_owner,
+  Ownable_transfer_ownership,
 )
 
 from ruleslabs.lib.roles.AccessControl_base import (
@@ -25,7 +26,7 @@ from ruleslabs.lib.roles.AccessControl_base import (
   AccessControl_roles_count,
   AccessControl_role_member,
 
-  AccessControl_initializer
+  AccessControl_initializer,
 )
 
 from ruleslabs.lib.roles.minter import (
@@ -34,7 +35,7 @@ from ruleslabs.lib.roles.minter import (
   Minter_initializer,
   Minter_only_minter,
   Minter_grant,
-  Minter_revoke
+  Minter_revoke,
 )
 
 from ruleslabs.lib.roles.capper import (
@@ -43,7 +44,7 @@ from ruleslabs.lib.roles.capper import (
   Capper_initializer,
   Capper_only_capper,
   Capper_grant,
-  Capper_revoke
+  Capper_revoke,
 )
 
 from ruleslabs.lib.roles.packer import (
@@ -98,6 +99,7 @@ func upgrade{
     pedersen_ptr: HashBuiltin*,
     range_check_ptr
   }(implementation: felt):
+  Ownable_only_owner()
   RulesCards.upgrade(implementation)
   return ()
 end
