@@ -14,7 +14,7 @@ async def _create_artist(ctx, signer_account_name, artist_name):
   await ctx.execute(
     signer_account_name,
     ctx.rulesData.contract_address,
-    "createArtist",
+    'createArtist',
     [*artist_name]
   )
 
@@ -31,7 +31,7 @@ async def _create_card(ctx, signer_account_name, card, metadata):
   await ctx.execute(
     signer_account_name,
     ctx.rulesCards.contract_address,
-    "createCard",
+    'createCard',
     [*to_starknet_args(card), *to_starknet_args(metadata)]
   )
 
@@ -55,7 +55,7 @@ async def _create_pack(ctx, signer_account_name, pack, metadata):
   await ctx.execute(
     signer_account_name,
     ctx.rulesPacks.contract_address,
-    "createPack",
+    'createPack',
     [*to_starknet_args(pack), *to_starknet_args(metadata)]
   )
 
@@ -64,7 +64,7 @@ async def _create_common_pack(ctx, signer_account_name, cards_per_pack, season, 
   await ctx.execute(
     signer_account_name,
     ctx.rulesPacks.contract_address,
-    "createCommonPack",
+    'createCommonPack',
     [cards_per_pack, season, *to_starknet_args(metadata)]
   )
 
@@ -95,7 +95,7 @@ async def _set_base_token_uri(ctx, signer_account_name, base_token_uri):
   await ctx.execute(
     signer_account_name,
     ctx.rulesTokens.contract_address,
-    "setBaseTokenURI",
+    'setBaseTokenURI',
     [len(base_token_uri), *base_token_uri]
   )
 
@@ -131,7 +131,7 @@ async def _has_role(ctx, conrtact_name, role, account_name):
 
 
 async def _grant_role(ctx, signer_account_name, contract, role_name, account_address):
-  method_name = "add" + ROLES[role_name]
+  method_name = 'add' + ROLES[role_name]
   await ctx.execute(
     signer_account_name,
     contract.contract_address,
@@ -141,7 +141,7 @@ async def _grant_role(ctx, signer_account_name, contract, role_name, account_add
 
 
 async def _revoke_role(ctx, signer_account_name, contract, role_name, account_address):
-  method_name = "revoke" + ROLES[role_name]
+  method_name = 'revoke' + ROLES[role_name]
   await ctx.execute(
     signer_account_name,
     contract.contract_address,
@@ -164,13 +164,13 @@ async def _transfer_ownership(ctx, signer_account_name, contract, account_addres
   await ctx.execute(
     signer_account_name,
     contract.contract_address,
-    "transferOwnership",
+    'transferOwnership',
     [account_address]
   )
 
 
 async def _renounce_ownership(ctx, signer_account_name, contract):
-  await ctx.execute(signer_account_name, contract.contract_address, "renounceOwnership", [])
+  await ctx.execute(signer_account_name, contract.contract_address, 'renounceOwnership', [])
 
 # Scarcity
 
@@ -185,7 +185,7 @@ async def _add_scarcity_for_season(ctx, signer_account_name, season, supply):
   await ctx.execute(
     signer_account_name,
     ctx.rulesCards.contract_address,
-    "addScarcityForSeason",
+    'addScarcityForSeason',
     [season, supply]
   )
 
@@ -201,7 +201,7 @@ async def _stop_production_for_season_and_scarcity(ctx, signer_account_name, sea
   await ctx.execute(
     signer_account_name,
     ctx.rulesCards.contract_address,
-    "stopProductionForSeasonAndScarcity",
+    'stopProductionForSeasonAndScarcity',
     [season, scarcity]
   )
 
@@ -211,7 +211,7 @@ async def _create_and_mint_card(ctx, signer_account_name, card, metadata, to_acc
   await ctx.execute(
     signer_account_name,
     ctx.rulesTokens.contract_address,
-    "createAndMintCard",
+    'createAndMintCard',
     [*to_starknet_args(card), *to_starknet_args(metadata), to_account_address]
   )
 
@@ -219,7 +219,7 @@ async def _mint_pack(ctx, signer_account_name, pack_id, to_account_address, amou
   await ctx.execute(
     signer_account_name,
     ctx.rulesTokens.contract_address,
-    "mintPack",
+    'mintPack',
     [*to_starknet_args(pack_id), to_account_address, amount, operator_address]
   )
 
@@ -227,7 +227,7 @@ async def _mint_card(ctx, signer_account_name, card_id, to_account_address):
   await ctx.execute(
     signer_account_name,
     ctx.rulesTokens.contract_address,
-    "mintCard",
+    'mintCard',
     [*to_starknet_args(card_id), to_account_address]
   )
 
@@ -261,7 +261,7 @@ async def _safe_transfer(ctx, signer_account_name, token_id, from_account_addres
   await ctx.execute(
     signer_account_name,
     ctx.rulesTokens.contract_address,
-    "safeTransferFrom",
+    'safeTransferFrom',
     [from_account_address, to_account_address, *to_starknet_args(token_id), *to_starknet_args(amount), 1, 0]
   )
 
@@ -271,7 +271,7 @@ async def _set_approve_for_all(ctx, signer_account_name, to_account_address, app
   await ctx.execute(
     signer_account_name,
     ctx.rulesTokens.contract_address,
-    "setApprovalForAll",
+    'setApprovalForAll',
     [to_account_address, approved]
   )
 
@@ -279,7 +279,7 @@ async def _approve(ctx, signer_account_name, token_id, to_account_address, amoun
   await ctx.execute(
     signer_account_name,
     ctx.rulesTokens.contract_address,
-    "approve",
+    'approve',
     [to_account_address, *to_starknet_args(token_id), *to_starknet_args(amount)]
   )
 
@@ -297,7 +297,7 @@ async def _open_pack(ctx, signer_account_name, pack_id, cards, metadata, to_acco
   await ctx.execute(
     signer_account_name,
     ctx.rulesTokens.contract_address,
-    "openPackTo",
+    'openPackTo',
     [to_account_address, *to_starknet_args(pack_id), len(cards), *to_starknet_args(cards), len(metadata), *to_starknet_args(metadata)]
   )
 
@@ -307,26 +307,37 @@ async def _upgrade(ctx, signer_account_name, contract, new_declared_class):
   await ctx.execute(
     signer_account_name,
     contract.contract_address,
-    "upgrade",
+    'upgrade',
     [new_declared_class.class_hash]
   )
+
+async def _initialize(ctx, signer_account_name, contract, params):
+  await ctx.execute(
+    signer_account_name,
+    contract.contract_address,
+    'initialize',
+    params,
+  )
+
+async def _reset(ctx, signer_account_name, contract):
+  await ctx.execute(signer_account_name, contract.contract_address, 'reset', [])
 
 ##########
 # CONSTS #
 ##########
 
-NULL = "null"
-DEAD = "dead"
-MINTER = "minter"
-OWNER = "owner"
-RANDO_1 = "rando1"
-RANDO_2 = "rando2"
-RANDO_3 = "rando3"
+NULL = 'null'
+DEAD = 'dead'
+MINTER = 'minter'
+OWNER = 'owner'
+RANDO_1 = 'rando1'
+RANDO_2 = 'rando2'
+RANDO_3 = 'rando3'
 VALID_ACCOUNT_NAMES = [MINTER, OWNER, RANDO_1, RANDO_2, RANDO_3, NULL]
 
-MINTER_ROLE = "MINTER_ROLE"
-CAPPER_ROLE = "CAPPER_ROLE"
-ROLES = dict(MINTER_ROLE="Minter", CAPPER_ROLE="Capper")
+MINTER_ROLE = 'MINTER_ROLE'
+CAPPER_ROLE = 'CAPPER_ROLE'
+ROLES = dict(MINTER_ROLE='Minter', CAPPER_ROLE='Capper')
 
 METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
 
@@ -365,6 +376,16 @@ class ScenarioState:
     new_declared_class = get_declared_class(self.ctx, new_declared_class_name)
 
     await _upgrade(self.ctx, signer_account_name, contract, new_declared_class)
+
+  async def initialize(self, signer_account_name, contract_name, params):
+    contract = get_contract(self.ctx, contract_name)
+
+    await _initialize(self.ctx, signer_account_name, contract, params)
+
+  async def reset(self, signer_account_name, contract_name):
+    contract = get_contract(self.ctx, contract_name)
+
+    await _reset(self.ctx, signer_account_name, contract)
 
   # Transfer
 
@@ -461,13 +482,13 @@ async def run_scenario(ctx, scenario):
   scenario_state = ScenarioState(ctx)
   for (signer_account_name, function_name, kwargs, expect_success) in scenario:
     if signer_account_name not in VALID_ACCOUNT_NAMES:
-      raise AttributeError(f"Invalid signer '{signer_account_name}'")
+      raise AttributeError(f'Invalid signer \'{signer_account_name}\'')
 
     print(kwargs)
 
     func = getattr(scenario_state, function_name, None)
     if not func:
-      raise AttributeError(f"ScenarioState.{function_name} doesn't exist.")
+      raise AttributeError(f'ScenarioState.{function_name} doesn\'t exist.')
 
     try:
       await func(signer_account_name, **kwargs)
@@ -495,8 +516,8 @@ async def test_settle_where_minter_create_artist(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), False)
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), False)
     ]
   )
 
@@ -516,10 +537,10 @@ async def test_settle_where_minter_create_card(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_card", dict(card=CARD_1, metadata=METADATA_1), False),
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_card", dict(card=CARD_1, metadata=METADATA_1), True),
-      (MINTER, "create_card", dict(card=CARD_1, metadata=METADATA_1), False),
+      (MINTER, 'create_card', dict(card=CARD_1, metadata=METADATA_1), False),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_card', dict(card=CARD_1, metadata=METADATA_1), True),
+      (MINTER, 'create_card', dict(card=CARD_1, metadata=METADATA_1), False),
     ]
   )
 
@@ -538,12 +559,12 @@ async def test_settle_where_minter_create_invalid_card(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_card", dict(card=update_card(CARD_1, season=0), metadata=METADATA_1), False),
-      (MINTER, "create_card", dict(card=update_card(CARD_1, serial_number=0), metadata=METADATA_1), False),
-      (MINTER, "create_card", dict(card=update_card(CARD_1, season=2 ** 16), metadata=METADATA_1), False),
-      (MINTER, "create_card", dict(card=update_card(CARD_1, scarcity=2 ** 8), metadata=METADATA_1), False),
-      (MINTER, "create_card", dict(card=update_card(CARD_1, serial_number=2 ** 32), metadata=METADATA_1), False),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_card', dict(card=update_card(CARD_1, season=0), metadata=METADATA_1), False),
+      (MINTER, 'create_card', dict(card=update_card(CARD_1, serial_number=0), metadata=METADATA_1), False),
+      (MINTER, 'create_card', dict(card=update_card(CARD_1, season=2 ** 16), metadata=METADATA_1), False),
+      (MINTER, 'create_card', dict(card=update_card(CARD_1, scarcity=2 ** 8), metadata=METADATA_1), False),
+      (MINTER, 'create_card', dict(card=update_card(CARD_1, serial_number=2 ** 32), metadata=METADATA_1), False),
     ]
   )
 
@@ -559,9 +580,9 @@ async def test_settle_where_owner_set_base_token_uri(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (OWNER, "set_base_token_uri", dict(base_token_uri=base_token_uri + base_token_uri), True),
-      (OWNER, "set_base_token_uri", dict(base_token_uri=[32434, 5234, 23, 5324]), True),
-      (OWNER, "set_base_token_uri", dict(base_token_uri=base_token_uri), True),
+      (OWNER, 'set_base_token_uri', dict(base_token_uri=base_token_uri + base_token_uri), True),
+      (OWNER, 'set_base_token_uri', dict(base_token_uri=[32434, 5234, 23, 5324]), True),
+      (OWNER, 'set_base_token_uri', dict(base_token_uri=base_token_uri), True),
     ]
   )
 
@@ -571,13 +592,13 @@ async def test_settle_where_owner_set_base_token_uri(ctx_factory):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-  "contract_name, role_name, initial_members_count",
+  'contract_name, role_name, initial_members_count',
   [
-    ("rulesTokens", MINTER_ROLE, 2),
-    ("rulesPacks", MINTER_ROLE, 3),
-    ("rulesCards", CAPPER_ROLE, 1),
-    ("rulesCards", MINTER_ROLE, 3),
-    ("rulesData", MINTER_ROLE, 2)
+    ('rulesTokens', MINTER_ROLE, 2),
+    ('rulesPacks', MINTER_ROLE, 3),
+    ('rulesCards', CAPPER_ROLE, 1),
+    ('rulesCards', MINTER_ROLE, 3),
+    ('rulesData', MINTER_ROLE, 2)
   ]
 )
 async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, role_name, initial_members_count):
@@ -597,23 +618,23 @@ async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, ro
   await run_scenario(
     ctx,
     [
-      (RANDO_1, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), False),
-      (RANDO_3, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_3), False),
+      (RANDO_1, 'grant_role', dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), False),
+      (RANDO_3, 'grant_role', dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_3), False),
 
-      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
-      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
-      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
+      (OWNER, 'grant_role', dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
+      (OWNER, 'grant_role', dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
+      (OWNER, 'grant_role', dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
 
-      (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
-      (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=OWNER), True),
+      (OWNER, 'revoke_role', dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
+      (OWNER, 'revoke_role', dict(contract_name=contract_name, role_name=role_name, account_name=OWNER), True),
 
-      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
-      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_3), True),
+      (OWNER, 'grant_role', dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True),
+      (OWNER, 'grant_role', dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_3), True),
 
-      (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
-      (OWNER, "revoke_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
+      (OWNER, 'revoke_role', dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
+      (OWNER, 'revoke_role', dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_2), True),
 
-      (OWNER, "grant_role", dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True)
+      (OWNER, 'grant_role', dict(contract_name=contract_name, role_name=role_name, account_name=RANDO_1), True)
     ]
   )
 
@@ -625,7 +646,7 @@ async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, ro
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("contract_name", ["rulesTokens", "rulesCards", "rulesData", "rulesPacks"])
+@pytest.mark.parametrize('contract_name', ['rulesTokens', 'rulesCards', 'rulesData', 'rulesPacks'])
 async def test_settle_where_owner_transfer_the_owner_ship(ctx_factory, contract_name):
   ctx = ctx_factory()
 
@@ -638,9 +659,9 @@ async def test_settle_where_owner_transfer_the_owner_ship(ctx_factory, contract_
   await run_scenario(
     ctx,
     [
-      (RANDO_1, "transfer_ownership", dict(contract_name=contract_name, account_name=RANDO_2), False),
-      (OWNER, "transfer_ownership", dict(contract_name=contract_name, account_name=RANDO_1), True),
-      (OWNER, "transfer_ownership", dict(contract_name=contract_name, account_name=RANDO_2), False),
+      (RANDO_1, 'transfer_ownership', dict(contract_name=contract_name, account_name=RANDO_2), False),
+      (OWNER, 'transfer_ownership', dict(contract_name=contract_name, account_name=RANDO_1), True),
+      (OWNER, 'transfer_ownership', dict(contract_name=contract_name, account_name=RANDO_2), False),
     ]
   )
 
@@ -649,7 +670,7 @@ async def test_settle_where_owner_transfer_the_owner_ship(ctx_factory, contract_
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("contract_name", ["rulesTokens", "rulesCards", "rulesData", "rulesPacks"])
+@pytest.mark.parametrize('contract_name', ['rulesTokens', 'rulesCards', 'rulesData', 'rulesPacks'])
 async def test_settle_where_owner_renounce_the_owner_ship(ctx_factory, contract_name):
   ctx = ctx_factory()
 
@@ -661,9 +682,9 @@ async def test_settle_where_owner_renounce_the_owner_ship(ctx_factory, contract_
   await run_scenario(
     ctx,
     [
-      (RANDO_1, "renounce_ownership", dict(contract_name=contract_name), False),
-      (OWNER, "renounce_ownership", dict(contract_name=contract_name), True),
-      (OWNER, "renounce_ownership", dict(contract_name=contract_name), False),
+      (RANDO_1, 'renounce_ownership', dict(contract_name=contract_name), False),
+      (OWNER, 'renounce_ownership', dict(contract_name=contract_name), True),
+      (OWNER, 'renounce_ownership', dict(contract_name=contract_name), False),
     ]
   )
 
@@ -685,14 +706,14 @@ async def test_settle_where_capper_add_scarcity_levels(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "add_scarcity_for_season", dict(season=1, supply=1000), False),
-      (OWNER, "add_scarcity_for_season", dict(season=1, supply=0), False),
-      (OWNER, "add_scarcity_for_season", dict(season=1, supply=1000), True),
-      (OWNER, "add_scarcity_for_season", dict(season=1, supply=500), True),
-      (OWNER, "add_scarcity_for_season", dict(season=1, supply=251), False),
-      (OWNER, "add_scarcity_for_season", dict(season=1, supply=0), False),
+      (MINTER, 'add_scarcity_for_season', dict(season=1, supply=1000), False),
+      (OWNER, 'add_scarcity_for_season', dict(season=1, supply=0), False),
+      (OWNER, 'add_scarcity_for_season', dict(season=1, supply=1000), True),
+      (OWNER, 'add_scarcity_for_season', dict(season=1, supply=500), True),
+      (OWNER, 'add_scarcity_for_season', dict(season=1, supply=251), False),
+      (OWNER, 'add_scarcity_for_season', dict(season=1, supply=0), False),
 
-      (OWNER, "add_scarcity_for_season", dict(season=2, supply=1), True),
+      (OWNER, 'add_scarcity_for_season', dict(season=2, supply=1), True),
     ]
   )
 
@@ -717,11 +738,11 @@ async def test_settle_where_capper_stop_production_for_season_and_scarcity(ctx_f
   await run_scenario(
     ctx,
     [
-      (MINTER, "stop_production_for_season_and_scarcity", dict(season=1, scarcity=0), False),
-      (OWNER, "stop_production_for_season_and_scarcity", dict(season=1, scarcity=0), True),
-      (OWNER, "stop_production_for_season_and_scarcity", dict(season=1, scarcity=0), True),
-      (OWNER, "stop_production_for_season_and_scarcity", dict(season=1, scarcity=2), True),
-      (OWNER, "stop_production_for_season_and_scarcity", dict(season=42, scarcity=42), True),
+      (MINTER, 'stop_production_for_season_and_scarcity', dict(season=1, scarcity=0), False),
+      (OWNER, 'stop_production_for_season_and_scarcity', dict(season=1, scarcity=0), True),
+      (OWNER, 'stop_production_for_season_and_scarcity', dict(season=1, scarcity=0), True),
+      (OWNER, 'stop_production_for_season_and_scarcity', dict(season=1, scarcity=2), True),
+      (OWNER, 'stop_production_for_season_and_scarcity', dict(season=42, scarcity=42), True),
     ]
   )
 
@@ -746,17 +767,17 @@ async def test_settle_where_minter_create_card_with_invalid_serial_number(ctx_fa
   await run_scenario(
     ctx,
     [
-      (OWNER, "add_scarcity_for_season", dict(season=1, supply=2), True),
+      (OWNER, 'add_scarcity_for_season', dict(season=1, supply=2), True),
 
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_card", dict(card=update_card(CARD_1, scarcity=1, serial_number=3), metadata=METADATA_1), False),
-      (MINTER, "create_card", dict(card=update_card(CARD_1, scarcity=1, serial_number=1), metadata=METADATA_1), True),
-      (MINTER, "create_card", dict(card=update_card(CARD_1, scarcity=1, serial_number=2), metadata=METADATA_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_card', dict(card=update_card(CARD_1, scarcity=1, serial_number=3), metadata=METADATA_1), False),
+      (MINTER, 'create_card', dict(card=update_card(CARD_1, scarcity=1, serial_number=1), metadata=METADATA_1), True),
+      (MINTER, 'create_card', dict(card=update_card(CARD_1, scarcity=1, serial_number=2), metadata=METADATA_1), True),
 
-      (OWNER, "add_scarcity_for_season", dict(season=1, supply=1), True),
+      (OWNER, 'add_scarcity_for_season', dict(season=1, supply=1), True),
 
-      (MINTER, "create_card", dict(card=update_card(CARD_1, scarcity=2, serial_number=1), metadata=METADATA_1), True),
-      (MINTER, "create_card", dict(card=update_card(CARD_1, scarcity=2, serial_number=2), metadata=METADATA_1), False),
+      (MINTER, 'create_card', dict(card=update_card(CARD_1, scarcity=2, serial_number=1), metadata=METADATA_1), True),
+      (MINTER, 'create_card', dict(card=update_card(CARD_1, scarcity=2, serial_number=2), metadata=METADATA_1), False),
     ]
   )
 
@@ -781,14 +802,14 @@ async def test_settle_where_minter_create_card_with_frozen_scarcity(ctx_factory)
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_card", dict(card=CARD_1, metadata=METADATA_1), True),
-      (MINTER, "create_card", dict(card=update_card(CARD_1, serial_number=5), metadata=METADATA_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_card', dict(card=CARD_1, metadata=METADATA_1), True),
+      (MINTER, 'create_card', dict(card=update_card(CARD_1, serial_number=5), metadata=METADATA_1), True),
 
-      (OWNER, "stop_production_for_season_and_scarcity", dict(season=1, scarcity=0), True),
+      (OWNER, 'stop_production_for_season_and_scarcity', dict(season=1, scarcity=0), True),
 
-      (MINTER, "create_card", dict(card=update_card(CARD_1, serial_number=10), metadata=METADATA_1), False),
-      (MINTER, "create_card", dict(card=update_card(CARD_1, season=2), metadata=METADATA_1), True),
+      (MINTER, 'create_card', dict(card=update_card(CARD_1, serial_number=10), metadata=METADATA_1), False),
+      (MINTER, 'create_card', dict(card=update_card(CARD_1, season=2), metadata=METADATA_1), True),
     ]
   )
 
@@ -814,14 +835,14 @@ async def test_settle_where_minter_create_and_mint_cards(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
 
-      (MINTER, "create_and_mint_card", dict(card=CARD_1, metadata=METADATA_1, to_account_name=NULL), False),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=METADATA_1, to_account_name=NULL), False),
 
-      (MINTER, "create_and_mint_card", dict(card=CARD_1, metadata=METADATA_1, to_account_name=MINTER), True),
-      (MINTER, "create_and_mint_card", dict(card=update_card(CARD_1, serial_number=2), metadata=METADATA_1, to_account_name=RANDO_1), True),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=METADATA_1, to_account_name=MINTER), True),
+      (MINTER, 'create_and_mint_card', dict(card=update_card(CARD_1, serial_number=2), metadata=METADATA_1, to_account_name=RANDO_1), True),
 
-      (MINTER, "create_and_mint_card", dict(card=CARD_1, metadata=METADATA_1, to_account_name=MINTER), False),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=METADATA_1, to_account_name=MINTER), False),
     ]
   )
 
@@ -845,10 +866,10 @@ async def test_settle_where_minter_create_and_mint_card_and_check_token_uri(ctx_
   await run_scenario(
     ctx,
     [
-      (OWNER, "set_base_token_uri", dict(base_token_uri=base_token_uri), True),
+      (OWNER, 'set_base_token_uri', dict(base_token_uri=base_token_uri), True),
 
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_and_mint_card", dict(card=CARD_1, metadata=METADATA_1, to_account_name=MINTER), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=METADATA_1, to_account_name=MINTER), True),
     ]
   )
 
@@ -873,17 +894,17 @@ async def test_settle_where_minter_create_cards_and_mint_them(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
 
-      (MINTER, "mint_card", dict(card_id=card_id_1, to_account_name=MINTER), False),
+      (MINTER, 'mint_card', dict(card_id=card_id_1, to_account_name=MINTER), False),
 
-      (MINTER, "create_card", dict(card=CARD_1, metadata=METADATA_1), True),
-      (MINTER, "create_card", dict(card=CARD_2, metadata=METADATA_1), True),
+      (MINTER, 'create_card', dict(card=CARD_1, metadata=METADATA_1), True),
+      (MINTER, 'create_card', dict(card=CARD_2, metadata=METADATA_1), True),
 
-      (MINTER, "mint_card", dict(card_id=card_id_1, to_account_name=MINTER), True),
-      (MINTER, "mint_card", dict(card_id=card_id_1, to_account_name=RANDO_1), False),
+      (MINTER, 'mint_card', dict(card_id=card_id_1, to_account_name=MINTER), True),
+      (MINTER, 'mint_card', dict(card_id=card_id_1, to_account_name=RANDO_1), False),
 
-      (MINTER, "mint_card", dict(card_id=card_id_2, to_account_name=RANDO_1), True),
+      (MINTER, 'mint_card', dict(card_id=card_id_2, to_account_name=RANDO_1), True),
     ]
   )
 
@@ -906,12 +927,12 @@ async def test_settle_where_minter_creates_pack(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), False),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), False),
 
-      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
     ]
   )
 
@@ -931,12 +952,12 @@ async def test_settle_where_minter_creates_invalid_pack(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=4), metadata=METADATA_1), False),
-      (MINTER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=15), metadata=METADATA_1), False),
-      (MINTER, "create_pack", dict(pack=update_dict(PACK_1, pack_card_models=[]), metadata=METADATA_1), False),
+      (MINTER, 'create_pack', dict(pack=update_dict(PACK_1, cards_per_pack=4), metadata=METADATA_1), False),
+      (MINTER, 'create_pack', dict(pack=update_dict(PACK_1, cards_per_pack=15), metadata=METADATA_1), False),
+      (MINTER, 'create_pack', dict(pack=update_dict(PACK_1, pack_card_models=[]), metadata=METADATA_1), False),
     ]
   )
 
@@ -958,32 +979,32 @@ async def test_settle_where_minter_saturates_card_model_supply(ctx_factory):
   NEW_CARD = update_dict(CARD_1, model=NEW_CARD_MODEL)
   NEW_PACK = update_dict(
     PACK_1,
-    pack_card_models=PACK_1["pack_card_models"] + [dict(card_model=NEW_CARD_MODEL, quantity=20), dict(card_model=NEW_CARD_MODEL, quantity=13)]
+    pack_card_models=PACK_1['pack_card_models'] + [dict(card_model=NEW_CARD_MODEL, quantity=20), dict(card_model=NEW_CARD_MODEL, quantity=13)]
   )
   NEW_PACK_2 = update_dict(
     PACK_1,
-    pack_card_models=PACK_1["pack_card_models"] + [dict(card_model=NEW_CARD_MODEL, quantity=32), dict(card_model=CARD_MODEL_1, quantity=1)]
+    pack_card_models=PACK_1['pack_card_models'] + [dict(card_model=NEW_CARD_MODEL, quantity=32), dict(card_model=CARD_MODEL_1, quantity=1)]
   )
 
   # When
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (OWNER, "add_scarcity_for_season", dict(season=1, supply=100), True),
+      (OWNER, 'add_scarcity_for_season', dict(season=1, supply=100), True),
 
-      (MINTER, "create_pack", dict(pack=NEW_PACK, metadata=METADATA_1), True),
-      (MINTER, "create_pack", dict(pack=NEW_PACK, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=NEW_PACK, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=NEW_PACK, metadata=METADATA_1), True),
 
-      (MINTER, "create_card", dict(card=update_card(NEW_CARD, serial_number=1), metadata=METADATA_1), True),
-      (MINTER, "create_card", dict(card=update_card(NEW_CARD, serial_number=2), metadata=METADATA_1), True),
+      (MINTER, 'create_card', dict(card=update_card(NEW_CARD, serial_number=1), metadata=METADATA_1), True),
+      (MINTER, 'create_card', dict(card=update_card(NEW_CARD, serial_number=2), metadata=METADATA_1), True),
 
-      (MINTER, "create_pack", dict(pack=NEW_PACK, metadata=METADATA_1), False),
-      (MINTER, "create_pack", dict(pack=NEW_PACK_2, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=NEW_PACK, metadata=METADATA_1), False),
+      (MINTER, 'create_pack', dict(pack=NEW_PACK_2, metadata=METADATA_1), True),
 
-      (MINTER, "create_card", dict(card=update_card(NEW_CARD, serial_number=3), metadata=METADATA_1), False),
+      (MINTER, 'create_card', dict(card=update_card(NEW_CARD, serial_number=3), metadata=METADATA_1), False),
     ]
   )
 
@@ -1009,20 +1030,20 @@ async def test_settle_where_minter_create_packs_and_mint_them(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=MINTER, amount=1), False),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=MINTER, amount=1), False),
 
-      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
-      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=MINTER, amount=3), True),
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2), True),
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1), False),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=MINTER, amount=3), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1), False),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(2), to_account_name=RANDO_1, amount=6), False),
-      (MINTER, "mint_pack", dict(pack_id=to_uint(2), to_account_name=RANDO_1, amount=5), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(2), to_account_name=RANDO_1, amount=6), False),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(2), to_account_name=RANDO_1, amount=5), True),
     ]
   )
 
@@ -1041,25 +1062,25 @@ async def test_settle_where_tokens_are_transfered(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
-      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
-      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
-      (MINTER, "mint_pack", dict(pack_id=to_uint(2), to_account_name=RANDO_2, amount=5), True),
-      (MINTER, "mint_pack", dict(pack_id=to_uint(3), to_account_name=RANDO_3, amount=5), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(2), to_account_name=RANDO_2, amount=5), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(3), to_account_name=RANDO_3, amount=5), True),
 
-      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=NULL, amount=5), False),
-      (RANDO_3, "safe_transfer", dict(token_id=to_uint(3), from_account_name=RANDO_1, to_account_name=DEAD, amount=5), False),
-      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=5), True),
-      (RANDO_3, "safe_transfer", dict(token_id=to_uint(3), from_account_name=RANDO_3, to_account_name=RANDO_1, amount=2), True),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_2, to_account_name=RANDO_3, amount=2), True),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(2), from_account_name=RANDO_2, to_account_name=RANDO_1, amount=3), True),
-      (RANDO_3, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_1, amount=1), True),
-      (RANDO_3, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_1, amount=2), False),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=NULL, amount=5), False),
+      (RANDO_3, 'safe_transfer', dict(token_id=to_uint(3), from_account_name=RANDO_1, to_account_name=DEAD, amount=5), False),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=5), True),
+      (RANDO_3, 'safe_transfer', dict(token_id=to_uint(3), from_account_name=RANDO_3, to_account_name=RANDO_1, amount=2), True),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_2, to_account_name=RANDO_3, amount=2), True),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(2), from_account_name=RANDO_2, to_account_name=RANDO_1, amount=3), True),
+      (RANDO_3, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_1, amount=1), True),
+      (RANDO_3, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_1, amount=2), False),
     ]
   )
 
@@ -1085,38 +1106,38 @@ async def test_settle_where_tokens_are_all_approved(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
 
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), False),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), False),
 
-      (RANDO_1, "set_approve_for_all", dict(to_account_name=NULL, approved=True), False),
-      (RANDO_1, "set_approve_for_all", dict(to_account_name=NULL, approved=2), False),
-      (RANDO_1, "set_approve_for_all", dict(to_account_name=RANDO_2, approved=True), True),
+      (RANDO_1, 'set_approve_for_all', dict(to_account_name=NULL, approved=True), False),
+      (RANDO_1, 'set_approve_for_all', dict(to_account_name=NULL, approved=2), False),
+      (RANDO_1, 'set_approve_for_all', dict(to_account_name=RANDO_2, approved=True), True),
 
-      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
-      (RANDO_3, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), False),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
+      (RANDO_3, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), False),
 
-      (RANDO_1, "set_approve_for_all", dict(to_account_name=RANDO_2, approved=False), True),
-      (RANDO_1, "set_approve_for_all", dict(to_account_name=RANDO_3, approved=True), True),
+      (RANDO_1, 'set_approve_for_all', dict(to_account_name=RANDO_2, approved=False), True),
+      (RANDO_1, 'set_approve_for_all', dict(to_account_name=RANDO_3, approved=True), True),
 
-      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), False),
-      (RANDO_3, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=2), True),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), False),
+      (RANDO_3, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=2), True),
 
-      (RANDO_3, "set_approve_for_all", dict(to_account_name=RANDO_1, approved=True), True),
+      (RANDO_3, 'set_approve_for_all', dict(to_account_name=RANDO_1, approved=True), True),
 
-      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_2, amount=1), True),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_2, amount=1), True),
 
-      (RANDO_3, "set_approve_for_all", dict(to_account_name=RANDO_1, approved=False), True),
+      (RANDO_3, 'set_approve_for_all', dict(to_account_name=RANDO_1, approved=False), True),
 
-      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_2, amount=1), False),
-      (RANDO_3, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_1, amount=1), True),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_2, amount=1), False),
+      (RANDO_3, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_3, to_account_name=RANDO_1, amount=1), True),
     ]
   )
 
@@ -1134,17 +1155,17 @@ async def test_settle_where_tokens_are_approved_1(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
 
-      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=5), True),
+      (RANDO_1, 'approve', dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=5), True),
 
-      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), True),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=2), True),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), True),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=2), True),
     ]
   )
 
@@ -1162,26 +1183,26 @@ async def test_settle_where_tokens_are_approved_2(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, "create_pack", dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
 
-      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=1), True),
+      (RANDO_1, 'approve', dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=1), True),
 
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=2), False),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), True),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), False),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=2), False),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), True),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), False),
 
-      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=5), False),
-      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=4), True),
-      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_3, amount=3), True),
+      (RANDO_1, 'approve', dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=5), False),
+      (RANDO_1, 'approve', dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=4), True),
+      (RANDO_1, 'approve', dict(token_id=to_uint(1), to_account_name=RANDO_3, amount=3), True),
 
-      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=2), True),
-      (RANDO_3, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), True),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), False),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=2), True),
+      (RANDO_3, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), True),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_2, amount=1), False),
     ]
   )
 
@@ -1205,13 +1226,13 @@ async def test_settle_where_minter_create_valid_and_invalid_common_packs(ctx_fac
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_common_pack", dict(cards_per_pack=3, season=0, metadata=METADATA_1), False),
-      (MINTER, "create_common_pack", dict(cards_per_pack=3, season=1, metadata=METADATA_1), True),
-      (MINTER, "create_common_pack", dict(cards_per_pack=3, season=1, metadata=METADATA_1), False),
-      (MINTER, "create_common_pack", dict(cards_per_pack=3, season=42, metadata=METADATA_1), True),
-      (MINTER, "create_common_pack", dict(cards_per_pack=1, season=41, metadata=METADATA_1), True),
-      (MINTER, "create_common_pack", dict(cards_per_pack=0, season=41, metadata=METADATA_1), False),
-      (MINTER, "create_common_pack", dict(cards_per_pack=11, season=40, metadata=METADATA_1), False),
+      (MINTER, 'create_common_pack', dict(cards_per_pack=3, season=0, metadata=METADATA_1), False),
+      (MINTER, 'create_common_pack', dict(cards_per_pack=3, season=1, metadata=METADATA_1), True),
+      (MINTER, 'create_common_pack', dict(cards_per_pack=3, season=1, metadata=METADATA_1), False),
+      (MINTER, 'create_common_pack', dict(cards_per_pack=3, season=42, metadata=METADATA_1), True),
+      (MINTER, 'create_common_pack', dict(cards_per_pack=1, season=41, metadata=METADATA_1), True),
+      (MINTER, 'create_common_pack', dict(cards_per_pack=0, season=41, metadata=METADATA_1), False),
+      (MINTER, 'create_common_pack', dict(cards_per_pack=11, season=40, metadata=METADATA_1), False),
     ]
   )
 
@@ -1237,22 +1258,22 @@ async def test_settle_where_minter_create_packs_and_mint_them(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1), False),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1), False),
 
-      (MINTER, "create_common_pack", dict(cards_per_pack=3, season=1, metadata=METADATA_1), True),
+      (MINTER, 'create_common_pack', dict(cards_per_pack=3, season=1, metadata=METADATA_1), True),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1000000), True),
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=RANDO_1, amount=1), True),
-      (MINTER, "mint_pack", dict(pack_id=to_uint(2 << 128), to_account_name=MINTER, amount=1000000), False),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1000000), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=RANDO_1, amount=1), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(2 << 128), to_account_name=MINTER, amount=1000000), False),
 
-      (OWNER, "stop_production_for_season_and_scarcity", dict(season=1, scarcity=1), True),
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1), True),
+      (OWNER, 'stop_production_for_season_and_scarcity', dict(season=1, scarcity=1), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1), True),
 
-      (OWNER, "stop_production_for_season_and_scarcity", dict(season=2, scarcity=0), True),
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1), True),
+      (OWNER, 'stop_production_for_season_and_scarcity', dict(season=2, scarcity=0), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1), True),
 
-      (OWNER, "stop_production_for_season_and_scarcity", dict(season=1, scarcity=0), True),
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1), False),
+      (OWNER, 'stop_production_for_season_and_scarcity', dict(season=1, scarcity=0), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1), False),
     ]
   )
 
@@ -1285,28 +1306,28 @@ async def test_settle_where_owner_open_common_packs_1(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, "create_common_pack", dict(cards_per_pack=2, season=1, metadata=METADATA_1), True),
+      (MINTER, 'create_common_pack', dict(cards_per_pack=2, season=1, metadata=METADATA_1), True),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1 << 128), to_account_name=RANDO_1, amount=3), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=RANDO_1, amount=3), True),
 
-      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1 << 128), from_account_name=RANDO_1, to_account_name=OWNER, amount=1), True),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadata=[METADATA_1], to_account_name=RANDO_1), False),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1 << 128), from_account_name=RANDO_1, to_account_name=OWNER, amount=1), True),
+      (OWNER, 'open_pack', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadata=[METADATA_1], to_account_name=RANDO_1), False),
 
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
 
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1], metadata=[METADATA_1], to_account_name=RANDO_1), False),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_1], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_3], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[update_card(CARD_1, serial_number=2), CARD_2_2], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, 'open_pack', dict(pack_id=to_uint(1 << 128), cards=[CARD_1], metadata=[METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, 'open_pack', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_1], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, 'open_pack', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_3], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, 'open_pack', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
+      (OWNER, 'open_pack', dict(pack_id=to_uint(1 << 128), cards=[update_card(CARD_1, serial_number=2), CARD_2_2], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
 
-      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1 << 128), from_account_name=RANDO_1, to_account_name=OWNER, amount=1), True),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1 << 128), from_account_name=RANDO_1, to_account_name=OWNER, amount=1), True),
 
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1, update_card(CARD_2, serial_number=2)], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, 'open_pack', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, update_card(CARD_2, serial_number=2)], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
 
-      (OWNER, "open_pack", dict(pack_id=to_uint(1 << 128), cards=[CARD_1_2, CARD_2_2], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
+      (OWNER, 'open_pack', dict(pack_id=to_uint(1 << 128), cards=[CARD_1_2, CARD_2_2], metadata=[METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
     ]
   )
 
@@ -1339,18 +1360,18 @@ async def test_settle_where_owner_open_classic_packs_1(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=3), metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=update_dict(PACK_1, cards_per_pack=3), metadata=METADATA_1), True),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=3), True),
-      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=3), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=3), True),
+      (RANDO_1, 'approve', dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=3), True),
 
-      (RANDO_1, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=OWNER, amount=1), True),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_3], metadata=[METADATA_1, METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
-      (OWNER, "open_pack", dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_1_2], metadata=[METADATA_1, METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True)
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=OWNER, amount=1), True),
+      (OWNER, 'open_pack', dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_3], metadata=[METADATA_1, METADATA_1, METADATA_1], to_account_name=RANDO_1), False),
+      (OWNER, 'open_pack', dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_1_2], metadata=[METADATA_1, METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True)
     ]
   )
 
@@ -1379,22 +1400,22 @@ async def test_settle_where_owner_mint_packs_with_operator(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (MINTER, "create_artist", dict(artist_name=ARTIST_2), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, "create_pack", dict(pack=update_dict(PACK_1, cards_per_pack=1), metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(pack=update_dict(PACK_1, cards_per_pack=1), metadata=METADATA_1), True),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2, operator_name=RANDO_2), True),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2, operator_name=RANDO_2), True),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1, operator_name=RANDO_2), True),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=2), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1, operator_name=RANDO_2), True),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=2), True),
 
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2), True),
-      (RANDO_1, "approve", dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=1), True),
-      (MINTER, "mint_pack", dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1, operator_name=RANDO_2), True),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=3), False),
-      (RANDO_2, "safe_transfer", dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=2), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2), True),
+      (RANDO_1, 'approve', dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=1), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1, operator_name=RANDO_2), True),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=3), False),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=2), True),
     ]
   )
 
@@ -1407,9 +1428,12 @@ async def test_settle_where_owner_mint_packs_with_operator(ctx_factory):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-  "contract_name, params",
+  'contract_name, params',
   [
-    ("rulesData", [0])
+    ('rulesData', [1]),
+    ('rulesCards', [1, 1]),
+    ('rulesPacks', [1, 1, 1]),
+    ('rulesTokens', [1, 1, 1, 1, 1]),
   ]
 )
 async def test_upgrade(ctx_factory, contract_name, params):
@@ -1419,17 +1443,14 @@ async def test_upgrade(ctx_factory, contract_name, params):
   await run_scenario(
     ctx,
     [
-      (OWNER, "create_artist", dict(artist_name=ARTIST_1), True),
-      (RANDO_1, "create_artist", dict(artist_name=ARTIST_2), False),
+      (OWNER, 'initialize', dict(contract_name=contract_name, params=params), False),
 
-      (RANDO_1, "upgrade", dict(contract_name=contract_name, new_declared_class_name=contract_name + 'Mock'), False),
-      (OWNER, "upgrade", dict(contract_name=contract_name, new_declared_class_name=contract_name + 'Mock'), True),
+      (RANDO_1, 'upgrade', dict(contract_name=contract_name, new_declared_class_name='upgrade'), False),
+      (OWNER, 'upgrade', dict(contract_name=contract_name, new_declared_class_name='upgrade'), True),
 
-      (RANDO_1, "create_artist", dict(artist_name=ARTIST_1), False),
-      (RANDO_1, "create_artist", dict(artist_name=ARTIST_2), True),
+      (OWNER, 'initialize', dict(contract_name=contract_name, params=[]), False),
+      (OWNER, 'reset', dict(contract_name=contract_name), True),
+      (OWNER, 'initialize', dict(contract_name=contract_name, params=[]), True),
+      (OWNER, 'initialize', dict(contract_name=contract_name, params=[]), False),
     ]
   )
-
-  # Then
-  assert await _artist_exists(ctx, artist_name=ARTIST_1) == 1
-  assert await _artist_exists(ctx, artist_name=ARTIST_2) == 1

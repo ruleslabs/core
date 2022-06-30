@@ -47,6 +47,7 @@ func initialize{
   AccessControl_initializer(owner)
   Minter_initializer(owner)
 
+  RulesData.initializer()
   return ()
 end
 

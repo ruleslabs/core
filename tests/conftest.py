@@ -74,7 +74,7 @@ async def build_copyable_deployment():
     rulesCards=get_contract_class("ruleslabs/contracts/RulesCards/RulesCards.cairo"),
     rulesPacks=get_contract_class("ruleslabs/contracts/RulesPacks/RulesPacks.cairo"),
     rulesTokens=get_contract_class("ruleslabs/contracts/RulesTokens/RulesTokens.cairo"),
-    rulesDataMock=get_contract_class("mocks/upgrades/RulesDataMock.cairo")
+    upgrade=get_contract_class("test/upgrade.cairo")
   )
 
   signers = dict(
@@ -98,8 +98,8 @@ async def build_copyable_deployment():
   rulesPacks = await starknet.declare(contract_class=contract_classes.rulesPacks)
   rulesTokens = await starknet.declare(contract_class=contract_classes.rulesTokens)
 
-  # Mocks
-  rulesDataMock = await starknet.declare(contract_class=contract_classes.rulesDataMock)
+  # Upgrade
+  upgrade = await starknet.declare(contract_class=contract_classes.upgrade)
 
   # Proxies
   rulesDataProxy = await starknet.deploy(
@@ -198,7 +198,7 @@ async def build_copyable_deployment():
       rulesTokens=serialize_contract(rulesTokensProxy, contract_classes.rulesTokens.abi),
     ),
     serialized_classes=dict(
-      rulesDataMock=serialize_class(rulesDataMock)
+      upgrade=serialize_class(upgrade)
     )
   )
 

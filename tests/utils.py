@@ -29,28 +29,12 @@ def get_periphery_contract_class(path):
   return contract_class
 
 
-def get_contract_source(name):
-  if name.startswith("mocks/"):
-    return str(_root / "tests" / name)
-  else:
-    return str(_root / "src" / name)
-
-
 def get_contract_class(path):
   """Returns the contract definition from the contract path"""
-  if path.startswith("mocks/upgrades/"):
-    cairo_path_leaf = "src"
-  elif path.startswith("mocks/"):
-    cairo_path_leaf = "tests"
-  else:
-    cairo_path_leaf = "src"
-
-  source = get_contract_source(path)
-
   contract_class = compile_starknet_files(
-    files=[source],
+    files=[str(_root / "src" / path)],
     debug_info=True,
-    cairo_path=[str(_root / cairo_path_leaf)]
+    cairo_path=[str(_root / "src")]
   )
   return contract_class
 

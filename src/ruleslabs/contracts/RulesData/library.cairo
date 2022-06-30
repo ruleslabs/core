@@ -1,6 +1,6 @@
 %lang starknet
 
-from starkware.cairo.common.bool import TRUE
+from starkware.cairo.common.bool import TRUE, FALSE
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256
 from starkware.cairo.common.math import assert_not_zero
@@ -19,11 +19,38 @@ from periphery.proxy.library import Proxy
 # Storage
 #
 
+# Initialization
+
+@storage_var
+func contract_initialized() -> (initialized: felt):
+end
+
+# Artists
+
 @storage_var
 func artists_storage(artist_name: Uint256) -> (exists: felt):
 end
 
 namespace RulesData:
+
+  #
+  # Initializer
+  #
+
+  func initializer{
+      syscall_ptr: felt*,
+      pedersen_ptr: HashBuiltin*,
+      range_check_ptr
+    }():
+    # assert not already initialized
+    let (initialized) = contract_initialized.read()
+    with_attr error_message("RulesCards: contract already initialized"):
+        assert initialized = FALSE
+    end
+    contract_initialized.write(TRUE)
+
+    return ()
+  end
 
   #
   # Getters
@@ -50,7 +77,7 @@ namespace RulesData:
     # only called by owner
     Ownable_only_owner()
 
-    # make sure the target is an account
+    # make sure the target is not null
     with_attr error_message("RulesData: new implementation cannot be null"):
       assert_not_zero(implementation)
     end

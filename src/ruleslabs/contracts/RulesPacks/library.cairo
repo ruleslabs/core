@@ -31,6 +31,14 @@ from ruleslabs.models.card import SERIAL_NUMBER_MAX, SCARCITY_MIN
 # Storage
 #
 
+# Initialization
+
+@storage_var
+func contract_initialized() -> (initialized: felt):
+end
+
+# Packs
+
 @storage_var
 func packs_supply_storage() -> (supply: felt):
 end
@@ -78,6 +86,13 @@ namespace RulesPacks:
       pedersen_ptr : HashBuiltin*,
       range_check_ptr
     }(_rules_data_address: felt, _rules_cards_address: felt):
+    # assert not already initialized
+    let (initialized) = contract_initialized.read()
+    with_attr error_message("RulesCards: contract already initialized"):
+        assert initialized = FALSE
+    end
+    contract_initialized.write(TRUE)
+
     rules_data_address_storage.write(_rules_data_address)
     rules_cards_address_storage.write(_rules_cards_address)
     return ()
@@ -177,7 +192,7 @@ namespace RulesPacks:
     # only called by owner
     Ownable_only_owner()
 
-    # make sure the target is an account
+    # make sure the target is not null
     with_attr error_message("RulesPacks: new implementation cannot be null"):
       assert_not_zero(implementation)
     end

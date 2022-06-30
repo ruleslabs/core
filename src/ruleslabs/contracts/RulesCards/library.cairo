@@ -31,6 +31,12 @@ from ruleslabs.contracts.RulesData.IRulesData import IRulesData
 # Storage
 #
 
+# Initialization
+
+@storage_var
+func contract_initialized() -> (initialized: felt):
+end
+
 # Card models
 
 @storage_var
@@ -68,6 +74,13 @@ namespace RulesCards:
       pedersen_ptr: HashBuiltin*,
       range_check_ptr
     }(_rules_data_address: felt):
+    # assert not already initialized
+    let (initialized) = contract_initialized.read()
+    with_attr error_message("RulesCards: contract already initialized"):
+        assert initialized = FALSE
+    end
+    contract_initialized.write(TRUE)
+
     rules_data_address_storage.write(_rules_data_address)
     return ()
   end
@@ -169,7 +182,7 @@ namespace RulesCards:
     # only called by owner
     Ownable_only_owner()
 
-    # make sure the target is an account
+    # make sure the target is not null
     with_attr error_message("RulesCards: new implementation cannot be null"):
       assert_not_zero(implementation)
     end

@@ -50,6 +50,14 @@ from ruleslabs.contracts.RulesPacks.IRulesPacks import IRulesPacks
 # Storage
 #
 
+# Initialization
+
+@storage_var
+func contract_initialized() -> (initialized: felt):
+end
+
+# Addresses
+
 @storage_var
 func rules_cards_address_storage() -> (rules_cards_address: felt):
 end
@@ -69,6 +77,13 @@ namespace RulesTokens:
       pedersen_ptr: HashBuiltin*,
       range_check_ptr
     }(_rules_cards_address: felt, _rules_packs_address: felt):
+    # assert not already initialized
+    let (initialized) = contract_initialized.read()
+    with_attr error_message("RulesCards: contract already initialized"):
+        assert initialized = FALSE
+    end
+    contract_initialized.write(TRUE)
+
     rules_cards_address_storage.write(_rules_cards_address)
     rules_packs_address_storage.write(_rules_packs_address)
     return ()
@@ -135,7 +150,7 @@ namespace RulesTokens:
     # only called by owner
     Ownable_only_owner()
 
-    # make sure the target is an account
+    # make sure the target is not null
     with_attr error_message("RulesTokens: new implementation cannot be null"):
       assert_not_zero(implementation)
     end

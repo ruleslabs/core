@@ -202,7 +202,7 @@ for more information.
 ### Compile contracts
 
 ```bash
-nile compile src/ruleslabs/contracts/Rules*/Rules*.cairo src/ruleslabs/upgrades/Proxy.cairo --directory src
+nile compile src/ruleslabs/contracts/Rules*/Rules*.cairo --directory src
 ```
 
 ### Run tests
