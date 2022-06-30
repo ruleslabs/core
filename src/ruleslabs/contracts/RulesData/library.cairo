@@ -44,7 +44,7 @@ namespace RulesData:
     }():
     # assert not already initialized
     let (initialized) = contract_initialized.read()
-    with_attr error_message("RulesCards: contract already initialized"):
+    with_attr error_message("RulesData: contract already initialized"):
         assert initialized = FALSE
     end
     contract_initialized.write(TRUE)

@@ -79,7 +79,7 @@ namespace RulesTokens:
     }(_rules_cards_address: felt, _rules_packs_address: felt):
     # assert not already initialized
     let (initialized) = contract_initialized.read()
-    with_attr error_message("RulesCards: contract already initialized"):
+    with_attr error_message("RulesTokens: contract already initialized"):
         assert initialized = FALSE
     end
     contract_initialized.write(TRUE)
