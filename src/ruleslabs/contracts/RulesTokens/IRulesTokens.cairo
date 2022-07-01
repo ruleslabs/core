@@ -2,6 +2,9 @@
 
 from starkware.cairo.common.uint256 import Uint256
 
+from ruleslabs.models.metadata import Metadata
+from ruleslabs.models.card import Card
+
 @contract_interface
 namespace IRulesTokens:
 
