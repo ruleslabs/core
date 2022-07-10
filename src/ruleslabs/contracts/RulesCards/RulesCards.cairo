@@ -355,10 +355,10 @@ func createCard{
     pedersen_ptr: HashBuiltin*,
     bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
-  }(card: Card, metadata: Metadata) -> (card_id: Uint256):
+  }(card: Card, metadata: Metadata, packed: felt) -> (card_id: Uint256):
   Minter_only_minter()
 
-  let (card_id) = RulesCards.create_card(card, metadata)
+  let (card_id) = RulesCards.create_card(card, metadata, packed)
   return (card_id)
 end
 

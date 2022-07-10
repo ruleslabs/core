@@ -32,7 +32,7 @@ async def _create_card(ctx, signer_account_name, card, metadata):
     signer_account_name,
     ctx.rulesCards.contract_address,
     'createCard',
-    [*to_starknet_args(card), *to_starknet_args(metadata)]
+    [*to_starknet_args(card), *to_starknet_args(metadata), 0]
   )
 
 
@@ -1017,7 +1017,7 @@ async def test_settle_where_minter_saturates_card_model_supply(ctx_factory):
 
 
 @pytest.mark.asyncio
-async def test_settle_where_minter_create_packs_and_mint_them(ctx_factory):
+async def test_settle_where_minter_create_packs_and_mint_them_1(ctx_factory):
   ctx = ctx_factory()
 
   # Given
@@ -1245,7 +1245,7 @@ async def test_settle_where_minter_create_valid_and_invalid_common_packs(ctx_fac
 
 
 @pytest.mark.asyncio
-async def test_settle_where_minter_create_packs_and_mint_them(ctx_factory):
+async def test_settle_where_minter_create_packs_and_mint_them_2(ctx_factory):
   ctx = ctx_factory()
 
   # Given
@@ -1385,6 +1385,41 @@ async def test_settle_where_owner_open_classic_packs_1(ctx_factory):
   assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(1)
   assert await _balance_of(ctx, RANDO_3, to_uint(1)) == to_uint(1)
   assert await _get_approved(ctx, RANDO_1, to_uint(1)) == (rando_2_address, to_uint(1))
+
+
+@pytest.mark.asyncio
+async def test_settle_where_owner_open_classic_packs_2(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  CARD_3_1 = update_card(CARD_1, scarcity=1, serial_number=1)
+  CARD_3_2 = update_card(CARD_1, scarcity=1, serial_number=2)
+  CARD_3_3 = update_card(CARD_1, scarcity=1, serial_number=3)
+  CARD_3_4 = update_card(CARD_1, scarcity=1, serial_number=4)
+  CARD_3_5 = update_card(CARD_1, scarcity=1, serial_number=5)
+
+  PACK_2 = dict(
+    cards_per_pack=3,
+    pack_card_models=[dict(card_model=CARD_3_1['model'], quantity=3)]
+  )
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+
+      (MINTER, 'create_pack', dict(pack=PACK_2, metadata=METADATA_1), False),
+      (OWNER, 'add_scarcity_for_season', dict(season=1, supply=4), True),
+      (MINTER, 'create_pack', dict(pack=PACK_2, metadata=METADATA_1), True),
+
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=OWNER, amount=1), True),
+
+      (OWNER, 'open_pack', dict(pack_id=to_uint(1), cards=[CARD_3_1, CARD_3_2, CARD_3_3], metadata=[METADATA_1, METADATA_1, METADATA_1], to_account_name=RANDO_1), True),
+      (MINTER, 'create_card', dict(card=CARD_3_4, metadata=METADATA_1), True),
+      (MINTER, 'create_card', dict(card=CARD_3_5, metadata=METADATA_1), False),
+    ]
+  )
 
 
 @pytest.mark.asyncio

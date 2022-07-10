@@ -165,7 +165,7 @@ namespace RulesTokens:
     alloc_locals
 
     let (rules_cards_address) = rules_cards_address_storage.read()
-    let (local card_id) = IRulesCards.createCard(rules_cards_address, card, metadata)
+    let (local card_id) = IRulesCards.createCard(rules_cards_address, card, metadata, FALSE)
 
     let data = cast(0, felt*)
     _safe_mint(to, token_id=card_id, amount=Uint256(1, 0), data_len=0, data=data)
@@ -365,7 +365,7 @@ namespace RulesTokens:
       return ()
     end
 
-    let (card_id) = IRulesCards.createCard(rules_cards_address, [cards], [metadata])
+    let (card_id) = IRulesCards.createCard(rules_cards_address, [cards], [metadata], TRUE)
     assert [card_ids] = card_id
 
     _create_cards_batch(

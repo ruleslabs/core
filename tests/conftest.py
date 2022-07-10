@@ -1,7 +1,6 @@
 import asyncio
 import pytest
 import dill
-import os
 import sys
 from types import SimpleNamespace
 import time
@@ -15,10 +14,6 @@ from utils import Signer, get_contract_class, get_periphery_contract_class, _roo
 
 # pytest-xdest only shows stderr
 sys.stdout = sys.stderr
-
-
-def get_block_timestamp(starknet_state):
-  return starknet_state.state.block_info.block_timestamp
 
 
 def set_block_timestamp(starknet_state, timestamp):

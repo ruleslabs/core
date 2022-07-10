@@ -5,6 +5,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.math import assert_not_zero, assert_le
 from starkware.cairo.common.math_cmp import is_not_zero
 from starkware.cairo.common.uint256 import Uint256
+from starkware.starknet.common.syscalls import get_caller_address
 
 from ruleslabs.models.metadata import Metadata
 from ruleslabs.models.card import Card, CardModel, get_card_id_from_card, card_is_null
@@ -139,31 +140,8 @@ namespace RulesCards:
       pedersen_ptr: HashBuiltin*,
       range_check_ptr
     }(card_model: CardModel) -> (available_supply: felt):
-    let (rules_data_address) = rules_data_address_storage.read()
-
-    # Check if artist exists
-    let (artist_exists) = IRulesData.artistExists(rules_data_address, card_model.artist_name)
-    if artist_exists == FALSE:
-      return (available_supply=0)
-    end
-
-    # Check is production is stopped for this scarcity and season
-    let (stopped) = Scarcity_productionStopped(card_model.season, card_model.scarcity)
-    if stopped == TRUE:
-      return (available_supply=0)
-    end
-
-    # Check max supply
-    let (max_supply) = Scarcity_max_supply(card_model.season, card_model.scarcity)
-    if max_supply == 0:
-      return (available_supply=0)
-    end
-
-    # Get supply and packed supply
-    let (packed_supply) = card_models_packed_supply_storage.read(card_model)
-    let (supply) = card_models_supply_storage.read(card_model)
-
-    return (max_supply - supply - packed_supply)
+    let (available_supply) = _card_model_available_supply(card_model, FALSE)
+    return (available_supply)
   end
 
   #
@@ -194,10 +172,10 @@ namespace RulesCards:
       pedersen_ptr: HashBuiltin*,
       bitwise_ptr: BitwiseBuiltin*,
       range_check_ptr
-    }(card: Card, metadata: Metadata) -> (card_id: Uint256):
+    }(card: Card, metadata: Metadata, packed: felt) -> (card_id: Uint256):
     alloc_locals
 
-    let (available_supply) = card_model_available_supply(card_model=card.model)
+    let (available_supply) = _card_model_available_supply(card_model=card.model, packed=packed)
     with_attr error_message("Available supply is null"):
       assert_not_zero(available_supply)
     end
@@ -223,8 +201,17 @@ namespace RulesCards:
       assert exists = FALSE
     end
 
-    let (supply) = card_models_supply_storage.read(card.model)
-    card_models_supply_storage.write(card.model, supply + 1)
+    if packed == FALSE:
+      let (supply) = card_models_supply_storage.read(card.model)
+      card_models_supply_storage.write(card.model, supply + 1)
+      tempvar syscall_ptr = syscall_ptr
+      tempvar pedersen_ptr = pedersen_ptr
+      tempvar range_check_ptr = range_check_ptr
+    else:
+      tempvar syscall_ptr = syscall_ptr
+      tempvar pedersen_ptr = pedersen_ptr
+      tempvar range_check_ptr = range_check_ptr
+    end
 
     cards_storage.write(card_id, card)
     cards_metadata_storage.write(card_id, metadata)
@@ -246,5 +233,45 @@ namespace RulesCards:
     let (packed_supply) = card_models_packed_supply_storage.read(pack_card_model.card_model)
     card_models_packed_supply_storage.write(pack_card_model.card_model, packed_supply + pack_card_model.quantity)
     return ()
+  end
+
+  #
+  # Internals
+  #
+
+  func _card_model_available_supply{
+      syscall_ptr: felt*,
+      pedersen_ptr: HashBuiltin*,
+      range_check_ptr
+    }(card_model: CardModel, packed: felt) -> (available_supply: felt):
+    let (rules_data_address) = rules_data_address_storage.read()
+
+    # Check if artist exists
+    let (artist_exists) = IRulesData.artistExists(rules_data_address, card_model.artist_name)
+    if artist_exists == FALSE:
+      return (available_supply=0)
+    end
+
+    # Check is production is stopped for this scarcity and season
+    let (stopped) = Scarcity_productionStopped(card_model.season, card_model.scarcity)
+    if stopped == TRUE:
+      return (available_supply=0)
+    end
+
+    # Check max supply
+    let (max_supply) = Scarcity_max_supply(card_model.season, card_model.scarcity)
+    if max_supply == 0:
+      return (available_supply=0)
+    end
+
+    if packed == TRUE:
+      return (1) # return anything above 0
+    end
+
+    # Get supply and packed supply
+
+    let (supply) = card_models_supply_storage.read(card_model)
+    let (packed_supply) = card_models_packed_supply_storage.read(card_model)
+    return (max_supply - supply - packed_supply)
   end
 end

@@ -26,7 +26,7 @@ namespace IRulesCards:
   # Business logic
   #
 
-  func createCard(card: Card, metadata: Metadata) -> (card_id: Uint256):
+  func createCard(card: Card, metadata: Metadata, packed: felt) -> (card_id: Uint256):
   end
 
   func packCardModel(pack_card_model: PackCardModel):
