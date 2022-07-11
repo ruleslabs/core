@@ -1,7 +1,7 @@
 %lang starknet
-%builtins pedersen range_check bitwise
+%builtins pedersen range_check
 
-from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256
 
 from ruleslabs.models.metadata import Metadata
@@ -378,7 +378,6 @@ end
 func openPackTo{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
-    bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
   }(to: felt, pack_id: Uint256, cards_len: felt, cards: Card*, metadata_len: felt, metadata: Metadata*):
   Minter_only_minter()

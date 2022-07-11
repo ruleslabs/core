@@ -2,7 +2,7 @@
 
 from starkware.cairo.common.bool import TRUE, FALSE
 from starkware.cairo.common.alloc import alloc
-from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256, uint256_le
 from starkware.cairo.common.math import assert_le, assert_not_zero, assert_not_equal
 from starkware.starknet.common.syscalls import get_caller_address
@@ -252,7 +252,6 @@ namespace RulesTokens:
   func open_pack{
       syscall_ptr: felt*,
       pedersen_ptr: HashBuiltin*,
-      bitwise_ptr: BitwiseBuiltin*,
       range_check_ptr
     }(to: felt, pack_id: Uint256, cards_len: felt, cards: Card*, metadata_len: felt, metadata: Metadata*):
     alloc_locals

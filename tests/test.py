@@ -343,6 +343,8 @@ METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
 
 ARTIST_1 = (0x416C7068612057616E6E, 0)
 ARTIST_2 = (0x5A6575, 0)
+INVALID_ARTIST = (0x6162636465666768696A6B6C6D6E6F70, 0x7172737475767778797A3132)
+VALID_ARTIST = (0x6162636465666768696A6B6C6D6E6F70, 0x7172737475767778797A31)
 
 CARD_MODEL_1 = dict(artist_name=ARTIST_1, season=1, scarcity=0)
 CARD_MODEL_2 = dict(artist_name=ARTIST_2, season=1, scarcity=0)
@@ -559,6 +561,9 @@ async def test_settle_where_minter_create_invalid_card(ctx_factory):
   await run_scenario(
     ctx,
     [
+      (MINTER, 'create_artist', dict(artist_name=INVALID_ARTIST), False),
+      (MINTER, 'create_artist', dict(artist_name=VALID_ARTIST), True),
+
       (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
       (MINTER, 'create_card', dict(card=update_card(CARD_1, season=0), metadata=METADATA_1), False),
       (MINTER, 'create_card', dict(card=update_card(CARD_1, serial_number=0), metadata=METADATA_1), False),

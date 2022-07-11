@@ -1,7 +1,7 @@
 %lang starknet
 
 from starkware.cairo.common.bool import TRUE, FALSE
-from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.math import assert_not_zero, assert_le
 from starkware.cairo.common.math_cmp import is_not_zero
 from starkware.cairo.common.uint256 import Uint256
@@ -128,7 +128,6 @@ namespace RulesCards:
   func card_id{
       syscall_ptr: felt*,
       pedersen_ptr: HashBuiltin*,
-      bitwise_ptr: BitwiseBuiltin*,
       range_check_ptr
     }(card: Card) -> (card_id: Uint256):
     let (card_id) = get_card_id_from_card(card)
@@ -170,7 +169,6 @@ namespace RulesCards:
   func create_card{
       syscall_ptr: felt*,
       pedersen_ptr: HashBuiltin*,
-      bitwise_ptr: BitwiseBuiltin*,
       range_check_ptr
     }(card: Card, metadata: Metadata, packed: felt) -> (card_id: Uint256):
     alloc_locals

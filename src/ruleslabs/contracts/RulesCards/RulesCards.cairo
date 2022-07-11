@@ -1,8 +1,8 @@
 %lang starknet
-%builtins pedersen range_check bitwise
+%builtins pedersen range_check
 
 from starkware.cairo.common.bool import TRUE, FALSE
-from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256
 
 from ruleslabs.models.metadata import Metadata
@@ -76,7 +76,6 @@ from ruleslabs.contracts.RulesData.IRulesData import IRulesData
 func initialize{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
-    bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
   }(owner: felt, _rules_data_address: felt):
   Ownable_initializer(owner)
@@ -204,7 +203,6 @@ end
 func getCardId{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
-    bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
   }(card: Card) -> (card_id: Uint256):
   let (card_id) = RulesCards.card_id(card)
@@ -353,7 +351,6 @@ end
 func createCard{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
-    bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
   }(card: Card, metadata: Metadata, packed: felt) -> (card_id: Uint256):
   Minter_only_minter()
@@ -366,7 +363,6 @@ end
 func packCardModel{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
-    bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
   }(pack_card_model: PackCardModel):
   Packer_only_packer()
