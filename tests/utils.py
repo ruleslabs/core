@@ -13,7 +13,7 @@ from starkware.starknet.core.os.transaction_hash.transaction_hash import calcula
 from starkware.starknet.definitions.general_config import StarknetChainId
 from itertools import chain
 
-SERIAL_NUMBER_MAX = 2 ** 32 - 1
+SERIAL_NUMBER_MAX = 2 ** 24 - 1
 TRANSACTION_VERSION = 0
 
 _root = Path(__file__).parent.parent
