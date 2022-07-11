@@ -1,14 +1,14 @@
 %lang starknet
 
 from starkware.cairo.common.bool import TRUE, FALSE
-from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.math import assert_not_zero, assert_le
 from starkware.cairo.common.math_cmp import is_not_zero
 from starkware.cairo.common.uint256 import Uint256
 from starkware.starknet.common.syscalls import get_caller_address
 
 from ruleslabs.models.metadata import Metadata
-from ruleslabs.models.card import Card, CardModel, get_card_id_from_card, card_is_null
+from ruleslabs.models.card import Card, CardModel, get_card_id_from_card, get_card_from_card_id, card_is_null
 from ruleslabs.models.pack import PackCardModel
 
 # Libraries
@@ -47,7 +47,7 @@ end
 # Cards
 
 @storage_var
-func cards_storage(card_id: Uint256) -> (card: Card):
+func cards_storage(card_id: Uint256) -> (res: felt):
 end
 
 @storage_var
@@ -100,26 +100,22 @@ namespace RulesCards:
       pedersen_ptr: HashBuiltin*,
       range_check_ptr
     }(card_id: Uint256) -> (res: felt):
-    let (card) = cards_storage.read(card_id)
-    let (is_null) = card_is_null(card)
-
-    tempvar syscall_ptr = syscall_ptr
-    tempvar pedersen_ptr = pedersen_ptr
-    tempvar range_check_ptr = range_check_ptr
-
-    if is_null == 1:
-        return (FALSE)
-    else:
-        return (TRUE)
-    end
+    let (res) = cards_storage.read(card_id)
+    return (res)
   end
 
   func card{
       syscall_ptr: felt*,
       pedersen_ptr: HashBuiltin*,
+      bitwise_ptr: BitwiseBuiltin*,
       range_check_ptr
     }(card_id: Uint256) -> (card: Card, metadata: Metadata):
-    let (card) = cards_storage.read(card_id)
+    let (does_card_exists) = card_exists(card_id)
+    with_attr error_message("RulesCard: card does not exist"):
+      assert_not_zero(does_card_exists)
+    end
+
+    let (card) = get_card_from_card_id(card_id)
     let (metadata) = cards_metadata_storage.read(card_id)
 
     return (card, metadata)
@@ -211,7 +207,7 @@ namespace RulesCards:
       tempvar range_check_ptr = range_check_ptr
     end
 
-    cards_storage.write(card_id, card)
+    cards_storage.write(card_id, TRUE)
     cards_metadata_storage.write(card_id, metadata)
 
     return (card_id)

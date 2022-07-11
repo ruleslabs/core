@@ -197,3 +197,10 @@ def felts_to_ascii(felts):
 
 def felts_to_string(felts):
   return reduce(lambda acc, felt: acc + "{:x}".format(felt), felts, "")
+
+
+def compute_card_id(card):
+  return (
+    card['model']['artist_name'][0],
+    card['model']['artist_name'][1] + card['model']['scarcity'] * 2 ** 88 + card['model']['season'] * 2 ** 96 + card['serial_number'] * 2 ** 104
+  )

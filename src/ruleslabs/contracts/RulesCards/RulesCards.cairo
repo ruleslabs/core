@@ -1,8 +1,8 @@
 %lang starknet
-%builtins pedersen range_check
+%builtins pedersen range_check bitwise
 
 from starkware.cairo.common.bool import TRUE, FALSE
-from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.uint256 import Uint256
 
 from ruleslabs.models.metadata import Metadata
@@ -193,6 +193,7 @@ end
 func getCard{
     syscall_ptr: felt*,
     pedersen_ptr: HashBuiltin*,
+    bitwise_ptr: BitwiseBuiltin*,
     range_check_ptr
   }(card_id: Uint256) -> (card: Card, metadata: Metadata):
   let (card, metadata) = RulesCards.card(card_id)

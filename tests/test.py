@@ -5,7 +5,7 @@ from starkware.starknet.definitions.error_codes import StarknetErrorCode
 
 from utils import (
   dict_to_tuple, to_starknet_args, update_card, get_contract, get_method, to_uint, get_account_address,
-  felts_to_string, felts_to_ascii, from_uint, update_dict, SERIAL_NUMBER_MAX, get_declared_class
+  felts_to_string, felts_to_ascii, from_uint, update_dict, SERIAL_NUMBER_MAX, get_declared_class, compute_card_id
 )
 
 # Artist
@@ -342,9 +342,8 @@ ROLES = dict(MINTER_ROLE='Minter', CAPPER_ROLE='Capper')
 METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
 
 ARTIST_1 = (0x416C7068612057616E6E, 0)
-ARTIST_2 = (0x5A6575, 0)
+ARTIST_2 = (0x6162636465666768696A6B6C6D6E6F70, 0x7172737475767778797A31)
 INVALID_ARTIST = (0x6162636465666768696A6B6C6D6E6F70, 0x7172737475767778797A3132)
-VALID_ARTIST = (0x6162636465666768696A6B6C6D6E6F70, 0x7172737475767778797A31)
 
 CARD_MODEL_1 = dict(artist_name=ARTIST_1, season=1, scarcity=0)
 CARD_MODEL_2 = dict(artist_name=ARTIST_2, season=1, scarcity=0)
@@ -528,7 +527,7 @@ async def test_settle_where_minter_create_artist(ctx_factory):
 
 
 @pytest.mark.asyncio
-async def test_settle_where_minter_create_card(ctx_factory):
+async def test_settle_where_minter_create_valid_card(ctx_factory):
   ctx = ctx_factory()
 
   # Given
@@ -540,14 +539,21 @@ async def test_settle_where_minter_create_card(ctx_factory):
     ctx,
     [
       (MINTER, 'create_card', dict(card=CARD_1, metadata=METADATA_1), False),
+
       (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
+
       (MINTER, 'create_card', dict(card=CARD_1, metadata=METADATA_1), True),
       (MINTER, 'create_card', dict(card=CARD_1, metadata=METADATA_1), False),
+
+      (MINTER, 'create_card', dict(card=CARD_2, metadata=METADATA_1), True),
     ]
   )
 
   # Then
   assert await _card_exists(ctx, card_id) == 1
+  assert await _get_card_id(ctx, CARD_2) == compute_card_id(CARD_2)
+  assert await _get_card_id(ctx, CARD_1) == compute_card_id(CARD_1)
 
 
 @pytest.mark.asyncio
@@ -557,12 +563,12 @@ async def test_settle_where_minter_create_invalid_card(ctx_factory):
   # Given
   assert await _get_supply_for_season_and_scarcity(ctx, 1, 1) == 0
 
-  # When / Then
+  # When
   await run_scenario(
     ctx,
     [
       (MINTER, 'create_artist', dict(artist_name=INVALID_ARTIST), False),
-      (MINTER, 'create_artist', dict(artist_name=VALID_ARTIST), True),
+      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
       (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
       (MINTER, 'create_card', dict(card=update_card(CARD_1, season=0), metadata=METADATA_1), False),

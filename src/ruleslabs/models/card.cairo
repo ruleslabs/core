@@ -1,7 +1,7 @@
 %lang starknet
 
 from starkware.cairo.common.bool import TRUE, FALSE
-from starkware.cairo.common.cairo_builtins import HashBuiltin
+from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.math import unsigned_div_rem
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.math import assert_le
@@ -18,6 +18,15 @@ const SERIAL_NUMBER_MAX = 2 ** 24 - 1
 const SEASON_MIN = 1
 const SCARCITY_MIN = 0
 const SERIAL_NUMBER_MIN = 1
+
+const ARTIST_NAME_HIGH_MASK = 2 ** 88 - 1
+const SERIAL_NUMBER_MASK = 2 ** 128 - 2 ** 104
+const SCARCITY_MASK = 2 ** 96 - 2 ** 88
+const SEASON_MASK = 2 ** 104 - 2 ** 96
+
+const SERIAL_NUMBER_SHIFT = 2 ** 104
+const SEASON_SHIFT = 2 ** 96
+const SCARCITY_SHIFT = 2 ** 88
 
 #
 # Structs
@@ -78,11 +87,47 @@ func get_card_id_from_card{
   #  |    ---> season
   #   -------> serial_number
 
-  let serial_number = card.serial_number * 2 ** 104
-  let season = card.model.season * 2 ** 96
-  let scarcity = card.model.scarcity * 2 ** 88
+  let serial_number = card.serial_number * SERIAL_NUMBER_SHIFT
+  let season = card.model.season * SEASON_SHIFT
+  let scarcity = card.model.scarcity * SCARCITY_SHIFT
 
   return (card_id=Uint256(card.model.artist_name.low, card.model.artist_name.high + serial_number + season + scarcity))
+end
+
+func get_card_from_card_id{
+    syscall_ptr: felt*,
+    pedersen_ptr: HashBuiltin*,
+    bitwise_ptr: BitwiseBuiltin*,
+    range_check_ptr
+  }(card_id: Uint256) -> (card: Card):
+  # artist name
+  assert bitwise_ptr[0].x = card_id.high
+  assert bitwise_ptr[0].y = ARTIST_NAME_HIGH_MASK
+
+  let artist_name = Uint256(card_id.low, bitwise_ptr[0].x_and_y)
+
+  # serial number
+  assert bitwise_ptr[1].x = card_id.high
+  assert bitwise_ptr[1].y = SERIAL_NUMBER_MASK
+
+  let serial_number = bitwise_ptr[1].x_and_y / SEASON_SHIFT
+
+  # season
+  assert bitwise_ptr[2].x = card_id.high
+  assert bitwise_ptr[2].y = SEASON_MASK
+
+  let season = bitwise_ptr[2].x_and_y / SEASON_SHIFT
+
+  # scarcity
+  assert bitwise_ptr[3].x = card_id.high
+  assert bitwise_ptr[3].y = SCARCITY_MASK
+
+  let scarcity = bitwise_ptr[3].x_and_y / SCARCITY_SHIFT
+
+  let bitwise_ptr = bitwise_ptr + 4 * BitwiseBuiltin.SIZE
+
+  let card_model = CardModel(artist_name, season, scarcity)
+  return (Card(card_model, serial_number))
 end
 
 # Guards
