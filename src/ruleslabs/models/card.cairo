@@ -110,7 +110,7 @@ func get_card_from_card_id{
   assert bitwise_ptr[1].x = card_id.high
   assert bitwise_ptr[1].y = SERIAL_NUMBER_MASK
 
-  let serial_number = bitwise_ptr[1].x_and_y / SEASON_SHIFT
+  let serial_number = bitwise_ptr[1].x_and_y / SERIAL_NUMBER_SHIFT
 
   # season
   assert bitwise_ptr[2].x = card_id.high
