@@ -9,8 +9,6 @@ from starkware.cairo.common.math_cmp import is_not_zero
 
 from ruleslabs.models.card import SERIAL_NUMBER_MAX
 
-const SCARCITY_SUPPLY_DIVISOR = 2
-
 #
 # Storage
 #
@@ -79,16 +77,6 @@ func Scarcity_addScarcity{
   assert_not_zero(supply)
 
   let (local last_scarcity) = last_scarcity_storage.read(season)
-  let (last_supply) = scarcity_max_supply_storage.read(season, last_scarcity)
-
-  let (is_last_supply_set) = is_not_zero(last_supply)
-
-  if is_last_supply_set == TRUE:
-    assert_le(supply * SCARCITY_SUPPLY_DIVISOR, last_supply)
-    tempvar range_check_ptr = range_check_ptr
-  else:
-    tempvar range_check_ptr = range_check_ptr
-  end
 
   scarcity_max_supply_storage.write(season, last_scarcity + 1, supply)
   last_scarcity_storage.write(season, last_scarcity + 1)

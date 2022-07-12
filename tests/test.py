@@ -721,7 +721,7 @@ async def test_settle_where_capper_add_scarcity_levels(ctx_factory):
       (OWNER, 'add_scarcity_for_season', dict(season=1, supply=0), False),
       (OWNER, 'add_scarcity_for_season', dict(season=1, supply=1000), True),
       (OWNER, 'add_scarcity_for_season', dict(season=1, supply=500), True),
-      (OWNER, 'add_scarcity_for_season', dict(season=1, supply=251), False),
+      (OWNER, 'add_scarcity_for_season', dict(season=1, supply=10000), True),
       (OWNER, 'add_scarcity_for_season', dict(season=1, supply=0), False),
 
       (OWNER, 'add_scarcity_for_season', dict(season=2, supply=1), True),

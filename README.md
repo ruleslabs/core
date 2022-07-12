@@ -23,7 +23,7 @@ Rules protocol is composed of 4 contracts interacting with each other.
 Create an artists if it does not already exist.
 
 - ###### parameters
-  - `artist_name: Uint256`: the artist name
+  - `artist_name: Uint256`: the artist name (must be at most 27 characters long)
 
 ### RulesCards
 
@@ -36,12 +36,12 @@ A card is a struct composed like bellow, and the main purpose of this contract i
 ```cairo
 struct Card:
   member model: CardModel
-  member serial_number: felt # uint32
+  member serial_number: felt # uint24
 end
 
 struct CardModel:
   member artist_name: Uint256
-  member season: felt # uint16
+  member season: felt # uint8
   member scarcity: felt # uint8
 end
 ```
@@ -62,13 +62,6 @@ Add a new scarcity level to a given season.
 
   - `supply: felt`: the max supply of the scarcity level to create.
 
-    If a scarcity level had already been added to this season, this parameters must be at most half of the max supply of the last scarcity level created for the season.
-
-    Given $x$ the scarcity level and $n_x$ its associated max supply:
-
-    $\forall x \in N\ast$  
-    $0 < n_x \leq {n_{x - 1} \over 2}$
-
 ##### `stopProductionForSeasonAndScarcity`:
 
 Definitively Stop the production of new cards for the scarcity level of a given season.
@@ -80,7 +73,7 @@ Definitively Stop the production of new cards for the scarcity level of a given 
 
 ##### `createCard`
 
-Store card informations, derivate a hash (using `keccak256`) from them and use it as a card identifier.
+Store card informations in a `Uint256`, and use it as a card identifier.
 If the card informations are invalid, that the scarcity provided does not allow more card creation, or if the card already exists, the transaction will fail.
 
 - ###### parameters
@@ -92,12 +85,12 @@ If the card informations are invalid, that the scarcity provided does not allow 
 
       - `season: felt`: must be non null and fit in 8 bits
 
-      - `scarcity: felt`: must fit in 16 bits, and exist in the given season
+      - `scarcity: felt`: must fit in 8 bits, and exist in the given season
 
-    - `serial_number: felt`: must be non null and fit in 32 bits
+    - `serial_number: felt`: must be non null and fit in 24 bits
 
 - ###### return value
-  - `card_id: Uint256` the `keccak256` hash derivated from card data
+  - `card_id: Uint256` the card identifier
 
 ##### `packCardModel`
 
