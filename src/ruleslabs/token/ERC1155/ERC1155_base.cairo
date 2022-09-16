@@ -8,14 +8,10 @@ from starkware.cairo.common.uint256 import (
 from starkware.cairo.common.math import assert_not_zero, assert_not_equal
 from starkware.starknet.common.syscalls import get_caller_address
 
-from openzeppelin.security.safemath import (
-  uint256_checked_add,
-  uint256_checked_sub_le
-)
+# External namespaces
 
-from openzeppelin.introspection.ERC165 import (
-  ERC165_register_interface
-)
+from openzeppelin.security.safemath.library import SafeUint256
+from openzeppelin.introspection.erc165.library import ERC165
 
 # Constants
 
@@ -27,7 +23,7 @@ from ruleslabs.utils.constants import (
 # Import interfaces
 #
 
-from openzeppelin.introspection.IERC165 import IERC165
+from openzeppelin.introspection.erc165.IERC165 import IERC165
 from ruleslabs.token.ERC1155.IERC1155_Receiver import IERC1155_Receiver
 
 #
@@ -90,7 +86,7 @@ func ERC1155_initializer{
   ERC1155_name_.write(name)
   ERC1155_symbol_.write(symbol)
 
-  ERC165_register_interface(IERC1155_ID)
+  ERC165.register_interface(IERC1155_ID)
   return ()
 end
 
@@ -343,7 +339,7 @@ func ERC1155_burn{
 
   # Decrease owner balance
   let (owner_balance) = ERC1155_balances.read(_from, token_id)
-  let (new_balance: Uint256) = uint256_checked_sub_le(owner_balance, amount)
+  let (new_balance: Uint256) = SafeUint256.sub_le(owner_balance, amount)
   ERC1155_balances.write(_from, token_id, new_balance)
 
   # Emit transfer before update approval to avoid revoked implicit arguments
@@ -472,12 +468,12 @@ func _transfer{
 
   # Decrease owner balance
   let (owner_balance) = ERC1155_balances.read(_from, token_id)
-  let (new_owner_balance: Uint256) = uint256_checked_sub_le(owner_balance, amount)
+  let (new_owner_balance: Uint256) = SafeUint256.sub_le(owner_balance, amount)
   ERC1155_balances.write(_from, token_id, new_owner_balance)
 
   # Increase receiver balance
   let (receiver_balance) = ERC1155_balances.read(to, token_id)
-  let (new_receiver_balance: Uint256) = uint256_checked_add(receiver_balance, amount)
+  let (new_receiver_balance: Uint256) = SafeUint256.add(receiver_balance, amount)
   ERC1155_balances.write(to, token_id, new_receiver_balance)
 
   # Emit transfer before update approval to avoid revoked implicit arguments
@@ -489,7 +485,7 @@ func _transfer{
   let (approved_amount) = ERC1155_token_approval_amount.read(_from, token_id)
 
   if operator == caller:
-    let (new_approved_amount) = uint256_checked_sub_le(approved_amount, amount)
+    let (new_approved_amount) = SafeUint256.sub_le(approved_amount, amount)
     _approve(owner=_from, operator=operator, token_id=token_id, amount=new_approved_amount)
     return ()
   else:
@@ -544,12 +540,12 @@ func _safe_batch_transfer_loop{
 
   # Decrease owner balance
   let (owner_balance) = ERC1155_balances.read(_from, [ids])
-  let (new_balance: Uint256) = uint256_checked_sub_le(owner_balance, [amounts])
+  let (new_balance: Uint256) = SafeUint256.sub_le(owner_balance, [amounts])
   ERC1155_balances.write(_from, [ids], new_balance)
 
   # Increase receiver balance
   let (receiver_balance) = ERC1155_balances.read(to, [ids])
-  let (new_balance: Uint256) = uint256_checked_add(receiver_balance, [amounts])
+  let (new_balance: Uint256) = SafeUint256.add(receiver_balance, [amounts])
   ERC1155_balances.write(to, [ids], new_balance)
 
   # Update approval
@@ -558,7 +554,7 @@ func _safe_batch_transfer_loop{
   let (approved_amount) = ERC1155_token_approval_amount.read(_from, [ids])
 
   if operator == caller:
-    let (new_approved_amount) = uint256_checked_sub_le(approved_amount, [amounts])
+    let (new_approved_amount) = SafeUint256.sub_le(approved_amount, [amounts])
     _approve(owner=_from, operator=operator, token_id=[ids], amount=new_approved_amount)
 
     tempvar syscall_ptr = syscall_ptr

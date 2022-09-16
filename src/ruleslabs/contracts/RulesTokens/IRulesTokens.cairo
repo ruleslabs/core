@@ -13,4 +13,7 @@ namespace IRulesTokens:
 
   func openPackTo(to: felt, pack_id: Uint256, cards_len: felt, cards: Card*, metadata_len: felt, metadata: Metadata*):
   end
+
+  func getApproved(owner: felt, token_id: Uint256) -> (operator: felt, amount: Uint256):
+  end
 end
