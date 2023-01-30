@@ -255,6 +255,16 @@ async def _get_card_model_available_supply(ctx, card_model):
   ).result
   return available_supply
 
+# Pack locking
+
+async def _get_unlocked(ctx, account_name, token_id):
+  account_address = get_account_address(ctx, account_name)
+
+  (amount,) = (
+    await ctx.rules_tokens.getUnlocked(account_address, token_id).call()
+  ).result
+  return amount
+
 # Transfer
 
 async def _safe_transfer(ctx, signer_account_name, token_id, from_account_address, to_account_address, amount):
@@ -1079,9 +1089,9 @@ async def test_settle_where_tokens_are_transfered(ctx_factory):
       (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
       (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
 
-      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
-      (MINTER, 'mint_pack', dict(pack_id=to_uint(2), to_account_name=RANDO_2, amount=5), True),
-      (MINTER, 'mint_pack', dict(pack_id=to_uint(3), to_account_name=RANDO_3, amount=5), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5, unlocked=True), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(2), to_account_name=RANDO_2, amount=5, unlocked=True), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(3), to_account_name=RANDO_3, amount=5, unlocked=True), True),
 
       (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=NULL, amount=5), False),
       (RANDO_3, 'safe_transfer', dict(token_id=to_uint(3), from_account_name=RANDO_1, to_account_name=DEAD, amount=5), False),
@@ -1121,7 +1131,7 @@ async def test_settle_where_tokens_are_all_approved(ctx_factory):
 
       (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
 
-      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5, unlocked=True), True),
 
       (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), False),
 
@@ -1170,7 +1180,7 @@ async def test_settle_where_tokens_are_approved_1(ctx_factory):
 
       (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
 
-      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5, unlocked=True), True),
 
       (RANDO_1, 'approve', dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=5), True),
 
@@ -1198,7 +1208,7 @@ async def test_settle_where_tokens_are_approved_2(ctx_factory):
 
       (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
 
-      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5, unlocked=True), True),
 
       (RANDO_1, 'approve', dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=1), True),
 
@@ -1320,7 +1330,7 @@ async def test_settle_where_owner_open_common_packs_1(ctx_factory):
 
       (MINTER, 'create_common_pack', dict(cards_per_pack=2, season=1, metadata=METADATA_1), True),
 
-      (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=RANDO_1, amount=3), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=RANDO_1, amount=3, unlocked=True), True),
 
       (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1 << 128), from_account_name=RANDO_1, to_account_name=OWNER, amount=1), True),
       (OWNER, 'open_pack', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadata=[METADATA_1], to_account_name=RANDO_1), False),
@@ -1375,7 +1385,7 @@ async def test_settle_where_owner_open_classic_packs_1(ctx_factory):
 
       (MINTER, 'create_pack', dict(pack=update_dict(PACK_1, cards_per_pack=3), metadata=METADATA_1), True),
 
-      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=3), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=3, unlocked=True), True),
       (RANDO_1, 'approve', dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=3), True),
 
       (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=OWNER, amount=1), True),
@@ -1433,7 +1443,7 @@ async def test_settle_where_owner_open_classic_packs_2(ctx_factory):
 
 
 @pytest.mark.asyncio
-async def test_settle_where_owner_mint_unlocked_packs(ctx_factory):
+async def test_settle_where_owner_mint_locked_and_unlocked_packs(ctx_factory):
   ctx = ctx_factory()
 
   # Given
@@ -1458,12 +1468,16 @@ async def test_settle_where_owner_mint_unlocked_packs(ctx_factory):
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2), True),
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1, unlocked=True), True),
-      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=3), False),
-      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=3), False),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
     ]
   )
 
   # Then
+  assert await _get_unlocked(ctx, RANDO_1, to_uint(1)) == to_uint(0)
+  assert await _get_unlocked(ctx, RANDO_2, to_uint(1)) == to_uint(0)
+  assert await _get_unlocked(ctx, RANDO_3, to_uint(1)) == to_uint(4)
+
   assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(2)
   assert await _balance_of(ctx, RANDO_2, to_uint(1)) == to_uint(0)
   assert await _balance_of(ctx, RANDO_3, to_uint(1)) == to_uint(4)

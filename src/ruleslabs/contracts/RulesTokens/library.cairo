@@ -438,10 +438,9 @@ namespace RulesTokens {
   func _unlocking_handler{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     _from: felt, to: felt, token_id: Uint256, amount: Uint256
   ) {
-    let is_pack = token_id.low * token_id.high;
-
+    // if token_id.low * token_id.high === 0 => token is a pack
     // Check and update the amount of unlocked packs if needed
-    if (is_pack != FALSE) {
+    if (token_id.low * token_id.high == 0) {
       let (unlocked_amount) = RulesTokens_packs_unlocking_amount.read(_from, token_id);
 
       with_attr error_message("RulesTokens: not enough unlocked packs") {
@@ -454,7 +453,7 @@ namespace RulesTokens {
       _unlock_packs(_from, token_id, new_unlocked_amount);
 
       // Increase unlocked packs amount for recipient
-      _inc_unlocked_packs(_from, token_id, amount);
+      _inc_unlocked_packs(to, token_id, amount);
 
       return ();
     } else {
