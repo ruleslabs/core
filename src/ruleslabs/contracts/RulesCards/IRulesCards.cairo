@@ -7,28 +7,27 @@ from ruleslabs.models.card import Card
 from ruleslabs.models.pack import PackCardModel
 
 @contract_interface
-namespace IRulesCards:
+namespace IRulesCards {
+  //
+  // Getters
+  //
 
-  #
-  # Getters
-  #
+  func getCard(card_id: Uint256) -> (card: Card, metadata: Metadata) {
+  }
 
-  func getCard(card_id: Uint256) -> (card: Card, metadata: Metadata):
-  end
+  func cardExists(card_id: Uint256) -> (res: felt) {
+  }
 
-  func cardExists(card_id: Uint256) -> (res: felt):
-  end
+  func productionStoppedForSeasonAndScarcity(season: felt, scarcity: felt) -> (stopped: felt) {
+  }
 
-  func productionStoppedForSeasonAndScarcity(season: felt, scarcity: felt) -> (stopped: felt):
-  end
+  //
+  // Business logic
+  //
 
-  #
-  # Business logic
-  #
+  func createCard(card: Card, metadata: Metadata, packed: felt) -> (card_id: Uint256) {
+  }
 
-  func createCard(card: Card, metadata: Metadata, packed: felt) -> (card_id: Uint256):
-  end
-
-  func packCardModel(pack_card_model: PackCardModel):
-  end
-end
+  func packCardModel(pack_card_model: PackCardModel) {
+  }
+}

@@ -9,13 +9,12 @@ from ruleslabs.models.metadata import Metadata
 from ruleslabs.models.card import Card, CardModel
 from ruleslabs.models.pack import PackCardModel
 
-# Libraries
+// Libraries
 
 from ruleslabs.contracts.RulesCards.library import RulesCards
 
 from ruleslabs.lib.Ownable_base import (
   Ownable_get_owner,
-
   Ownable_initializer,
   Ownable_only_owner,
   Ownable_transfer_ownership,
@@ -25,13 +24,11 @@ from ruleslabs.lib.roles.AccessControl_base import (
   AccessControl_has_role,
   AccessControl_roles_count,
   AccessControl_role_member,
-
   AccessControl_initializer,
 )
 
 from ruleslabs.lib.roles.minter import (
   Minter_role,
-
   Minter_initializer,
   Minter_only_minter,
   Minter_grant,
@@ -40,7 +37,6 @@ from ruleslabs.lib.roles.minter import (
 
 from ruleslabs.lib.roles.capper import (
   Capper_role,
-
   Capper_initializer,
   Capper_only_capper,
   Capper_grant,
@@ -49,346 +45,271 @@ from ruleslabs.lib.roles.capper import (
 
 from ruleslabs.lib.roles.packer import (
   Packer_role,
-
   Packer_initializer,
   Packer_only_packer,
   Packer_grant,
-  Packer_revoke
+  Packer_revoke,
 )
 
 from ruleslabs.lib.scarcity.Scarcity_base import (
   Scarcity_max_supply,
   Scarcity_productionStopped,
-
   Scarcity_addScarcity,
-  Scarcity_stopProduction
+  Scarcity_stopProduction,
 )
 
-# Interfaces
+// Interfaces
 
 from ruleslabs.contracts.RulesData.IRulesData import IRulesData
 
-#
-# Initializer
-#
+//
+// Initializer
+//
 
 @external
-func initialize{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(owner: felt, _rules_data_address: felt):
-  Ownable_initializer(owner)
-  AccessControl_initializer(owner)
-  Capper_initializer(owner)
-  Packer_initializer(owner)
-  Minter_initializer(owner)
+func initialize{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  owner: felt, _rules_data_address: felt
+) {
+  Ownable_initializer(owner);
+  AccessControl_initializer(owner);
+  Capper_initializer(owner);
+  Packer_initializer(owner);
+  Minter_initializer(owner);
 
-  RulesCards.initializer(_rules_data_address)
-  return ()
-end
+  RulesCards.initializer(_rules_data_address);
+  return ();
+}
 
-#
-# Upgrade
-#
+//
+// Upgrade
+//
 
 @external
-func upgrade{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(implementation: felt):
-  Ownable_only_owner()
-  RulesCards.upgrade(implementation)
-  return ()
-end
+func upgrade{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  implementation: felt
+) {
+  Ownable_only_owner();
+  RulesCards.upgrade(implementation);
+  return ();
+}
 
-#
-# Getters
-#
+//
+// Getters
+//
 
-# Roles
+// Roles
 
 @view
-func CAPPER_ROLE{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }() -> (role: felt):
-  let (role) = Capper_role()
-  return (role)
-end
+func CAPPER_ROLE{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
+  role: felt
+) {
+  let (role) = Capper_role();
+  return (role,);
+}
 
 @view
-func PACKER_ROLE{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }() -> (role: felt):
-  let (role) = Packer_role()
-  return (role)
-end
+func PACKER_ROLE{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
+  role: felt
+) {
+  let (role) = Packer_role();
+  return (role,);
+}
 
 @view
-func MINTER_ROLE{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }() -> (role: felt):
-  let (role) = Minter_role()
-  return (role)
-end
+func MINTER_ROLE{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
+  role: felt
+) {
+  let (role) = Minter_role();
+  return (role,);
+}
 
 @view
-func owner{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }() -> (owner: felt):
-  let (owner) = Ownable_get_owner()
-  return (owner)
-end
+func owner{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (owner: felt) {
+  let (owner) = Ownable_get_owner();
+  return (owner,);
+}
 
 @view
-func getRoleMember{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(role: felt, index: felt) -> (account: felt):
-  let (account) = AccessControl_role_member(role, index)
-  return (account)
-end
+func getRoleMember{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  role: felt, index: felt
+) -> (account: felt) {
+  let (account) = AccessControl_role_member(role, index);
+  return (account,);
+}
 
 @view
-func getRoleMemberCount{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(role: felt) -> (count: felt):
-  let (count) = AccessControl_roles_count(role)
-  return (count)
-end
+func getRoleMemberCount{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  role: felt
+) -> (count: felt) {
+  let (count) = AccessControl_roles_count(role);
+  return (count,);
+}
 
 @view
-func hasRole{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(role: felt, account: felt) -> (has_role: felt):
-  let (has_role) = AccessControl_has_role(role, account)
-  return (has_role)
-end
+func hasRole{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  role: felt, account: felt
+) -> (has_role: felt) {
+  let (has_role) = AccessControl_has_role(role, account);
+  return (has_role,);
+}
 
 @view
-func cardExists{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(card_id: Uint256) -> (res: felt):
-  let (exists) = RulesCards.card_exists(card_id)
-  return (exists)
-end
+func cardExists{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  card_id: Uint256
+) -> (res: felt) {
+  let (exists) = RulesCards.card_exists(card_id);
+  return (exists,);
+}
 
 @view
 func getCard{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    bitwise_ptr: BitwiseBuiltin*,
-    range_check_ptr
-  }(card_id: Uint256) -> (card: Card, metadata: Metadata):
-  let (card, metadata) = RulesCards.card(card_id)
-  return (card, metadata)
-end
+  syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, bitwise_ptr: BitwiseBuiltin*, range_check_ptr
+}(card_id: Uint256) -> (card: Card, metadata: Metadata) {
+  let (card, metadata) = RulesCards.card(card_id);
+  return (card, metadata);
+}
 
 @view
-func getCardId{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(card: Card) -> (card_id: Uint256):
-  let (card_id) = RulesCards.card_id(card)
-  return (card_id)
-end
+func getCardId{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(card: Card) -> (
+  card_id: Uint256
+) {
+  let (card_id) = RulesCards.card_id(card);
+  return (card_id,);
+}
 
-# Supply
+// Supply
 
 @view
-func getSupplyForSeasonAndScarcity{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(season: felt, scarcity: felt) -> (supply: felt):
-  let (supply) = Scarcity_max_supply(season, scarcity)
-  return (supply)
-end
+func getSupplyForSeasonAndScarcity{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  season: felt, scarcity: felt
+) -> (supply: felt) {
+  let (supply) = Scarcity_max_supply(season, scarcity);
+  return (supply,);
+}
 
 @view
 func productionStoppedForSeasonAndScarcity{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(season: felt, scarcity: felt) -> (stopped: felt):
-  let (stopped) = Scarcity_productionStopped(season, scarcity)
-  return (stopped)
-end
+  syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
+}(season: felt, scarcity: felt) -> (stopped: felt) {
+  let (stopped) = Scarcity_productionStopped(season, scarcity);
+  return (stopped,);
+}
 
 @view
-func getCardModelAvailableSupply{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(card_model: CardModel) -> (supply: felt):
-  let (supply) = RulesCards.card_model_available_supply(card_model)
-  return (supply)
-end
+func getCardModelAvailableSupply{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  card_model: CardModel
+) -> (supply: felt) {
+  let (supply) = RulesCards.card_model_available_supply(card_model);
+  return (supply,);
+}
 
-# Other contracts
+// Other contracts
 
 @view
-func rulesData{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }() -> (address: felt):
-  let (address) = RulesCards.rules_data()
-  return (address)
-end
+func rulesData{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
+  address: felt
+) {
+  let (address) = RulesCards.rules_data();
+  return (address,);
+}
 
-#
-# Externals
-#
+//
+// Externals
+//
 
-# Roles
+// Roles
 
 @external
-func addCapper{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(account: felt):
-  Capper_grant(account)
-  return ()
-end
+func addCapper{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(account: felt) {
+  Capper_grant(account);
+  return ();
+}
 
 @external
-func addPacker{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(account: felt):
-  Packer_grant(account)
-  return ()
-end
+func addPacker{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(account: felt) {
+  Packer_grant(account);
+  return ();
+}
 
 @external
-func addMinter{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(account: felt):
-  Minter_grant(account)
-  return ()
-end
+func addMinter{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(account: felt) {
+  Minter_grant(account);
+  return ();
+}
 
 @external
-func revokeCapper{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(account: felt):
-  Capper_revoke(account)
-  return ()
-end
+func revokeCapper{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(account: felt) {
+  Capper_revoke(account);
+  return ();
+}
 
 @external
-func revokePacker{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(account: felt):
-  Packer_revoke(account)
-  return ()
-end
+func revokePacker{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(account: felt) {
+  Packer_revoke(account);
+  return ();
+}
 
 @external
-func revokeMinter{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(account: felt):
-  Minter_revoke(account)
-  return ()
-end
+func revokeMinter{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(account: felt) {
+  Minter_revoke(account);
+  return ();
+}
 
-# Supply
+// Supply
 
 @external
-func addScarcityForSeason{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(season: felt, supply: felt) -> (scarcity: felt):
-  Capper_only_capper()
+func addScarcityForSeason{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  season: felt, supply: felt
+) -> (scarcity: felt) {
+  Capper_only_capper();
 
-  let (scarcity) = Scarcity_addScarcity(season, supply)
-  return (scarcity)
-end
+  let (scarcity) = Scarcity_addScarcity(season, supply);
+  return (scarcity,);
+}
 
 @external
 func stopProductionForSeasonAndScarcity{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(season: felt, scarcity: felt):
-  Capper_only_capper()
+  syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
+}(season: felt, scarcity: felt) {
+  Capper_only_capper();
 
-  Scarcity_stopProduction(season, scarcity)
-  return ()
-end
+  Scarcity_stopProduction(season, scarcity);
+  return ();
+}
 
-# Cards
+// Cards
 
 @external
-func createCard{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(card: Card, metadata: Metadata, packed: felt) -> (card_id: Uint256):
-  Minter_only_minter()
+func createCard{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  card: Card, metadata: Metadata, packed: felt
+) -> (card_id: Uint256) {
+  Minter_only_minter();
 
-  let (card_id) = RulesCards.create_card(card, metadata, packed)
-  return (card_id)
-end
+  let (card_id) = RulesCards.create_card(card, metadata, packed);
+  return (card_id,);
+}
 
 @external
-func packCardModel{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(pack_card_model: PackCardModel):
-  Packer_only_packer()
-  RulesCards.pack_card_model(pack_card_model)
-  return ()
-end
+func packCardModel{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  pack_card_model: PackCardModel
+) {
+  Packer_only_packer();
+  RulesCards.pack_card_model(pack_card_model);
+  return ();
+}
 
-# Ownership
+// Ownership
 
 @external
-func transferOwnership{
-    syscall_ptr : felt*,
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr
-  }(new_owner: felt) -> (new_owner: felt):
-  Ownable_transfer_ownership(new_owner)
-  return (new_owner)
-end
+func transferOwnership{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  new_owner: felt
+) -> (new_owner: felt) {
+  Ownable_transfer_ownership(new_owner);
+  return (new_owner,);
+}
 
 @external
-func renounceOwnership{
-    syscall_ptr : felt*,
-    pedersen_ptr : HashBuiltin*,
-    range_check_ptr
-  }():
-  Ownable_transfer_ownership(0)
-  return ()
-end
+func renounceOwnership{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
+  Ownable_transfer_ownership(0);
+  return ();
+}

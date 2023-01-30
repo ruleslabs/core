@@ -1,57 +1,28 @@
-import asyncio
 import pytest
+import asyncio
 import dill
 import sys
-from types import SimpleNamespace
 import time
+from types import SimpleNamespace
 
 from starkware.starknet.testing.starknet import Starknet
-from starkware.starknet.business_logic.state.state import BlockInfo
-from starkware.starknet.testing.contract import DeclaredClass, StarknetContract
 from starkware.starknet.compiler.compile import get_selector_from_name
 
-from utils import Signer, get_contract_class, get_periphery_contract_class, _root
+from utils.Signer import Signer
+from utils.misc import (
+  declare, deploy_proxy, serialize_contract, unserialize_contract, serialize_class, unserialize_class,
+  set_block_timestamp, uint, str_to_felt, to_starknet_args,
+)
+from utils.TransactionSender import TransactionSender
+
 
 # pytest-xdest only shows stderr
 sys.stdout = sys.stderr
 
-
-def set_block_timestamp(starknet_state, timestamp):
-  starknet_state.state.block_info = BlockInfo.create_for_testing(
-    starknet_state.state.block_info.block_number, timestamp
-  )
+initialize_selector = get_selector_from_name('initialize')
 
 
-async def deploy_account(starknet, signer, account_def):
-  account = await starknet.deploy(contract_class=account_def)
-  await account.initialize(signer.public_key, 0).invoke()
-  return account
-
-
-def serialize_contract(contract, abi):
-  return dict(
-    abi=abi,
-    contract_address=contract.contract_address,
-    deploy_execution_info=contract.deploy_execution_info
-  )
-
-
-def serialize_class(declared_class):
-  return dict(
-    class_hash=declared_class.class_hash,
-    abi=declared_class.abi
-  )
-
-
-def unserialize_contract(starknet_state, serialized_contract):
-  return StarknetContract(state=starknet_state, **serialized_contract)
-
-
-def unserialize_class(serialized_class):
-  return DeclaredClass(**serialized_class)
-
-
-@pytest.fixture(scope="session")
+@pytest.fixture(scope='module')
 def event_loop():
   return asyncio.new_event_loop()
 
@@ -62,16 +33,7 @@ async def build_copyable_deployment():
   # initialize realistic timestamp
   set_block_timestamp(starknet.state, round(time.time()))
 
-  contract_classes = SimpleNamespace(
-    account=get_periphery_contract_class("account/Account.cairo"),
-    proxy=get_periphery_contract_class("proxy/Proxy.cairo"),
-    rulesData=get_contract_class("ruleslabs/contracts/RulesData/RulesData.cairo"),
-    rulesCards=get_contract_class("ruleslabs/contracts/RulesCards/RulesCards.cairo"),
-    rulesPacks=get_contract_class("ruleslabs/contracts/RulesPacks/RulesPacks.cairo"),
-    rulesTokens=get_contract_class("ruleslabs/contracts/RulesTokens/RulesTokens.cairo"),
-    upgrade=get_contract_class("test/upgrade.cairo")
-  )
-
+  # Signers
   signers = dict(
     owner=Signer(8245892928310),
     minter=Signer(1004912350233),
@@ -80,142 +42,134 @@ async def build_copyable_deployment():
     rando3=Signer(3333333333333)
   )
 
+  # Classes
+  account_class = await declare(starknet, 'periphery/account/Account.cairo')
+
+  rules_data_class = await declare(starknet, 'src/ruleslabs/contracts/RulesData/RulesData.cairo')
+  rules_cards_class = await declare(starknet, 'src/ruleslabs/contracts/RulesCards/RulesCards.cairo')
+  rules_packs_class = await declare(starknet, 'src/ruleslabs/contracts/RulesPacks/RulesPacks.cairo')
+  rules_tokens_class = await declare(starknet, 'src/ruleslabs/contracts/RulesTokens/RulesTokens.cairo')
+
+  upgrade_class = await declare(starknet, 'src/test/upgrade.cairo')
+
+  # Accounts
   accounts = SimpleNamespace(
     **{
-      name: (await deploy_account(starknet, signer, contract_classes.account))
+      name: (await deploy_proxy(
+        starknet,
+        account_class.abi,
+        [account_class.class_hash, initialize_selector, 2, signer.public_key, 0]
+      ))
       for name, signer in signers.items()
     }
   )
 
-  # Implementations
-  rulesData = await starknet.declare(contract_class=contract_classes.rulesData)
-  rulesCards = await starknet.declare(contract_class=contract_classes.rulesCards)
-  rulesPacks = await starknet.declare(contract_class=contract_classes.rulesPacks)
-  rulesTokens = await starknet.declare(contract_class=contract_classes.rulesTokens)
-
-  # Upgrade
-  upgrade = await starknet.declare(contract_class=contract_classes.upgrade)
-
   # Proxies
-  rulesDataProxy = await starknet.deploy(
-    contract_class=contract_classes.proxy,
-    constructor_calldata=[
-      rulesData.class_hash,
-      get_selector_from_name('initialize'),
+  rules_data = await deploy_proxy(
+    starknet,
+    rules_data_class.abi,
+    [
+      rules_data_class.class_hash,
+      initialize_selector,
       1,
-      accounts.owner.contract_address,
-    ]
+      accounts.owner.contract_address
+    ],
   )
-  rulesCardsProxy = await starknet.deploy(
-    contract_class=contract_classes.proxy,
-    constructor_calldata=[
-      rulesCards.class_hash,
-      get_selector_from_name('initialize'),
+  rules_cards = await deploy_proxy(
+    starknet,
+    rules_cards_class.abi,
+    [
+      rules_cards_class.class_hash,
+      initialize_selector,
       2,
       accounts.owner.contract_address,
-      rulesDataProxy.contract_address,
-    ]
+      rules_data.contract_address,
+    ],
   )
-  rulesPacksProxy = await starknet.deploy(
-    contract_class=contract_classes.proxy,
-    constructor_calldata=[
-      rulesPacks.class_hash,
-      get_selector_from_name('initialize'),
+  rules_packs = await deploy_proxy(
+    starknet,
+    rules_packs_class.abi,
+    [
+      rules_packs_class.class_hash,
+      initialize_selector,
       3,
       accounts.owner.contract_address,
-      rulesDataProxy.contract_address,
-      rulesCardsProxy.contract_address,
-    ]
+      rules_data.contract_address,
+      rules_cards.contract_address,
+    ],
   )
-  rulesTokensProxy = await starknet.deploy(
-    contract_class=contract_classes.proxy,
-    constructor_calldata=[
-      rulesTokens.class_hash,
-      get_selector_from_name('initialize'),
+  rules_tokens = await deploy_proxy(
+    starknet,
+    rules_tokens_class.abi,
+    [
+      rules_tokens_class.class_hash,
+      initialize_selector,
       5,
-      0x5374616D70656465, # name
-      0x5354414D50, # symbol
-      accounts.owner.contract_address, # owner
-      rulesCardsProxy.contract_address,
-      rulesPacksProxy.contract_address,
-    ]
+      0x52756C6573,
+      0x52554C4553,
+      accounts.owner.contract_address,
+      rules_cards.contract_address,
+      rules_packs.contract_address,
+    ],
   )
 
-  # Configure access control
-  for contract in [rulesDataProxy, rulesCardsProxy, rulesTokensProxy, rulesPacksProxy]:
-    await signers["owner"].send_transaction(
-      accounts.owner,
-      contract.contract_address,
-      "addMinter",
-      [accounts.minter.contract_address]
-    )
+  # Access control
+  owner_sender = TransactionSender(accounts.owner)
 
-  await signers["owner"].send_transaction(
-    accounts.owner,
-    rulesCardsProxy.contract_address,
-    "addMinter",
-    [rulesTokensProxy.contract_address]
-  )
+  await owner_sender.send_transaction([
+    (rules_data.contract_address, 'addMinter', [accounts.minter.contract_address]),
+    (rules_packs.contract_address, 'addMinter', [accounts.minter.contract_address]),
+    (rules_cards.contract_address, 'addMinter', [accounts.minter.contract_address]),
+    (rules_tokens.contract_address, 'addMinter', [accounts.minter.contract_address]),
 
-  await signers["owner"].send_transaction(
-    accounts.owner,
-    rulesPacksProxy.contract_address,
-    "addMinter",
-    [rulesTokensProxy.contract_address]
-  )
+    (rules_cards.contract_address, 'addMinter', [rules_tokens.contract_address]),
+    (rules_packs.contract_address, 'addMinter', [rules_tokens.contract_address]),
 
-  await signers["owner"].send_transaction(
-    accounts.owner,
-    rulesCardsProxy.contract_address,
-    "addPacker",
-    [rulesPacksProxy.contract_address]
-  )
-
-  await signers["owner"].send_transaction(
-    accounts.owner,
-    rulesCardsProxy.contract_address,
-    "revokePacker",
-    [accounts.owner.contract_address]
-  )
+    (rules_cards.contract_address, 'addPacker', [rules_packs.contract_address]),
+    (rules_cards.contract_address, 'revokePacker', [accounts.owner.contract_address]),
+  ], signers['owner'])
 
   return SimpleNamespace(
     starknet=starknet,
     signers=signers,
+    serialized_accounts=dict(
+      owner=serialize_contract(accounts.owner, account_class.abi),
+      minter=serialize_contract(accounts.minter, account_class.abi),
+      rando1=serialize_contract(accounts.rando1, account_class.abi),
+      rando2=serialize_contract(accounts.rando2, account_class.abi),
+      rando3=serialize_contract(accounts.rando3, account_class.abi),
+    ),
     serialized_contracts=dict(
-      owner=serialize_contract(accounts.owner, contract_classes.account.abi),
-      rando1=serialize_contract(accounts.rando1, contract_classes.account.abi),
-      rando2=serialize_contract(accounts.rando2, contract_classes.account.abi),
-      rando3=serialize_contract(accounts.rando3, contract_classes.account.abi),
-      minter=serialize_contract(accounts.minter, contract_classes.account.abi),
-      rulesData=serialize_contract(rulesDataProxy, contract_classes.rulesData.abi),
-      rulesCards=serialize_contract(rulesCardsProxy, contract_classes.rulesCards.abi),
-      rulesPacks=serialize_contract(rulesPacksProxy, contract_classes.rulesPacks.abi),
-      rulesTokens=serialize_contract(rulesTokensProxy, contract_classes.rulesTokens.abi),
+      rules_data=serialize_contract(rules_data, rules_data_class.abi),
+      rules_cards=serialize_contract(rules_cards, rules_cards_class.abi),
+      rules_packs=serialize_contract(rules_packs, rules_packs_class.abi),
+      rules_tokens=serialize_contract(rules_tokens, rules_tokens_class.abi),
     ),
     serialized_classes=dict(
-      upgrade=serialize_class(upgrade)
-    )
+      upgrade=serialize_class(upgrade_class),
+    ),
   )
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope='module')
 async def copyable_deployment(request):
-  CACHE_KEY="deployment"
+  CACHE_KEY='deployment'
   val = request.config.cache.get(CACHE_KEY, None)
 
   if val is None:
     val = await build_copyable_deployment()
-    res = dill.dumps(val).decode("cp437")
+    res = dill.dumps(val).decode('cp437')
     request.config.cache.set(CACHE_KEY, res)
   else:
-    val = dill.loads(val.encode("cp437"))
+    val = dill.loads(val.encode('cp437'))
 
   return val
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope='module')
 async def ctx_factory(copyable_deployment):
   serialized_contracts = copyable_deployment.serialized_contracts
+  serialized_accounts = copyable_deployment.serialized_accounts
   serialized_classes = copyable_deployment.serialized_classes
   signers = copyable_deployment.signers
 
@@ -225,24 +179,29 @@ async def ctx_factory(copyable_deployment):
       name: unserialize_contract(starknet_state, serialized_contract)
       for name, serialized_contract in serialized_contracts.items()
     }
+    accounts = {
+      name: unserialize_contract(starknet_state, serialized_account)
+      for name, serialized_account in serialized_accounts.items()
+    }
     classes = {
       name: unserialize_class(serialized_class)
       for name, serialized_class in serialized_classes.items()
     }
 
     async def execute(account_name, contract_address, selector_name, calldata):
-      return await signers[account_name].send_transaction(
-        contracts[account_name],
-        contract_address,
-        selector_name,
-        calldata
-      )
+      sender = TransactionSender(accounts[account_name])
+
+      return await sender.send_transaction([
+        (contract_address, selector_name, calldata)
+      ], signers[account_name])
 
     return SimpleNamespace(
       starknet=Starknet(starknet_state),
       execute=execute,
+      signers=signers,
+      **accounts,
+      **contracts,
       **classes,
-      **contracts
     )
 
   return make

@@ -3,7 +3,7 @@ import pytest
 from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.definitions.error_codes import StarknetErrorCode
 
-from utils import (
+from utils.misc import (
   dict_to_tuple, to_starknet_args, update_card, get_contract, get_method, to_uint, get_account_address,
   felts_to_string, felts_to_ascii, from_uint, update_dict, SERIAL_NUMBER_MAX, get_declared_class, compute_card_id
 )
@@ -13,7 +13,7 @@ from utils import (
 async def _create_artist(ctx, signer_account_name, artist_name):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesData.contract_address,
+    ctx.rules_data.contract_address,
     'createArtist',
     [*artist_name]
   )
@@ -21,7 +21,7 @@ async def _create_artist(ctx, signer_account_name, artist_name):
 
 async def _artist_exists(ctx, artist_name):
   (exists,) = (
-    await ctx.rulesData.artistExists(artist_name).call()
+    await ctx.rules_data.artistExists(artist_name).call()
   ).result
   return exists
 
@@ -30,7 +30,7 @@ async def _artist_exists(ctx, artist_name):
 async def _create_card(ctx, signer_account_name, card, metadata):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesCards.contract_address,
+    ctx.rules_cards.contract_address,
     'createCard',
     [*to_starknet_args(card), *to_starknet_args(metadata), 0]
   )
@@ -38,14 +38,14 @@ async def _create_card(ctx, signer_account_name, card, metadata):
 
 async def _card_exists(ctx, card_id):
   (exists,) = (
-    await ctx.rulesCards.cardExists(card_id).call()
+    await ctx.rules_cards.cardExists(card_id).call()
   ).result
   return exists
 
 
 async def _get_card_id(ctx, card):
   (card_id,) = (
-    await ctx.rulesCards.getCardId(dict_to_tuple(card)).call()
+    await ctx.rules_cards.getCardId(dict_to_tuple(card)).call()
   ).result
   return card_id
 
@@ -54,7 +54,7 @@ async def _get_card_id(ctx, card):
 async def _create_pack(ctx, signer_account_name, pack, metadata):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesPacks.contract_address,
+    ctx.rules_packs.contract_address,
     'createPack',
     [*to_starknet_args(pack), *to_starknet_args(metadata)]
   )
@@ -63,7 +63,7 @@ async def _create_pack(ctx, signer_account_name, pack, metadata):
 async def _create_common_pack(ctx, signer_account_name, cards_per_pack, season, metadata):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesPacks.contract_address,
+    ctx.rules_packs.contract_address,
     'createCommonPack',
     [cards_per_pack, season, *to_starknet_args(metadata)]
   )
@@ -71,7 +71,7 @@ async def _create_common_pack(ctx, signer_account_name, cards_per_pack, season, 
 
 async def _pack_exists(ctx, pack_id):
   (exists,) = (
-    await ctx.rulesPacks.packExists(pack_id).call()
+    await ctx.rules_packs.packExists(pack_id).call()
   ).result
   return exists
 
@@ -79,14 +79,14 @@ async def _pack_exists(ctx, pack_id):
 
 async def _get_base_token_uri(ctx):
   (base_token_uri,) = (
-    await ctx.rulesTokens.baseTokenURI().call()
+    await ctx.rules_tokens.baseTokenURI().call()
   ).result
   return base_token_uri
 
 
 async def _get_token_uri(ctx, token_id):
   (token_uri,) = (
-    await ctx.rulesTokens.tokenURI(token_id).call()
+    await ctx.rules_tokens.tokenURI(token_id).call()
   ).result
   return token_uri
 
@@ -94,7 +94,7 @@ async def _get_token_uri(ctx, token_id):
 async def _set_base_token_uri(ctx, signer_account_name, base_token_uri):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesTokens.contract_address,
+    ctx.rules_tokens.contract_address,
     'setBaseTokenURI',
     [len(base_token_uri), *base_token_uri]
   )
@@ -176,7 +176,7 @@ async def _renounce_ownership(ctx, signer_account_name, contract):
 
 async def _get_supply_for_season_and_scarcity(ctx, season, scarcity):
   (supply,) = (
-    await ctx.rulesCards.getSupplyForSeasonAndScarcity(season, scarcity).call()
+    await ctx.rules_cards.getSupplyForSeasonAndScarcity(season, scarcity).call()
   ).result
   return supply
 
@@ -184,7 +184,7 @@ async def _get_supply_for_season_and_scarcity(ctx, season, scarcity):
 async def _add_scarcity_for_season(ctx, signer_account_name, season, supply):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesCards.contract_address,
+    ctx.rules_cards.contract_address,
     'addScarcityForSeason',
     [season, supply]
   )
@@ -192,7 +192,7 @@ async def _add_scarcity_for_season(ctx, signer_account_name, season, supply):
 
 async def _stopped_production_for_season_and_scarcity(ctx, season, scarcity):
   (stopped,) = (
-    await ctx.rulesCards.productionStoppedForSeasonAndScarcity(season, scarcity).call()
+    await ctx.rules_cards.productionStoppedForSeasonAndScarcity(season, scarcity).call()
   ).result
   return stopped
 
@@ -200,7 +200,7 @@ async def _stopped_production_for_season_and_scarcity(ctx, season, scarcity):
 async def _stop_production_for_season_and_scarcity(ctx, signer_account_name, season, scarcity):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesCards.contract_address,
+    ctx.rules_cards.contract_address,
     'stopProductionForSeasonAndScarcity',
     [season, scarcity]
   )
@@ -210,7 +210,7 @@ async def _stop_production_for_season_and_scarcity(ctx, signer_account_name, sea
 async def _create_and_mint_card(ctx, signer_account_name, card, metadata, to_account_address):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesTokens.contract_address,
+    ctx.rules_tokens.contract_address,
     'createAndMintCard',
     [*to_starknet_args(card), *to_starknet_args(metadata), to_account_address]
   )
@@ -218,7 +218,7 @@ async def _create_and_mint_card(ctx, signer_account_name, card, metadata, to_acc
 async def _mint_pack(ctx, signer_account_name, pack_id, to_account_address, amount, operator_address):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesTokens.contract_address,
+    ctx.rules_tokens.contract_address,
     'mintPack',
     [*to_starknet_args(pack_id), to_account_address, amount, operator_address]
   )
@@ -226,7 +226,7 @@ async def _mint_pack(ctx, signer_account_name, pack_id, to_account_address, amou
 async def _mint_card(ctx, signer_account_name, card_id, to_account_address):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesTokens.contract_address,
+    ctx.rules_tokens.contract_address,
     'mintCard',
     [*to_starknet_args(card_id), to_account_address]
   )
@@ -237,21 +237,21 @@ async def _balance_of(ctx, account_name, token_id):
   account_address = get_account_address(ctx, account_name)
 
   (balance,) = (
-    await ctx.rulesTokens.balanceOf(account_address, token_id).call()
+    await ctx.rules_tokens.balanceOf(account_address, token_id).call()
   ).result
   return balance
 
 
 async def _get_total_supply(ctx, token_id):
   (supply,) = (
-    await ctx.rulesTokens.totalSupply(token_id).call()
+    await ctx.rules_tokens.totalSupply(token_id).call()
   ).result
   return supply
 
 
 async def _get_card_model_available_supply(ctx, card_model):
   (available_supply,) = (
-    await ctx.rulesCards.getCardModelAvailableSupply(dict_to_tuple(card_model)).call()
+    await ctx.rules_cards.getCardModelAvailableSupply(dict_to_tuple(card_model)).call()
   ).result
   return available_supply
 
@@ -260,7 +260,7 @@ async def _get_card_model_available_supply(ctx, card_model):
 async def _safe_transfer(ctx, signer_account_name, token_id, from_account_address, to_account_address, amount):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesTokens.contract_address,
+    ctx.rules_tokens.contract_address,
     'safeTransferFrom',
     [from_account_address, to_account_address, *to_starknet_args(token_id), *to_starknet_args(amount), 1, 0]
   )
@@ -270,7 +270,7 @@ async def _safe_transfer(ctx, signer_account_name, token_id, from_account_addres
 async def _set_approve_for_all(ctx, signer_account_name, to_account_address, approved):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesTokens.contract_address,
+    ctx.rules_tokens.contract_address,
     'setApprovalForAll',
     [to_account_address, approved]
   )
@@ -278,7 +278,7 @@ async def _set_approve_for_all(ctx, signer_account_name, to_account_address, app
 async def _approve(ctx, signer_account_name, token_id, to_account_address, amount):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesTokens.contract_address,
+    ctx.rules_tokens.contract_address,
     'approve',
     [to_account_address, *to_starknet_args(token_id), *to_starknet_args(amount)]
   )
@@ -287,7 +287,7 @@ async def _get_approved(ctx, account_name, token_id):
   account_address = get_account_address(ctx, account_name)
 
   (operator, amount) = (
-    await ctx.rulesTokens.getApproved(account_address, token_id).call()
+    await ctx.rules_tokens.getApproved(account_address, token_id).call()
   ).result
   return (operator, amount)
 
@@ -296,7 +296,7 @@ async def _get_approved(ctx, account_name, token_id):
 async def _open_pack(ctx, signer_account_name, pack_id, cards, metadata, to_account_address):
   await ctx.execute(
     signer_account_name,
-    ctx.rulesTokens.contract_address,
+    ctx.rules_tokens.contract_address,
     'openPackTo',
     [to_account_address, *to_starknet_args(pack_id), len(cards), *to_starknet_args(cards), len(metadata), *to_starknet_args(metadata)]
   )
@@ -605,11 +605,11 @@ async def test_settle_where_owner_set_base_token_uri(ctx_factory):
 @pytest.mark.parametrize(
   'contract_name, role_name, initial_members_count',
   [
-    ('rulesTokens', MINTER_ROLE, 2),
-    ('rulesPacks', MINTER_ROLE, 3),
-    ('rulesCards', CAPPER_ROLE, 1),
-    ('rulesCards', MINTER_ROLE, 3),
-    ('rulesData', MINTER_ROLE, 2)
+    ('rules_tokens', MINTER_ROLE, 2),
+    ('rules_packs', MINTER_ROLE, 3),
+    ('rules_cards', CAPPER_ROLE, 1),
+    ('rules_cards', MINTER_ROLE, 3),
+    ('rules_data', MINTER_ROLE, 2)
   ]
 )
 async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, role_name, initial_members_count):
@@ -657,7 +657,7 @@ async def test_settle_where_owner_distribute_role(ctx_factory, contract_name, ro
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('contract_name', ['rulesTokens', 'rulesCards', 'rulesData', 'rulesPacks'])
+@pytest.mark.parametrize('contract_name', ['rules_tokens', 'rules_cards', 'rules_data', 'rules_packs'])
 async def test_settle_where_owner_transfer_the_owner_ship(ctx_factory, contract_name):
   ctx = ctx_factory()
 
@@ -681,7 +681,7 @@ async def test_settle_where_owner_transfer_the_owner_ship(ctx_factory, contract_
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('contract_name', ['rulesTokens', 'rulesCards', 'rulesData', 'rulesPacks'])
+@pytest.mark.parametrize('contract_name', ['rules_tokens', 'rules_cards', 'rules_data', 'rules_packs'])
 async def test_settle_where_owner_renounce_the_owner_ship(ctx_factory, contract_name):
   ctx = ctx_factory()
 
@@ -1476,10 +1476,10 @@ async def test_settle_where_owner_mint_packs_with_operator(ctx_factory):
 @pytest.mark.parametrize(
   'contract_name, params',
   [
-    ('rulesData', [1]),
-    ('rulesCards', [1, 1]),
-    ('rulesPacks', [1, 1, 1]),
-    ('rulesTokens', [1, 1, 1, 1, 1]),
+    ('rules_data', [1]),
+    ('rules_cards', [1, 1]),
+    ('rules_packs', [1, 1, 1]),
+    ('rules_tokens', [1, 1, 1, 1, 1]),
   ]
 )
 async def test_upgrade(ctx_factory, contract_name, params):

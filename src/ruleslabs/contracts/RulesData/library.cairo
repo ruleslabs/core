@@ -7,95 +7,84 @@ from starkware.cairo.common.math import assert_not_zero
 
 from ruleslabs.models.artist import assert_artist_name_well_formed
 
-# Libraries
+// Libraries
 
 from periphery.proxy.library import Proxy
 
-#
-# Storage
-#
+//
+// Storage
+//
 
-# Initialization
-
-@storage_var
-func contract_initialized() -> (initialized: felt):
-end
-
-# Artists
+// Initialization
 
 @storage_var
-func artists_storage(artist_name: Uint256) -> (exists: felt):
-end
+func contract_initialized() -> (initialized: felt) {
+}
 
-namespace RulesData:
+// Artists
 
-  #
-  # Initializer
-  #
+@storage_var
+func artists_storage(artist_name: Uint256) -> (exists: felt) {
+}
 
-  func initializer{
-      syscall_ptr: felt*,
-      pedersen_ptr: HashBuiltin*,
-      range_check_ptr
-    }():
-    # assert not already initialized
-    let (initialized) = contract_initialized.read()
-    with_attr error_message("RulesData: contract already initialized"):
-        assert initialized = FALSE
-    end
-    contract_initialized.write(TRUE)
+namespace RulesData {
+  //
+  // Initializer
+  //
 
-    return ()
-  end
+  func initializer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
+    // assert not already initialized
+    let (initialized) = contract_initialized.read();
+    with_attr error_message("RulesData: contract already initialized") {
+      assert initialized = FALSE;
+    }
+    contract_initialized.write(TRUE);
 
-  #
-  # Getters
-  #
+    return ();
+  }
 
-  func artist_exists{
-      syscall_ptr: felt*,
-      pedersen_ptr: HashBuiltin*,
-      range_check_ptr
-    }(artist_name: Uint256) -> (res: felt):
-    let (exists) = artists_storage.read(artist_name)
-    return (exists)
-  end
+  //
+  // Getters
+  //
 
-  #
-  # Setters
-  #
+  func artist_exists{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    artist_name: Uint256
+  ) -> (res: felt) {
+    let (exists) = artists_storage.read(artist_name);
+    return (exists,);
+  }
 
-  func upgrade{
-      syscall_ptr : felt*,
-      pedersen_ptr : HashBuiltin*,
-      range_check_ptr
-    }(implementation: felt):
-    # make sure the target is not null
-    with_attr error_message("RulesData: new implementation cannot be null"):
-      assert_not_zero(implementation)
-    end
+  //
+  // Setters
+  //
 
-    # change implementation
-    Proxy.set_implementation(implementation)
-    return ()
-  end
+  func upgrade{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    implementation: felt
+  ) {
+    // make sure the target is not null
+    with_attr error_message("RulesData: new implementation cannot be null") {
+      assert_not_zero(implementation);
+    }
 
-  #
-  # Business logic
-  #
+    // change implementation
+    Proxy.set_implementation(implementation);
+    return ();
+  }
 
-  func create_artist{
-      syscall_ptr: felt*,
-      pedersen_ptr: HashBuiltin*,
-      range_check_ptr
-    }(artist_name: Uint256):
-    let (exists) = artist_exists(artist_name)
-    assert exists = 0 # Artist already exists
+  //
+  // Business logic
+  //
 
-    assert_artist_name_well_formed(artist_name) # Invalid artist name
+  func create_artist{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    artist_name: Uint256
+  ) {
+    let (exists) = artist_exists(artist_name);
+    assert exists = 0;  // Artist already exists
 
-    artists_storage.write(artist_name, TRUE)
+    assert_artist_name_well_formed(artist_name);  // Invalid artist name
 
-    return ()
-  end
-end
+    artists_storage.write(artist_name, TRUE);
+
+    return ();
+  }
+}

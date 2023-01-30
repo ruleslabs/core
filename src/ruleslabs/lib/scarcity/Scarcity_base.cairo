@@ -5,100 +5,92 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.math import assert_le, assert_not_zero
 from starkware.cairo.common.math_cmp import is_not_zero
 
-# Constants
+// Constants
 
 from ruleslabs.models.card import SERIAL_NUMBER_MAX
 
-#
-# Storage
-#
+//
+// Storage
+//
 
 @storage_var
-func scarcity_max_supply_storage(season: felt, scarcity: felt) -> (supply: felt):
-end
+func scarcity_max_supply_storage(season: felt, scarcity: felt) -> (supply: felt) {
+}
 
 @storage_var
-func last_scarcity_storage(season: felt) -> (scarcity: felt):
-end
+func last_scarcity_storage(season: felt) -> (scarcity: felt) {
+}
 
 @storage_var
-func stopped_scarcity_storage(season: felt, scarcity: felt) -> (stopped: felt):
-end
+func stopped_scarcity_storage(season: felt, scarcity: felt) -> (stopped: felt) {
+}
 
-#
-# Events
-#
+//
+// Events
+//
 
 @event
-func ScarcityAdded(season: felt, scarcity: felt, supply: felt):
-end
+func ScarcityAdded(season: felt, scarcity: felt, supply: felt) {
+}
 
 @event
-func ScarcityProductionStopped(season: felt, scarcity: felt):
-end
+func ScarcityProductionStopped(season: felt, scarcity: felt) {
+}
 
-#
-# Getters
-#
+//
+// Getters
+//
 
-func Scarcity_max_supply{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(season: felt, scarcity: felt) -> (max_supply: felt):
-  if scarcity == 0:
-    return (max_supply=SERIAL_NUMBER_MAX)
-  end
+func Scarcity_max_supply{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  season: felt, scarcity: felt
+) -> (max_supply: felt) {
+  if (scarcity == 0) {
+    return (max_supply=SERIAL_NUMBER_MAX);
+  }
 
-  let (supply) = scarcity_max_supply_storage.read(season, scarcity)
-  return (supply)
-end
+  let (supply) = scarcity_max_supply_storage.read(season, scarcity);
+  return (supply,);
+}
 
-func Scarcity_productionStopped{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(season: felt, scarcity: felt) -> (stopped: felt):
-  let (stopped) = stopped_scarcity_storage.read(season, scarcity)
-  return (stopped)
-end
+func Scarcity_productionStopped{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  season: felt, scarcity: felt
+) -> (stopped: felt) {
+  let (stopped) = stopped_scarcity_storage.read(season, scarcity);
+  return (stopped,);
+}
 
-#
-# Externals
-#
+//
+// Externals
+//
 
-func Scarcity_addScarcity{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(season: felt, supply: felt) -> (scarcity: felt):
-  alloc_locals
+func Scarcity_addScarcity{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  season: felt, supply: felt
+) -> (scarcity: felt) {
+  alloc_locals;
 
-  assert_not_zero(supply)
+  assert_not_zero(supply);
 
-  let (local last_scarcity) = last_scarcity_storage.read(season)
+  let (local last_scarcity) = last_scarcity_storage.read(season);
 
-  scarcity_max_supply_storage.write(season, last_scarcity + 1, supply)
-  last_scarcity_storage.write(season, last_scarcity + 1)
+  scarcity_max_supply_storage.write(season, last_scarcity + 1, supply);
+  last_scarcity_storage.write(season, last_scarcity + 1);
 
-  ScarcityAdded.emit(season, last_scarcity + 1, supply)
+  ScarcityAdded.emit(season, last_scarcity + 1, supply);
 
-  return (last_scarcity + 1)
-end
+  return (last_scarcity + 1,);
+}
 
-func Scarcity_stopProduction{
-    syscall_ptr: felt*,
-    pedersen_ptr: HashBuiltin*,
-    range_check_ptr
-  }(season: felt, scarcity: felt):
-  alloc_locals
-  let (already_stopped) = stopped_scarcity_storage.read(season, scarcity)
-  stopped_scarcity_storage.write(season, scarcity, TRUE)
+func Scarcity_stopProduction{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  season: felt, scarcity: felt
+) {
+  alloc_locals;
+  let (already_stopped) = stopped_scarcity_storage.read(season, scarcity);
+  stopped_scarcity_storage.write(season, scarcity, TRUE);
 
-  if already_stopped == FALSE:
-    ScarcityProductionStopped.emit(season, scarcity)
-    return ()
-  end
+  if (already_stopped == FALSE) {
+    ScarcityProductionStopped.emit(season, scarcity);
+    return ();
+  }
 
-  return ()
-end
+  return ();
+}

@@ -6,17 +6,16 @@ from ruleslabs.models.card import CardModel
 from ruleslabs.models.metadata import Metadata
 
 @contract_interface
-namespace IRulesPacks:
+namespace IRulesPacks {
+  func getPack(pack_id: Uint256) -> (cards_per_pack: felt, metadata: Metadata) {
+  }
 
-  func getPack(pack_id: Uint256) -> (cards_per_pack: felt, metadata: Metadata):
-  end
+  func packExists(pack_id: Uint256) -> (res: felt) {
+  }
 
-  func packExists(pack_id: Uint256) -> (res: felt):
-  end
+  func getPackMaxSupply(pack_id: Uint256) -> (quantity: felt) {
+  }
 
-  func getPackMaxSupply(pack_id: Uint256) -> (quantity: felt):
-  end
-
-  func getPackCardModelQuantity(pack_id: Uint256, card_model: CardModel) -> (quantity: felt):
-  end
-end
+  func getPackCardModelQuantity(pack_id: Uint256, card_model: CardModel) -> (quantity: felt) {
+  }
+}
