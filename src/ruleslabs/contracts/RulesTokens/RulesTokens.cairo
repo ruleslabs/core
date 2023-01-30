@@ -20,8 +20,6 @@ from ruleslabs.token.ERC1155.ERC1155_base import (
   ERC1155_initializer,
   ERC1155_set_approve_for_all,
   ERC1155_approve,
-  ERC1155_safe_transfer_from,
-  ERC1155_safe_batch_transfer_from,
 )
 
 from ruleslabs.token.ERC1155.ERC1155_Metadata_base import (
@@ -219,6 +217,14 @@ func getApproved{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
   return (operator, amount);
 }
 
+@view
+func getUnlocked{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  owner: felt, token_id: Uint256
+) -> (amount: Uint256) {
+  let (amount) = RulesTokens.unlocked(owner, token_id);
+  return (amount,);
+}
+
 //
 // Setters
 //
@@ -292,10 +298,10 @@ func mintCard{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 
 @external
 func mintPack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  pack_id: Uint256, to: felt, amount: felt, operator: felt
+  pack_id: Uint256, to: felt, amount: felt, unlocked: felt
 ) -> (token_id: Uint256) {
   Minter_only_minter();
-  let (token_id) = RulesTokens.mint_pack(pack_id, to, amount, operator);
+  let (token_id) = RulesTokens.mint_pack(pack_id, to, amount, unlocked);
   return (token_id,);
 }
 
@@ -319,7 +325,7 @@ func openPackTo{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
 func safeTransferFrom{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
   _from: felt, to: felt, token_id: Uint256, amount: Uint256, data_len: felt, data: felt*
 ) {
-  ERC1155_safe_transfer_from(_from, to, token_id, amount, data_len, data);
+  RulesTokens.safe_transfer_from(_from, to, token_id, amount, data_len, data);
   return ();
 }
 
@@ -334,7 +340,7 @@ func safeBatchTransferFrom{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range
   data_len: felt,
   data: felt*,
 ) {
-  ERC1155_safe_batch_transfer_from(_from, to, ids_len, ids, amounts_len, amounts, data_len, data);
+  RulesTokens.safe_batch_transfer_from(_from, to, ids_len, ids, amounts_len, amounts, data_len, data);
   return ();
 }
 

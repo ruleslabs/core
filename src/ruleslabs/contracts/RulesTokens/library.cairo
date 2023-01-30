@@ -3,7 +3,7 @@
 from starkware.cairo.common.bool import TRUE, FALSE
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.cairo_builtins import HashBuiltin
-from starkware.cairo.common.uint256 import Uint256, uint256_le
+from starkware.cairo.common.uint256 import Uint256, uint256_le, uint256_lt, uint256_add, uint256_sub
 from starkware.cairo.common.math import assert_le, assert_not_zero, assert_not_equal
 from starkware.starknet.common.syscalls import get_caller_address
 from ruleslabs.lib.memset import uint256_memset
@@ -20,7 +20,8 @@ from ruleslabs.token.ERC1155.ERC1155_base import (
   ERC1155_mint_batch,
   ERC1155_burn,
   ERC1155_approve,
-  _inc_approve,
+  ERC1155_safe_transfer_from,
+  ERC1155_safe_batch_transfer_from,
 )
 
 from ruleslabs.token.ERC1155.ERC1155_Metadata_base import ERC1155_Metadata_token_uri
@@ -37,6 +38,14 @@ from periphery.proxy.library import Proxy
 
 from ruleslabs.contracts.RulesCards.IRulesCards import IRulesCards
 from ruleslabs.contracts.RulesPacks.IRulesPacks import IRulesPacks
+
+//
+// Events
+//
+
+@event
+func PackUnlocking(owner: felt, token_id: Uint256, amount: Uint256) {
+}
 
 //
 // Storage
@@ -56,6 +65,12 @@ func rules_cards_address_storage() -> (rules_cards_address: felt) {
 
 @storage_var
 func rules_packs_address_storage() -> (rules_cards_address: felt) {
+}
+
+// Pack locking
+
+@storage_var
+func RulesTokens_packs_unlocking_amount(owner: felt, token_id: Uint256) -> (amount: Uint256) {
 }
 
 namespace RulesTokens {
@@ -119,6 +134,13 @@ namespace RulesTokens {
     return (address,);
   }
 
+  func unlocked{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    owner: felt, token_id: Uint256
+  ) -> (amount: Uint256) {
+    let (amount) = RulesTokens_packs_unlocking_amount.read(owner, token_id);
+    return (amount,);
+  }
+
   //
   // Setters
   //
@@ -175,7 +197,7 @@ namespace RulesTokens {
   }
 
   func mint_pack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    pack_id: Uint256, to: felt, amount: felt, operator: felt
+    pack_id: Uint256, to: felt, amount: felt, unlocked: felt
   ) -> (token_id: Uint256) {
     alloc_locals;
 
@@ -221,11 +243,12 @@ namespace RulesTokens {
     _safe_mint(to, token_id=pack_id, amount=Uint256(amount, 0), data_len=0, data=data);
 
     // Anticipated opening approve
-    if (operator != 0) {
-      _inc_approve(owner=to, operator=operator, token_id=pack_id, amount=Uint256(amount, 0));
+    if (unlocked == TRUE) {
+      _inc_unlocked_packs(owner=to, token_id=pack_id, amount=Uint256(amount, 0));
+      return (token_id=pack_id);
+    } else {
+      return (token_id=pack_id);
     }
-
-    return (token_id=pack_id);
   }
 
   // Opening
@@ -287,6 +310,33 @@ namespace RulesTokens {
     return ();
   }
 
+  // Transfers
+
+  func safe_transfer_from{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    _from: felt, to: felt, token_id: Uint256, amount: Uint256, data_len: felt, data: felt*
+  ) {
+    _unlocking_handler(_from, to, token_id, amount);
+    ERC1155_safe_transfer_from(_from, to, token_id, amount, data_len, data);
+
+    return ();
+  }
+
+  func safe_batch_transfer_from{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    _from: felt,
+    to: felt,
+    ids_len: felt,
+    ids: Uint256*,
+    amounts_len: felt,
+    amounts: Uint256*,
+    data_len: felt,
+    data: felt*,
+  ) {
+    _batch_unlocking_handler_loop(_from, to, ids_len, ids, amounts_len, amounts);
+    ERC1155_safe_batch_transfer_from(_from, to, ids_len, ids, amounts_len, amounts, data_len, data);
+
+    return ();
+  }
+
   //
   // Internals
   //
@@ -323,23 +373,6 @@ namespace RulesTokens {
     ERC1155_Supply_before_token_transfer(_from=0, to=to, ids_len=1, ids=ids, amounts=amounts);
 
     ERC1155_safe_mint(to, token_id, amount, data_len, data);
-    return ();
-  }
-
-  func _safe_mint_batch{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    to: felt,
-    ids_len: felt,
-    ids: Uint256*,
-    amounts_len: felt,
-    amounts: Uint256*,
-    data_len: felt,
-    data: felt*,
-  ) {
-    ERC1155_Supply_before_token_transfer(
-      _from=0, to=to, ids_len=ids_len, ids=ids, amounts=amounts
-    );
-
-    ERC1155_safe_mint_batch(to, ids_len, ids, amounts_len, amounts, data_len, data);
     return ();
   }
 
@@ -381,6 +414,69 @@ namespace RulesTokens {
       metadata + Metadata.SIZE,
       card_ids + Uint256.SIZE,
     );
+    return ();
+  }
+
+  // Pack locking
+
+  func _batch_unlocking_handler_loop{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    _from: felt, to: felt, ids_len: felt, ids: Uint256*, amounts_len: felt, amounts: Uint256*
+  ) {
+    // loop stopping condition
+    if (ids_len == 0) {
+      return ();
+    }
+
+    _unlocking_handler(_from, to, [ids], [amounts]);
+
+    _batch_unlocking_handler_loop(
+      _from, to, ids_len - 1, ids + Uint256.SIZE, amounts_len - 1, amounts + Uint256.SIZE
+    );
+    return ();
+  }
+
+  func _unlocking_handler{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    _from: felt, to: felt, token_id: Uint256, amount: Uint256
+  ) {
+    let is_pack = token_id.low * token_id.high;
+
+    // Check and update the amount of unlocked packs if needed
+    if (is_pack != FALSE) {
+      let (unlocked_amount) = RulesTokens_packs_unlocking_amount.read(_from, token_id);
+
+      with_attr error_message("RulesTokens: not enough unlocked packs") {
+        let (unlocked_amount_too_low) = uint256_lt(unlocked_amount, amount);
+        assert unlocked_amount_too_low = FALSE;
+      }
+
+      // Decrease unlocked amount
+      let (new_unlocked_amount) = uint256_sub(unlocked_amount, amount);
+      _unlock_packs(_from, token_id, new_unlocked_amount);
+
+      // Increase unlocked packs amount for recipient
+      _inc_unlocked_packs(_from, token_id, amount);
+
+      return ();
+    } else {
+      return ();
+    }
+  }
+
+  func _unlock_packs{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    owner: felt, token_id: Uint256, amount: Uint256
+  ) {
+    RulesTokens_packs_unlocking_amount.write(owner, token_id, amount);
+    PackUnlocking.emit(owner, token_id, amount);
+    return ();
+  }
+
+  func _inc_unlocked_packs{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    owner: felt, token_id: Uint256, amount: Uint256
+  ) {
+    let (current_amount) = RulesTokens_packs_unlocking_amount.read(owner, token_id);
+    let (new_amount: Uint256, _) = uint256_add(current_amount, amount);
+    RulesTokens_packs_unlocking_amount.write(owner, token_id, new_amount);
+    PackUnlocking.emit(owner, token_id, amount);
     return ();
   }
 }

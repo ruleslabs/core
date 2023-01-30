@@ -215,12 +215,12 @@ async def _create_and_mint_card(ctx, signer_account_name, card, metadata, to_acc
     [*to_starknet_args(card), *to_starknet_args(metadata), to_account_address]
   )
 
-async def _mint_pack(ctx, signer_account_name, pack_id, to_account_address, amount, operator_address):
+async def _mint_pack(ctx, signer_account_name, pack_id, to_account_address, amount, unlocked):
   await ctx.execute(
     signer_account_name,
     ctx.rules_tokens.contract_address,
     'mintPack',
-    [*to_starknet_args(pack_id), to_account_address, amount, operator_address]
+    [*to_starknet_args(pack_id), to_account_address, amount, unlocked]
   )
 
 async def _mint_card(ctx, signer_account_name, card_id, to_account_address):
@@ -431,11 +431,10 @@ class ScenarioState:
   async def create_common_pack(self, signer_account_name, cards_per_pack, season, metadata):
     await _create_common_pack(self.ctx, signer_account_name, cards_per_pack, season, metadata)
 
-  async def mint_pack(self, signer_account_name, pack_id, to_account_name, amount, operator_name =NULL):
+  async def mint_pack(self, signer_account_name, pack_id, to_account_name, amount, unlocked=False):
     to_account_address = get_account_address(self.ctx, to_account_name)
-    operator_address = get_account_address(self.ctx, operator_name)
 
-    await _mint_pack(self.ctx, signer_account_name, pack_id, to_account_address, amount, operator_address)
+    await _mint_pack(self.ctx, signer_account_name, pack_id, to_account_address, amount, unlocked)
 
   # Packs opening
 
@@ -1434,7 +1433,7 @@ async def test_settle_where_owner_open_classic_packs_2(ctx_factory):
 
 
 @pytest.mark.asyncio
-async def test_settle_where_owner_mint_packs_with_operator(ctx_factory):
+async def test_settle_where_owner_mint_unlocked_packs(ctx_factory):
   ctx = ctx_factory()
 
   # Given
@@ -1451,24 +1450,23 @@ async def test_settle_where_owner_mint_packs_with_operator(ctx_factory):
 
       (MINTER, 'create_pack', dict(pack=update_dict(PACK_1, cards_per_pack=1), metadata=METADATA_1), True),
 
-      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2, operator_name=RANDO_2), True),
-      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2, unlocked=True), True),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
 
-      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1, operator_name=RANDO_2), True),
-      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=2), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1, unlocked=True), True),
+      (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=2), True),
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2), True),
-      (RANDO_1, 'approve', dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=1), True),
-      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1, operator_name=RANDO_2), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1, unlocked=True), True),
       (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=3), False),
-      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=2), True),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
     ]
   )
 
   # Then
-  assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(1)
+  assert await _balance_of(ctx, RANDO_1, to_uint(1)) == to_uint(2)
   assert await _balance_of(ctx, RANDO_2, to_uint(1)) == to_uint(0)
-  assert await _balance_of(ctx, RANDO_3, to_uint(1)) == to_uint(5)
+  assert await _balance_of(ctx, RANDO_3, to_uint(1)) == to_uint(4)
 
 # Proxy
 
