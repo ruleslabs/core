@@ -7,7 +7,7 @@ def local_scheme(version):
 
 if __name__ == "__main__":
   try:
-    setup(version="0.18.0")
+    setup(version="0.19.0")
   except:  # noqa
     print(
       "\n\nAn error occurred while building the project, "

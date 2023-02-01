@@ -306,8 +306,8 @@ func mintPack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 }
 
 @external
-func openPackTo{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  to: felt,
+func openPackFrom{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  _from: felt,
   pack_id: Uint256,
   cards_len: felt,
   cards: Card*,
@@ -315,7 +315,7 @@ func openPackTo{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
   metadata: Metadata*,
 ) {
   Minter_only_minter();
-  RulesTokens.open_pack(to, pack_id, cards_len, cards, metadata_len, metadata);
+  RulesTokens.open_pack_from(_from, pack_id, cards_len, cards, metadata_len, metadata);
   return ();
 }
 

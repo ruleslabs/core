@@ -253,8 +253,8 @@ namespace RulesTokens {
 
   // Opening
 
-  func open_pack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    to: felt,
+  func open_pack_from{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    _from: felt,
     pack_id: Uint256,
     cards_len: felt,
     cards: Card*,
@@ -262,14 +262,14 @@ namespace RulesTokens {
     metadata: Metadata*,
   ) {
     alloc_locals;
+
+    // check cards and metadata len match
     with_attr error_message("RulesTokens: cards count and metadata count doesn't match") {
       assert cards_len = metadata_len;
     }
 
-    let (local caller) = get_caller_address();
-
     // Ensures 'owner' hold at least one pack
-    let (balance) = ERC1155_balance_of(caller, pack_id);
+    let (balance) = ERC1155_balance_of(_from, pack_id);
     let (valid_amount) = uint256_le(Uint256(1, 0), balance);
     with_attr error_message("RulesTokens: caller does not own this pack") {
       assert valid_amount = TRUE;
@@ -290,13 +290,13 @@ namespace RulesTokens {
     let (card_ids: Uint256*) = alloc();
     _create_cards_batch(rules_cards_address, cards_len, cards, metadata, card_ids);
 
-    // Mint cards to receipent
+    // Mint cards to 'owner'
     let (amounts: Uint256*) = alloc();
     uint256_memset(dst=amounts, value=Uint256(1, 0), n=cards_len);
     let data = cast(0, felt*);
-    // Unsafe to avoid Reetrancy attack which could cancel the opening
+    // Unsafe minting to avoid Reetrancy attack which could cancel the opening
     _mint_batch(
-      to=to,
+      to=_from,
       ids_len=cards_len,
       ids=card_ids,
       amounts_len=cards_len,
@@ -306,7 +306,7 @@ namespace RulesTokens {
     );
 
     // Burn openned pack
-    ERC1155_burn(caller, pack_id, amount=Uint256(1, 0));
+    ERC1155_burn(_from, pack_id, amount=Uint256(1, 0));
     return ();
   }
 
