@@ -3,6 +3,8 @@ import pytest
 from starkware.starkware_utils.error_handling import StarkException
 from starkware.starknet.definitions.error_codes import StarknetErrorCode
 
+from conftest import BASE_URI
+
 from utils.misc import (
   dict_to_tuple, to_starknet_args, update_card, get_contract, get_method, to_uint, get_account_address,
   felts_to_string, felts_to_ascii, from_uint, update_dict, SERIAL_NUMBER_MAX, get_declared_class, compute_card_id
@@ -77,26 +79,19 @@ async def _pack_exists(ctx, pack_id):
 
 # Token URI
 
-async def _get_base_token_uri(ctx):
-  (base_token_uri,) = (
-    await ctx.rules_tokens.baseTokenURI().call()
+async def _get_uri(ctx, token_id):
+  (uri,) = (
+    await ctx.rules_tokens.uri(token_id).call()
   ).result
-  return base_token_uri
+  return uri
 
 
-async def _get_token_uri(ctx, token_id):
-  (token_uri,) = (
-    await ctx.rules_tokens.tokenURI(token_id).call()
-  ).result
-  return token_uri
-
-
-async def _set_base_token_uri(ctx, signer_account_name, base_token_uri):
+async def _set_uri(ctx, signer_account_name, uri):
   await ctx.execute(
     signer_account_name,
     ctx.rules_tokens.contract_address,
-    'setBaseTokenURI',
-    [len(base_token_uri), *base_token_uri]
+    'setUri',
+    [len(uri), *uri]
   )
 
 # Roles
@@ -455,8 +450,8 @@ class ScenarioState:
 
   # Others
 
-  async def set_base_token_uri(self, signer_account_name, base_token_uri):
-    await _set_base_token_uri(self.ctx, signer_account_name, base_token_uri)
+  async def set_uri(self, signer_account_name, uri):
+    await _set_uri(self.ctx, signer_account_name, uri)
 
   async def grant_role(self, signer_account_name, contract_name, role_name, account_name):
     account_address = get_account_address(self.ctx, account_name)
@@ -589,25 +584,27 @@ async def test_settle_where_minter_create_invalid_card(ctx_factory):
   )
 
 @pytest.mark.asyncio
-async def test_settle_where_owner_set_base_token_uri(ctx_factory):
+async def test_settle_where_owner_set_uri(ctx_factory):
   ctx = ctx_factory()
 
   # Given
-  base_token_uri = [1, 2, 2, 3, 3, 3]
-  assert await _get_base_token_uri(ctx) == []
+  uri = [1, 2, 2, 3, 3, 3]
+  assert await _get_uri(ctx, to_uint(1)) == [BASE_URI]
 
   # When
   await run_scenario(
     ctx,
     [
-      (OWNER, 'set_base_token_uri', dict(base_token_uri=base_token_uri + base_token_uri), True),
-      (OWNER, 'set_base_token_uri', dict(base_token_uri=[32434, 5234, 23, 5324]), True),
-      (OWNER, 'set_base_token_uri', dict(base_token_uri=base_token_uri), True),
+      (OWNER, 'set_uri', dict(uri=uri + uri), True),
+      (OWNER, 'set_uri', dict(uri=[32434, 5234, 23, 5324]), True),
+      (OWNER, 'set_uri', dict(uri=uri), True),
     ]
   )
 
   # Then
-  assert await _get_base_token_uri(ctx) == base_token_uri
+  print(await _get_uri(ctx, to_uint(1 << 128)))
+  assert await _get_uri(ctx, to_uint(1 << 128)) == uri
+  assert await _get_uri(ctx, to_uint(1)) == uri
 
 
 @pytest.mark.asyncio
@@ -871,30 +868,6 @@ async def test_settle_where_minter_create_and_mint_cards(ctx_factory):
   assert await _balance_of(ctx, MINTER, card_id_2) == to_uint(0)
   assert await _balance_of(ctx, RANDO_1, card_id_1) == to_uint(0)
   assert await _balance_of(ctx, RANDO_1, card_id_2) == to_uint(1)
-
-
-@pytest.mark.asyncio
-async def test_settle_where_minter_create_and_mint_card_and_check_token_uri(ctx_factory):
-  ctx = ctx_factory()
-
-  # Given
-  base_token_uri = [0x68747470733A2F2F6578616D706C652E, 0x636F6D2F6170692F63617264732F]
-  card_id_1 = await _get_card_id(ctx, CARD_1)
-  token_uri = felts_to_ascii(base_token_uri) + felts_to_string([from_uint(card_id_1)])
-
-  # When
-  await run_scenario(
-    ctx,
-    [
-      (OWNER, 'set_base_token_uri', dict(base_token_uri=base_token_uri), True),
-
-      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
-      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=METADATA_1, to_account_name=MINTER), True),
-    ]
-  )
-
-  # Then
-  assert felts_to_ascii(await _get_token_uri(ctx, card_id_1)) == token_uri
 
 
 @pytest.mark.asyncio

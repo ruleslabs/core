@@ -21,6 +21,7 @@ sys.stdout = sys.stderr
 
 initialize_selector = get_selector_from_name('initialize')
 
+BASE_URI = 0x42
 
 @pytest.fixture(scope='module')
 def event_loop():
@@ -105,8 +106,8 @@ async def build_copyable_deployment():
       rules_tokens_class.class_hash,
       initialize_selector,
       5,
-      0x52756C6573,
-      0x52554C4553,
+      1,
+      BASE_URI,
       accounts.owner.contract_address,
       rules_cards.contract_address,
       rules_packs.contract_address,

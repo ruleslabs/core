@@ -11,6 +11,7 @@ from starkware.cairo.common.uint256 import (
 )
 from starkware.cairo.common.math import assert_not_zero, assert_not_equal
 from starkware.starknet.common.syscalls import get_caller_address
+from starkware.cairo.common.alloc import alloc
 
 // External namespaces
 
@@ -68,11 +69,11 @@ func Approval(owner: felt, operator: felt, token_id: Uint256, amount: Uint256) {
 //
 
 @storage_var
-func ERC1155_name_() -> (name: felt) {
+func ERC1155_storage_uri(index: felt) -> (res: felt) {
 }
 
 @storage_var
-func ERC1155_symbol_() -> (symbol: felt) {
+func ERC1155_storage_uri_len() -> (res: felt) {
 }
 
 @storage_var
@@ -96,10 +97,9 @@ func ERC1155_token_approval_amount(owner: felt, token_id: Uint256) -> (amount: U
 //
 
 func ERC1155_initializer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  name: felt, symbol: felt
+  uri_len: felt, uri: felt*
 ) {
-  ERC1155_name_.write(name);
-  ERC1155_symbol_.write(symbol);
+  ERC1155_set_uri(uri_len, uri);
 
   ERC165.register_interface(IERC1155_ID);
   return ();
@@ -109,18 +109,17 @@ func ERC1155_initializer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_c
 // Getters
 //
 
-func ERC1155_name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
-  name: felt
-) {
-  let (name) = ERC1155_name_.read();
-  return (name,);
-}
+func ERC1155_uri{
+  syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
+}() -> (uri_len: felt, uri: felt*) {
+  alloc_locals;
 
-func ERC1155_symbol{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
-  symbol: felt
-) {
-  let (symbol) = ERC1155_symbol_.read();
-  return (symbol,);
+  let (local uri) = alloc();
+  let (local uri_len) = ERC1155_storage_uri_len.read();
+
+  _ERC1155_uri(uri_len, uri);
+
+  return (uri_len, uri);
 }
 
 func ERC1155_balance_of{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
@@ -147,6 +146,18 @@ func ERC1155_approved{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_chec
   let (operator) = ERC1155_token_approval_operator.read(owner, token_id);
   let (amount) = ERC1155_token_approval_amount.read(owner, token_id);
   return (operator, amount);
+}
+
+//
+// Setters
+//
+
+func ERC1155_set_uri{
+  syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
+}(uri_len: felt, uri: felt*) {
+  _ERC1155_set_uri(uri_len, uri);
+  ERC1155_storage_uri_len.write(uri_len);
+  return ();
 }
 
 //
@@ -411,6 +422,35 @@ func ERC1155_burn{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_pt
 // Internals
 //
 
+// URI mgmt
+
+func _ERC1155_uri{
+  syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
+}(uri_len: felt, uri: felt*) {
+  if (uri_len == 0) {
+    return ();
+  }
+
+  let (base) = ERC1155_storage_uri.read(index=uri_len);
+  assert [uri] = base;
+  _ERC1155_uri(uri_len=uri_len - 1, uri=uri + 1);
+  return ();
+}
+
+func _ERC1155_set_uri{
+  syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
+}(uri_len: felt, uri: felt*) {
+  if (uri_len == 0) {
+    return ();
+  }
+
+  ERC1155_storage_uri.write(index=uri_len, value=[uri]);
+  _ERC1155_set_uri(uri_len=uri_len - 1, uri=uri + 1);
+  return ();
+}
+
+// approval mgmt
+
 func _approve{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
   owner: felt, operator: felt, token_id: Uint256, amount: Uint256
 ) {
@@ -614,7 +654,7 @@ func _safe_batch_transfer_loop{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, r
   return ();
 }
 
-// Mint
+// Minting
 
 func _safe_mint_batch{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
   operator: felt,

@@ -12,8 +12,8 @@ from ruleslabs.models.card import Card
 from ruleslabs.contracts.RulesTokens.library import RulesTokens
 
 from ruleslabs.token.ERC1155.ERC1155_base import (
-  ERC1155_name,
-  ERC1155_symbol,
+  ERC1155_set_uri,
+  ERC1155_uri,
   ERC1155_balance_of,
   ERC1155_approved_for_all,
   ERC1155_approved,
@@ -57,9 +57,9 @@ from ruleslabs.lib.roles.minter import (
 
 @external
 func initialize{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  name: felt, symbol: felt, owner: felt, _rules_cards_address: felt, _rules_packs_address: felt
+  uri_len: felt, uri: felt*, owner: felt, _rules_cards_address: felt, _rules_packs_address: felt
 ) {
-  ERC1155_initializer(name, symbol);
+  ERC1155_initializer(uri_len, uri);
   Ownable_initializer(owner);
   AccessControl_initializer(owner);
   Minter_initializer(owner);
@@ -85,18 +85,20 @@ func upgrade{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 // Getters
 //
 
-// Name & Symbol
-
+// URI
+     
+//  This implementation returns the same URI for all token types. It relies
+//  on the token type ID substitution mechanism
+//  https://eips.ethereum.org/EIPS/eip-1155#metadata[defined in the EIP].
+// 
+//  Clients calling this function must replace the `\{id\}` substring with the
+//  actual token type ID.
 @view
-func name{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (name: felt) {
-  let (name) = ERC1155_name();
-  return (name,);
-}
-
-@view
-func symbol{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (symbol: felt) {
-  let (symbol) = ERC1155_symbol();
-  return (symbol,);
+func uri{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  id: Uint256
+) -> (uri_len: felt, uri: felt*) {
+  let (uri_len, uri) = ERC1155_uri();
+  return (uri_len, uri);
 }
 
 // Roles
@@ -137,22 +139,6 @@ func hasRole{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 ) -> (has_role: felt) {
   let (has_role) = AccessControl_has_role(role, account);
   return (has_role,);
-}
-
-@view
-func tokenURI{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  token_id: Uint256
-) -> (token_uri_len: felt, token_uri: felt*) {
-  let (token_uri_len, token_uri) = RulesTokens.token_uri(token_id);
-  return (token_uri_len, token_uri);
-}
-
-@view
-func baseTokenURI{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
-  base_token_uri_len: felt, base_token_uri: felt*
-) {
-  let (base_token_uri_len, base_token_uri) = ERC1155_Metadata_base_token_uri();
-  return (base_token_uri_len, base_token_uri);
 }
 
 @view
@@ -230,11 +216,11 @@ func getUnlocked{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
 //
 
 @external
-func setBaseTokenURI{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  base_token_uri_len: felt, base_token_uri: felt*
+func setUri{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  uri_len: felt, uri: felt*
 ) {
   Ownable_only_owner();
-  ERC1155_Metadata_set_base_token_uri(base_token_uri_len, base_token_uri);
+  ERC1155_set_uri(uri_len, uri);
   return ();
 }
 
