@@ -86,11 +86,11 @@ func upgrade{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 //
 
 // URI
-     
+
 //  This implementation returns the same URI for all token types. It relies
 //  on the token type ID substitution mechanism
 //  https://eips.ethereum.org/EIPS/eip-1155#metadata[defined in the EIP].
-// 
+//
 //  Clients calling this function must replace the `\{id\}` substring with the
 //  actual token type ID.
 @view
@@ -99,6 +99,14 @@ func uri{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 ) -> (uri_len: felt, uri: felt*) {
   let (uri_len, uri) = ERC1155_uri();
   return (uri_len, uri);
+}
+
+@view
+func contractURI{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
+  contractURI_len: felt, contractURI: felt*
+) {
+  let (contract_uri_len, contract_uri) = RulesTokens.contract_uri();
+  return (contract_uri_len, contract_uri);
 }
 
 // Roles
@@ -221,6 +229,15 @@ func setUri{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 ) {
   Ownable_only_owner();
   ERC1155_set_uri(uri_len, uri);
+  return ();
+}
+
+@external
+func setContractURI{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  contract_uri_len: felt, contract_uri: felt*
+) {
+  Ownable_only_owner();
+  RulesTokens.set_contract_uri(contract_uri_len, contract_uri);
   return ();
 }
 

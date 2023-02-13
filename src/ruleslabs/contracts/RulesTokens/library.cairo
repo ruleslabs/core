@@ -67,6 +67,16 @@ func rules_cards_address_storage() -> (rules_cards_address: felt) {
 func rules_packs_address_storage() -> (rules_cards_address: felt) {
 }
 
+// Contract URI
+
+@storage_var
+func RulesTokens_contract_uri(index: felt) -> (res: felt) {
+}
+
+@storage_var
+func RulesTokens_contract_uri_len() -> (res: felt) {
+}
+
 // Pack locking
 
 @storage_var
@@ -97,16 +107,17 @@ namespace RulesTokens {
   // Getters
   //
 
-  func token_uri{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    token_id: Uint256
-  ) -> (token_uri_len: felt, token_uri: felt*) {
-    let (exists) = ERC1155_Supply_exists(token_id);
-    with_attr error_message("Token {token_id} does not exist.") {
-      assert exists = TRUE;
-    }
+  func contract_uri{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
+  }() -> (contract_uri_len: felt, contract_uri: felt*) {
+    alloc_locals;
 
-    let (token_uri_len, token_uri) = ERC1155_Metadata_token_uri(token_id);
-    return (token_uri_len, token_uri);
+    let (local contract_uri) = alloc();
+    let (local contract_uri_len) = RulesTokens_contract_uri_len.read();
+
+    _contract_uri(contract_uri_len, contract_uri);
+
+    return (contract_uri_len, contract_uri);
   }
 
   func card{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
@@ -144,6 +155,14 @@ namespace RulesTokens {
   //
   // Setters
   //
+
+  func set_contract_uri{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
+  }(contract_uri_len: felt, contract_uri: felt*) {
+    _set_contract_uri(contract_uri_len, contract_uri);
+    RulesTokens_contract_uri_len.write(contract_uri_len);
+    return ();
+  }
 
   func upgrade{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     implementation: felt
@@ -340,6 +359,35 @@ namespace RulesTokens {
   //
   // Internals
   //
+
+  // URI mgmt
+
+  func _contract_uri{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
+  }(contract_uri_len: felt, contract_uri: felt*) {
+    if (contract_uri_len == 0) {
+      return ();
+    }
+
+    let (base) = RulesTokens_contract_uri.read(index=contract_uri_len);
+    assert [contract_uri] = base;
+    _contract_uri(contract_uri_len=contract_uri_len - 1, contract_uri=contract_uri + 1);
+    return ();
+  }
+
+  func _set_contract_uri{
+    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
+  }(contract_uri_len: felt, contract_uri: felt*) {
+    if (contract_uri_len == 0) {
+      return ();
+    }
+
+    RulesTokens_contract_uri.write(index=contract_uri_len, value=[contract_uri]);
+    _set_contract_uri(contract_uri_len=contract_uri_len - 1, contract_uri=contract_uri + 1);
+    return ();
+  }
+
+  // Packs
 
   func _assert_cards_presence_in_pack{
     syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr

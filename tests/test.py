@@ -94,6 +94,23 @@ async def _set_uri(ctx, signer_account_name, uri):
     [len(uri), *uri]
   )
 
+# Contract URI
+
+async def _get_contract_uri(ctx):
+  (contract_uri,) = (
+    await ctx.rules_tokens.contractURI().call()
+  ).result
+  return contract_uri
+
+
+async def _set_contract_uri(ctx, signer_account_name, contract_uri):
+  await ctx.execute(
+    signer_account_name,
+    ctx.rules_tokens.contract_address,
+    'setContractURI',
+    [len(contract_uri), *contract_uri]
+  )
+
 # Roles
 
 async def _get_role(ctx, contract_name, role_name):
@@ -453,6 +470,9 @@ class ScenarioState:
   async def set_uri(self, signer_account_name, uri):
     await _set_uri(self.ctx, signer_account_name, uri)
 
+  async def set_contract_uri(self, signer_account_name, contract_uri):
+    await _set_contract_uri(self.ctx, signer_account_name, contract_uri)
+
   async def grant_role(self, signer_account_name, contract_name, role_name, account_name):
     account_address = get_account_address(self.ctx, account_name)
     contract = get_contract(self.ctx, contract_name)
@@ -583,6 +603,7 @@ async def test_settle_where_minter_create_invalid_card(ctx_factory):
     ]
   )
 
+
 @pytest.mark.asyncio
 async def test_settle_where_owner_set_uri(ctx_factory):
   ctx = ctx_factory()
@@ -602,9 +623,30 @@ async def test_settle_where_owner_set_uri(ctx_factory):
   )
 
   # Then
-  print(await _get_uri(ctx, to_uint(1 << 128)))
   assert await _get_uri(ctx, to_uint(1 << 128)) == uri
   assert await _get_uri(ctx, to_uint(1)) == uri
+
+
+@pytest.mark.asyncio
+async def test_settle_where_owner_set_contract_uri(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  contract_uri = [1, 2, 2, 3, 3, 3]
+  assert await _get_contract_uri(ctx) == []
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (OWNER, 'set_contract_uri', dict(contract_uri=contract_uri + contract_uri), True),
+      (OWNER, 'set_contract_uri', dict(contract_uri=[32434, 5234, 23, 5324]), True),
+      (OWNER, 'set_contract_uri', dict(contract_uri=contract_uri), True),
+    ]
+  )
+
+  # Then
+  assert await _get_contract_uri(ctx) == contract_uri
 
 
 @pytest.mark.asyncio
