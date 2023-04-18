@@ -4,7 +4,6 @@ from starkware.cairo.common.uint256 import Uint256
 
 from ruleslabs.models.metadata import Metadata
 from ruleslabs.models.card import Card
-from ruleslabs.models.pack import PackCardModel
 
 @contract_interface
 namespace IRulesCards {
@@ -25,9 +24,6 @@ namespace IRulesCards {
   // Business logic
   //
 
-  func createCard(card: Card, metadata: Metadata, packed: felt) -> (card_id: Uint256) {
-  }
-
-  func packCardModel(pack_card_model: PackCardModel) {
+  func createCard(card: Card, metadata: Metadata) -> (card_id: Uint256) {
   }
 }

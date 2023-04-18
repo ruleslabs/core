@@ -15,7 +15,6 @@ from ruleslabs.models.card import (
   get_card_from_card_id,
   card_is_null,
 )
-from ruleslabs.models.pack import PackCardModel
 
 // Libraries
 
@@ -37,21 +36,7 @@ from ruleslabs.contracts.RulesData.IRulesData import IRulesData
 func contract_initialized() -> (initialized: felt) {
 }
 
-// Card models
-
-@storage_var
-func card_models_packed_supply_storage(card_model: CardModel) -> (rules_data_address: felt) {
-}
-
-@storage_var
-func card_models_supply_storage(card_model: CardModel) -> (rules_data_address: felt) {
-}
-
 // Cards
-
-@storage_var
-func cards_storage(card_id: Uint256) -> (res: felt) {
-}
 
 @storage_var
 func cards_metadata_storage(card_id: Uint256) -> (metadata: Metadata) {
@@ -96,8 +81,13 @@ namespace RulesCards {
   func card_exists{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     card_id: Uint256
   ) -> (res: felt) {
-    let (res) = cards_storage.read(card_id);
-    return (res,);
+    let (metadata) = cards_metadata_storage.read(card_id);
+
+    if (metadata.hash.low == 0) {
+        return (FALSE,);
+    } else {
+        return (TRUE,);
+    }
   }
 
   func card{
@@ -124,13 +114,6 @@ namespace RulesCards {
     return (card_id,);
   }
 
-  func card_model_available_supply{
-    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
-  }(card_model: CardModel) -> (available_supply: felt) {
-    let (available_supply) = _card_model_available_supply(card_model, FALSE);
-    return (available_supply,);
-  }
-
   //
   // Setters
   //
@@ -153,13 +136,13 @@ namespace RulesCards {
   //
 
   func create_card{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    card: Card, metadata: Metadata, packed: felt
+    card: Card, metadata: Metadata
   ) -> (card_id: Uint256) {
     alloc_locals;
 
-    let (available_supply) = _card_model_available_supply(card_model=card.model, packed=packed);
+    let (is_card_model_creation_allowed) = _is_card_model_creation_allowed(card_model=card.model);
     with_attr error_message("Available supply is null") {
-      assert_not_zero(available_supply);
+      assert is_card_model_creation_allowed = TRUE;
     }
 
     // Check if the serial_number is valid, given the scarcity supply
@@ -183,75 +166,32 @@ namespace RulesCards {
       assert exists = FALSE;
     }
 
-    if (packed == FALSE) {
-      let (supply) = card_models_supply_storage.read(card.model);
-      card_models_supply_storage.write(card.model, supply + 1);
-      tempvar syscall_ptr = syscall_ptr;
-      tempvar pedersen_ptr = pedersen_ptr;
-      tempvar range_check_ptr = range_check_ptr;
-    } else {
-      tempvar syscall_ptr = syscall_ptr;
-      tempvar pedersen_ptr = pedersen_ptr;
-      tempvar range_check_ptr = range_check_ptr;
-    }
-
-    cards_storage.write(card_id, TRUE);
     cards_metadata_storage.write(card_id, metadata);
 
     return (card_id,);
-  }
-
-  func pack_card_model{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    pack_card_model: PackCardModel
-  ) {
-    let (available_supply) = card_model_available_supply(pack_card_model.card_model);
-
-    with_attr error_message("Card model quantity too high") {
-      assert_le(pack_card_model.quantity, available_supply);
-    }
-
-    let (packed_supply) = card_models_packed_supply_storage.read(pack_card_model.card_model);
-    card_models_packed_supply_storage.write(
-      pack_card_model.card_model, packed_supply + pack_card_model.quantity
-    );
-    return ();
   }
 
   //
   // Internals
   //
 
-  func _card_model_available_supply{
+  func _is_card_model_creation_allowed{
     syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
-  }(card_model: CardModel, packed: felt) -> (available_supply: felt) {
+  }(card_model: CardModel) -> (res: felt) {
     let (rules_data_address) = rules_data_address_storage.read();
 
     // Check if artist exists
     let (artist_exists) = IRulesData.artistExists(rules_data_address, card_model.artist_name);
     if (artist_exists == FALSE) {
-      return (available_supply=0);
+      return (FALSE,);
     }
 
     // Check is production is stopped for this scarcity and season
     let (stopped) = Scarcity_productionStopped(card_model.season, card_model.scarcity);
     if (stopped == TRUE) {
-      return (available_supply=0);
+      return (FALSE,);
     }
 
-    // Check max supply
-    let (max_supply) = Scarcity_max_supply(card_model.season, card_model.scarcity);
-    if (max_supply == 0) {
-      return (available_supply=0);
-    }
-
-    if (packed == TRUE) {
-      return (1,);  // return anything above 0
-    }
-
-    // Get supply and packed supply
-
-    let (supply) = card_models_supply_storage.read(card_model);
-    let (packed_supply) = card_models_packed_supply_storage.read(card_model);
-    return (max_supply - supply - packed_supply,);
+    return (TRUE,);
   }
 }

@@ -6,7 +6,6 @@ from starkware.cairo.common.uint256 import Uint256
 
 from ruleslabs.models.card import CardModel
 from ruleslabs.models.metadata import Metadata
-from ruleslabs.models.pack import PackCardModel
 
 // Libraries
 
@@ -108,22 +107,6 @@ func hasRole{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 }
 
 @view
-func packExists{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  pack_id: Uint256
-) -> (res: felt) {
-  let (res) = RulesPacks.pack_exists(pack_id);
-  return (res,);
-}
-
-@view
-func getPackCardModelQuantity{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  pack_id: Uint256, card_model: CardModel
-) -> (quantity: felt) {
-  let (quantity) = RulesPacks.pack_card_model_quantity(pack_id, card_model);
-  return (quantity,);
-}
-
-@view
 func getPackMaxSupply{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
   pack_id: Uint256
 ) -> (quantity: felt) {
@@ -132,21 +115,19 @@ func getPackMaxSupply{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_chec
 }
 
 @view
-func getPack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(pack_id: Uint256) -> (
-  cards_per_pack: felt, metadata: Metadata
-) {
-  let (cards_per_pack, metadata) = RulesPacks.pack(pack_id);
-  return (cards_per_pack, metadata);
+func packExists{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  pack_id: Uint256
+) -> (res: felt) {
+  let (exists) = RulesPacks.pack_exists(pack_id);
+  return (exists,);
 }
 
-// Other contracts
-
 @view
-func rulesCards{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
-  address: felt
+func getPack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(pack_id: Uint256) -> (
+  metadata: Metadata
 ) {
-  let (address) = RulesPacks.rules_cards_address();
-  return (address,);
+  let (metadata) = RulesPacks.pack(pack_id);
+  return (metadata,);
 }
 
 //
@@ -169,24 +150,20 @@ func revokeMinter{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_pt
 
 @external
 func createPack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  cards_per_pack: felt,
-  pack_card_models_len: felt,
-  pack_card_models: PackCardModel*,
-  metadata: Metadata,
+  max_supply: felt,
+  metadata: Metadata
 ) -> (pack_id: Uint256) {
   Minter_only_minter();
-  let (pack_id) = RulesPacks.create_pack(
-    cards_per_pack, pack_card_models_len, pack_card_models, metadata
-  );
+  let (pack_id) = RulesPacks.create_pack(max_supply, metadata);
   return (pack_id,);
 }
 
 @external
 func createCommonPack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  cards_per_pack: felt, season: felt, metadata: Metadata
+  season: felt, metadata: Metadata
 ) -> (pack_id: Uint256) {
   Minter_only_minter();
-  let (pack_id) = RulesPacks.create_common_pack(cards_per_pack, season, metadata);
+  let (pack_id) = RulesPacks.create_common_pack(season, metadata);
   return (pack_id,);
 }
 

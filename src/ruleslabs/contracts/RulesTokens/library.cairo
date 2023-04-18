@@ -187,7 +187,7 @@ namespace RulesTokens {
     alloc_locals;
 
     let (rules_cards_address) = rules_cards_address_storage.read();
-    let (local card_id) = IRulesCards.createCard(rules_cards_address, card, metadata, FALSE);
+    let (local card_id) = IRulesCards.createCard(rules_cards_address, card, metadata);
 
     let data = cast(0, felt*);
     _safe_mint(to, token_id=card_id, amount=Uint256(1, 0), data_len=0, data=data);
@@ -294,16 +294,6 @@ namespace RulesTokens {
       assert valid_amount = TRUE;
     }
 
-    // Check if card models are in the pack and `cards_len == cards_per_pack`
-    let (rules_packs_address) = rules_packs_address_storage.read();
-    let (cards_per_pack, _) = IRulesPacks.getPack(rules_packs_address, pack_id);
-
-    with_attr error_message(
-        "RulesTokens: wrong number of cards, expected {cards_per_pack} got {cards_len}") {
-      assert cards_per_pack = cards_len;
-    }
-    _assert_cards_presence_in_pack(rules_packs_address, pack_id, cards_len, cards);
-
     // Create cards
     let (rules_cards_address) = rules_cards_address_storage.read();
     let (card_ids: Uint256*) = alloc();
@@ -387,27 +377,7 @@ namespace RulesTokens {
     return ();
   }
 
-  // Packs
-
-  func _assert_cards_presence_in_pack{
-    syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
-  }(rules_packs_address: felt, pack_id: Uint256, cards_len: felt, cards: Card*) {
-    if (cards_len == 0) {
-      return ();
-    }
-
-    let (quantity) = IRulesPacks.getPackCardModelQuantity(
-      rules_packs_address, pack_id, [cards].model
-    );
-    with_attr error_message("RulesTokens: Card {cards_len} not mintable from pack") {
-      assert_not_zero(quantity);
-    }
-
-    _assert_cards_presence_in_pack(
-      rules_packs_address, pack_id, cards_len=cards_len - 1, cards=cards + Card.SIZE
-    );
-    return ();
-  }
+  // Mint
 
   func _safe_mint{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     to: felt, token_id: Uint256, amount: Uint256, data_len: felt, data: felt*
@@ -452,7 +422,7 @@ namespace RulesTokens {
       return ();
     }
 
-    let (card_id) = IRulesCards.createCard(rules_cards_address, [cards], [metadata], TRUE);
+    let (card_id) = IRulesCards.createCard(rules_cards_address, [cards], [metadata]);
     assert [card_ids] = card_id;
 
     _create_cards_batch(
