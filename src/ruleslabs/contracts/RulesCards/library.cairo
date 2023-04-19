@@ -7,7 +7,7 @@ from starkware.cairo.common.math_cmp import is_not_zero
 from starkware.cairo.common.uint256 import Uint256
 from starkware.starknet.common.syscalls import get_caller_address
 
-from ruleslabs.models.metadata import Metadata
+from ruleslabs.models.metadata import Metadata, _assert_metadata_are_valid
 from ruleslabs.models.card import (
   Card,
   CardModel,
@@ -83,7 +83,7 @@ namespace RulesCards {
   ) -> (res: felt) {
     let (metadata) = cards_metadata_storage.read(card_id);
 
-    if (metadata.hash.low == 0) {
+    if (metadata.multihash_identifier == 0) {
         return (FALSE,);
     } else {
         return (TRUE,);
@@ -139,6 +139,8 @@ namespace RulesCards {
     card: Card, metadata: Metadata
   ) -> (card_id: Uint256) {
     alloc_locals;
+
+    _assert_metadata_are_valid(metadata);
 
     let (is_card_model_creation_allowed) = _is_card_model_creation_allowed(card_model=card.model);
     with_attr error_message("Available supply is null") {

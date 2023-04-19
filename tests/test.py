@@ -34,7 +34,7 @@ async def _create_card(ctx, signer_account_name, card, metadata):
     signer_account_name,
     ctx.rules_cards.contract_address,
     'createCard',
-    [*to_starknet_args(card), *to_starknet_args(metadata), 0]
+    [*to_starknet_args(card), *to_starknet_args(metadata)]
   )
 
 
@@ -53,21 +53,21 @@ async def _get_card_id(ctx, card):
 
 # Packs
 
-async def _create_pack(ctx, signer_account_name, pack, metadata):
+async def _create_pack(ctx, signer_account_name, max_supply, metadata):
   await ctx.execute(
     signer_account_name,
     ctx.rules_packs.contract_address,
     'createPack',
-    [*to_starknet_args(pack), *to_starknet_args(metadata)]
+    [max_supply, *to_starknet_args(metadata)]
   )
 
 
-async def _create_common_pack(ctx, signer_account_name, cards_per_pack, season, metadata):
+async def _create_common_pack(ctx, signer_account_name, season, metadata):
   await ctx.execute(
     signer_account_name,
     ctx.rules_packs.contract_address,
     'createCommonPack',
-    [cards_per_pack, season, *to_starknet_args(metadata)]
+    [season, *to_starknet_args(metadata)]
   )
 
 
@@ -362,6 +362,9 @@ CAPPER_ROLE = 'CAPPER_ROLE'
 ROLES = dict(MINTER_ROLE='Minter', CAPPER_ROLE='Capper')
 
 METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
+INVALID_METADATA_1 = dict(hash=(0x0, 0x1), multihash_identifier=(0x1220))
+INVALID_METADATA_2 = dict(hash=(0x1, 0x0), multihash_identifier=(0x1220))
+INVALID_METADATA_3 = dict(hash=(0x1, 0x1), multihash_identifier=(0x0))
 
 ARTIST_1 = (0x416C7068612057616E6E, 0)
 ARTIST_2 = (0x6162636465666768696A6B6C6D6E6F70, 0x7172737475767778797A31)
@@ -372,12 +375,6 @@ CARD_MODEL_2 = dict(artist_name=ARTIST_2, season=1, scarcity=0)
 
 CARD_1 = dict(model=CARD_MODEL_1, serial_number=1)
 CARD_2 = dict(model=CARD_MODEL_2, serial_number=1)
-
-PACK_CARD_MODELS=[
-dict(card_model=CARD_MODEL_1, quantity=10),
-dict(card_model=CARD_MODEL_2, quantity=5),
-]
-PACK_1 = dict(cards_per_pack=3, pack_card_models=PACK_CARD_MODELS)
 
 ############
 # SCENARIO #
@@ -447,11 +444,11 @@ class ScenarioState:
 
   # Packs
 
-  async def create_pack(self, signer_account_name, pack, metadata):
-    await _create_pack(self.ctx, signer_account_name, pack, metadata)
+  async def create_pack(self, signer_account_name, max_supply, metadata):
+    await _create_pack(self.ctx, signer_account_name, max_supply, metadata)
 
-  async def create_common_pack(self, signer_account_name, cards_per_pack, season, metadata):
-    await _create_common_pack(self.ctx, signer_account_name, cards_per_pack, season, metadata)
+  async def create_common_pack(self, signer_account_name, season, metadata):
+    await _create_common_pack(self.ctx, signer_account_name, season, metadata)
 
   async def mint_pack(self, signer_account_name, pack_id, to_account_name, amount, unlocked=False):
     to_account_address = get_account_address(self.ctx, to_account_name)
@@ -600,6 +597,12 @@ async def test_settle_where_minter_create_invalid_card(ctx_factory):
       (MINTER, 'create_card', dict(card=update_card(CARD_1, season=2 ** 16), metadata=METADATA_1), False),
       (MINTER, 'create_card', dict(card=update_card(CARD_1, scarcity=2 ** 8), metadata=METADATA_1), False),
       (MINTER, 'create_card', dict(card=update_card(CARD_1, serial_number=2 ** 32), metadata=METADATA_1), False),
+
+      (MINTER, 'create_card', dict(card=CARD_1, metadata=INVALID_METADATA_1), False),
+      (MINTER, 'create_card', dict(card=CARD_1, metadata=INVALID_METADATA_2), False),
+      (MINTER, 'create_card', dict(card=CARD_1, metadata=INVALID_METADATA_3), False),
+
+      (MINTER, 'create_card', dict(card=CARD_1, metadata=METADATA_1), True),
     ]
   )
 
@@ -957,98 +960,25 @@ async def test_settle_where_minter_creates_pack(ctx_factory):
   # Given
   assert await _pack_exists(ctx, to_uint(1)) == 0
   assert await _pack_exists(ctx, to_uint(2)) == 0
-
-  # When
-  await run_scenario(
-    ctx,
-    [
-      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
-      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), False),
-
-      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
-
-      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
-    ]
-  )
-
-  # Then
-  assert await _pack_exists(ctx, to_uint(1)) == 1
-  assert await _pack_exists(ctx, to_uint(2)) == 0
-
-
-@pytest.mark.asyncio
-async def test_settle_where_minter_creates_invalid_pack(ctx_factory):
-  ctx = ctx_factory()
-
-  # Given
-  assert await _pack_exists(ctx, to_uint(1)) == 0
-
-  # When
-  await run_scenario(
-    ctx,
-    [
-      (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
-      (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
-
-      (MINTER, 'create_pack', dict(pack=update_dict(PACK_1, cards_per_pack=4), metadata=METADATA_1), False),
-      (MINTER, 'create_pack', dict(pack=update_dict(PACK_1, cards_per_pack=15), metadata=METADATA_1), False),
-      (MINTER, 'create_pack', dict(pack=update_dict(PACK_1, pack_card_models=[]), metadata=METADATA_1), False),
-    ]
-  )
-
-  # Then
-  assert await _pack_exists(ctx, to_uint(1)) == 0
-
-
-@pytest.mark.asyncio
-async def test_settle_where_minter_saturates_card_model_supply(ctx_factory):
-  ctx = ctx_factory()
-
-  # Given
-  assert await _pack_exists(ctx, to_uint(1)) == 0
-  assert await _pack_exists(ctx, to_uint(2)) == 0
   assert await _pack_exists(ctx, to_uint(3)) == 0
-  assert await _pack_exists(ctx, to_uint(4)) == 0
-
-  NEW_CARD_MODEL = update_dict(CARD_MODEL_1, scarcity=1)
-  NEW_CARD = update_dict(CARD_1, model=NEW_CARD_MODEL)
-  NEW_PACK = update_dict(
-    PACK_1,
-    pack_card_models=PACK_1['pack_card_models'] + [dict(card_model=NEW_CARD_MODEL, quantity=20), dict(card_model=NEW_CARD_MODEL, quantity=13)]
-  )
-  NEW_PACK_2 = update_dict(
-    PACK_1,
-    pack_card_models=PACK_1['pack_card_models'] + [dict(card_model=NEW_CARD_MODEL, quantity=32), dict(card_model=CARD_MODEL_1, quantity=1)]
-  )
 
   # When
   await run_scenario(
     ctx,
     [
       (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
+
       (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (OWNER, 'add_scarcity_for_season', dict(season=1, supply=100), True),
-
-      (MINTER, 'create_pack', dict(pack=NEW_PACK, metadata=METADATA_1), True),
-      (MINTER, 'create_pack', dict(pack=NEW_PACK, metadata=METADATA_1), True),
-
-      (MINTER, 'create_card', dict(card=update_card(NEW_CARD, serial_number=1), metadata=METADATA_1), True),
-      (MINTER, 'create_card', dict(card=update_card(NEW_CARD, serial_number=2), metadata=METADATA_1), True),
-
-      (MINTER, 'create_pack', dict(pack=NEW_PACK, metadata=METADATA_1), False),
-      (MINTER, 'create_pack', dict(pack=NEW_PACK_2, metadata=METADATA_1), True),
-
-      (MINTER, 'create_card', dict(card=update_card(NEW_CARD, serial_number=3), metadata=METADATA_1), False),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
     ]
   )
 
   # Then
   assert await _pack_exists(ctx, to_uint(1)) == 1
   assert await _pack_exists(ctx, to_uint(2)) == 1
-  assert await _pack_exists(ctx, to_uint(3)) == 1
-  assert await _pack_exists(ctx, to_uint(4)) == 0
-  assert await _get_card_model_available_supply(ctx, NEW_CARD_MODEL) == 0
+  assert await _pack_exists(ctx, to_uint(3)) == 0
 
 
 @pytest.mark.asyncio
@@ -1070,8 +1000,8 @@ async def test_settle_where_minter_create_packs_and_mint_them_1(ctx_factory):
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=MINTER, amount=1), False),
 
-      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
-      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(max_supply=5, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(max_supply=5, metadata=METADATA_1), True),
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=MINTER, amount=3), True),
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2), True),
@@ -1100,9 +1030,9 @@ async def test_settle_where_tokens_are_transfered(ctx_factory):
       (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
       (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
-      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
-      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5, unlocked=True), True),
       (MINTER, 'mint_pack', dict(pack_id=to_uint(2), to_account_name=RANDO_2, amount=5, unlocked=True), True),
@@ -1144,7 +1074,7 @@ async def test_settle_where_tokens_are_all_approved(ctx_factory):
       (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
       (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5, unlocked=True), True),
 
@@ -1193,7 +1123,7 @@ async def test_settle_where_tokens_are_approved_1(ctx_factory):
       (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
       (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5, unlocked=True), True),
 
@@ -1221,7 +1151,7 @@ async def test_settle_where_tokens_are_approved_2(ctx_factory):
       (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
       (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, 'create_pack', dict(pack=PACK_1, metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=5, unlocked=True), True),
 
@@ -1250,7 +1180,7 @@ async def test_settle_where_tokens_are_approved_2(ctx_factory):
 
 
 @pytest.mark.asyncio
-async def test_settle_where_minter_create_valid_and_invalid_common_packs(ctx_factory):
+async def test_settle_where_minter_create_valid_and_invalid_packs(ctx_factory):
   ctx = ctx_factory()
 
   # Given
@@ -1261,13 +1191,43 @@ async def test_settle_where_minter_create_valid_and_invalid_common_packs(ctx_fac
   await run_scenario(
     ctx,
     [
-      (MINTER, 'create_common_pack', dict(cards_per_pack=3, season=0, metadata=METADATA_1), False),
-      (MINTER, 'create_common_pack', dict(cards_per_pack=3, season=1, metadata=METADATA_1), True),
-      (MINTER, 'create_common_pack', dict(cards_per_pack=3, season=1, metadata=METADATA_1), False),
-      (MINTER, 'create_common_pack', dict(cards_per_pack=3, season=42, metadata=METADATA_1), True),
-      (MINTER, 'create_common_pack', dict(cards_per_pack=1, season=41, metadata=METADATA_1), True),
-      (MINTER, 'create_common_pack', dict(cards_per_pack=0, season=41, metadata=METADATA_1), False),
-      (MINTER, 'create_common_pack', dict(cards_per_pack=11, season=40, metadata=METADATA_1), False),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=INVALID_METADATA_1), False),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=INVALID_METADATA_2), False),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=INVALID_METADATA_3), False),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
+    ]
+  )
+
+  # Then
+  assert await _pack_exists(ctx, to_uint(1)) == 1
+  assert await _pack_exists(ctx, to_uint(2)) == 0
+
+
+@pytest.mark.asyncio
+async def test_settle_where_minter_create_valid_and_invalid_common_packs(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  assert await _pack_exists(ctx, to_uint(1 << 128)) == 0
+  assert await _pack_exists(ctx, to_uint(2 << 128)) == 0
+  assert await _pack_exists(ctx, to_uint(42 << 128)) == 0
+  assert await _pack_exists(ctx, to_uint(41 << 128)) == 0
+  assert await _pack_exists(ctx, to_uint(40 << 128)) == 0
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, 'create_common_pack', dict(season=0, metadata=METADATA_1), False),
+      (MINTER, 'create_common_pack', dict(season=1, metadata=METADATA_1), True),
+      (MINTER, 'create_common_pack', dict(season=1, metadata=METADATA_1), False),
+      (MINTER, 'create_common_pack', dict(season=42, metadata=METADATA_1), True),
+      (MINTER, 'create_common_pack', dict(season=41, metadata=METADATA_1), True),
+
+      (MINTER, 'create_common_pack', dict(season=40, metadata=INVALID_METADATA_1), False),
+      (MINTER, 'create_common_pack', dict(season=40, metadata=INVALID_METADATA_2), False),
+      (MINTER, 'create_common_pack', dict(season=40, metadata=INVALID_METADATA_3), False),
+      (MINTER, 'create_common_pack', dict(season=40, metadata=METADATA_1), True),
     ]
   )
 
@@ -1276,7 +1236,7 @@ async def test_settle_where_minter_create_valid_and_invalid_common_packs(ctx_fac
   assert await _pack_exists(ctx, to_uint(2 << 128)) == 0
   assert await _pack_exists(ctx, to_uint(42 << 128)) == 1
   assert await _pack_exists(ctx, to_uint(41 << 128)) == 1
-  assert await _pack_exists(ctx, to_uint(40 << 128)) == 0
+  assert await _pack_exists(ctx, to_uint(40 << 128)) == 1
 
 
 @pytest.mark.asyncio
@@ -1295,7 +1255,7 @@ async def test_settle_where_minter_create_packs_and_mint_them_2(ctx_factory):
     [
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1), False),
 
-      (MINTER, 'create_common_pack', dict(cards_per_pack=3, season=1, metadata=METADATA_1), True),
+      (MINTER, 'create_common_pack', dict(season=1, metadata=METADATA_1), True),
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=MINTER, amount=1000000), True),
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=RANDO_1, amount=1), True),
@@ -1343,20 +1303,17 @@ async def test_settle_where_owner_open_common_packs_1(ctx_factory):
     [
       (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, 'create_common_pack', dict(cards_per_pack=2, season=1, metadata=METADATA_1), True),
+      (MINTER, 'create_common_pack', dict(season=1, metadata=METADATA_1), True),
 
-      (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=RANDO_1, amount=3, unlocked=True), True),
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1 << 128), to_account_name=RANDO_1, amount=4, unlocked=True), True),
 
       (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadata=[METADATA_1], from_account_name=RANDO_1), False),
 
       (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
 
-      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1], metadata=[METADATA_1], from_account_name=RANDO_1), False),
       (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_1], metadata=[METADATA_1, METADATA_1], from_account_name=RANDO_1), False),
-      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_3], metadata=[METADATA_1, METADATA_1], from_account_name=RANDO_1), False),
+      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_3], metadata=[METADATA_1], from_account_name=RANDO_1), True),
       (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadata=[METADATA_1, METADATA_1], from_account_name=RANDO_1), True),
-
-      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, update_card(CARD_2, serial_number=2)], metadata=[METADATA_1, METADATA_1], from_account_name=RANDO_1), False),
 
       (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1_2, CARD_2_2], metadata=[METADATA_1, METADATA_1], from_account_name=RANDO_1), True),
     ]
@@ -1394,12 +1351,11 @@ async def test_settle_where_owner_open_classic_packs_1(ctx_factory):
       (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
       (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, 'create_pack', dict(pack=update_dict(PACK_1, cards_per_pack=3), metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=3, unlocked=True), True),
       (RANDO_1, 'approve', dict(token_id=to_uint(1), to_account_name=RANDO_2, amount=3), True),
 
-      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_3], metadata=[METADATA_1, METADATA_1, METADATA_1], from_account_name=RANDO_1), False),
       (OWNER, 'open_pack_from', dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_1_2], metadata=[METADATA_1, METADATA_1, METADATA_1], from_account_name=RANDO_1), True),
       (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True)
     ]
@@ -1428,20 +1384,15 @@ async def test_settle_where_owner_open_classic_packs_2(ctx_factory):
   CARD_3_4 = update_card(CARD_1, scarcity=1, serial_number=4)
   CARD_3_5 = update_card(CARD_1, scarcity=1, serial_number=5)
 
-  PACK_2 = dict(
-    cards_per_pack=3,
-    pack_card_models=[dict(card_model=CARD_3_1['model'], quantity=3)]
-  )
-
   # When
   await run_scenario(
     ctx,
     [
       (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
 
-      (MINTER, 'create_pack', dict(pack=PACK_2, metadata=METADATA_1), False),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
+
       (OWNER, 'add_scarcity_for_season', dict(season=1, supply=4), True),
-      (MINTER, 'create_pack', dict(pack=PACK_2, metadata=METADATA_1), True),
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1), True),
 
@@ -1468,7 +1419,7 @@ async def test_settle_where_owner_mint_locked_and_unlocked_packs(ctx_factory):
       (MINTER, 'create_artist', dict(artist_name=ARTIST_1), True),
       (MINTER, 'create_artist', dict(artist_name=ARTIST_2), True),
 
-      (MINTER, 'create_pack', dict(pack=update_dict(PACK_1, cards_per_pack=1), metadata=METADATA_1), True),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2, unlocked=True), True),
       (RANDO_1, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),

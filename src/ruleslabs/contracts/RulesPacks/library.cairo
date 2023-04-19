@@ -7,7 +7,7 @@ from starkware.cairo.common.uint256 import Uint256
 from starkware.cairo.common.math import assert_not_zero
 
 from ruleslabs.models.card import CardModel, assert_season_is_valid
-from ruleslabs.models.metadata import Metadata
+from ruleslabs.models.metadata import Metadata, _assert_metadata_are_valid
 
 // Libraries
 
@@ -51,9 +51,7 @@ namespace RulesPacks {
   // Initializer
   //
 
-  func initializer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    _rules_data_address: felt, _rules_cards_address: felt
-  ) {
+  func initializer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
     // assert not already initialized
     let (initialized) = contract_initialized.read();
     with_attr error_message("RulesPacks: contract already initialized") {
@@ -73,7 +71,7 @@ namespace RulesPacks {
   ) -> (res: felt) {
     let (metadata) = packs_metadata_storage.read(pack_id);
 
-    if (metadata.hash.low == 0) {
+    if (metadata.multihash_identifier == 0) {
         return (FALSE,);
     } else {
         return (TRUE,);
@@ -122,6 +120,12 @@ namespace RulesPacks {
   ) -> (pack_id: Uint256) {
     alloc_locals;
 
+    _assert_metadata_are_valid(metadata);
+
+    with_attr error_message("RulesPacks: pack max supply cannot be null") {
+      assert_not_zero(max_supply);
+    }
+
     let (local supply) = packs_supply_storage.read();
     let pack_id = Uint256(supply + 1, 0);
 
@@ -136,6 +140,9 @@ namespace RulesPacks {
   func create_common_pack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     season: felt, metadata: Metadata
   ) -> (pack_id: Uint256) {
+
+    _assert_metadata_are_valid(metadata);
+
     assert_season_is_valid(season);
 
     let pack_id = Uint256(0, season);

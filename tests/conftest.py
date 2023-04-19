@@ -93,10 +93,8 @@ async def build_copyable_deployment():
     [
       rules_packs_class.class_hash,
       initialize_selector,
-      3,
+      1,
       accounts.owner.contract_address,
-      rules_data.contract_address,
-      rules_cards.contract_address,
     ],
   )
   rules_tokens = await deploy_proxy(
@@ -125,9 +123,6 @@ async def build_copyable_deployment():
 
     (rules_cards.contract_address, 'addMinter', [rules_tokens.contract_address]),
     (rules_packs.contract_address, 'addMinter', [rules_tokens.contract_address]),
-
-    (rules_cards.contract_address, 'addPacker', [rules_packs.contract_address]),
-    (rules_cards.contract_address, 'revokePacker', [accounts.owner.contract_address]),
   ], signers['owner'])
 
   return SimpleNamespace(

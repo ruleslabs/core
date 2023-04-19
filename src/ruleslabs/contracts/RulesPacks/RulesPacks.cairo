@@ -38,14 +38,12 @@ from ruleslabs.lib.roles.minter import (
 //
 
 @external
-func initialize{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  owner: felt, _rules_data_address: felt, _rules_cards_address: felt
-) {
+func initialize{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(owner: felt) {
   Ownable_initializer(owner);
   AccessControl_initializer(owner);
   Minter_initializer(owner);
 
-  RulesPacks.initializer(_rules_data_address, _rules_cards_address);
+  RulesPacks.initializer();
   return ();
 }
 
