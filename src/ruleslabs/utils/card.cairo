@@ -4,7 +4,7 @@ from starkware.cairo.common.bool import TRUE, FALSE
 from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.math import unsigned_div_rem
 from starkware.cairo.common.alloc import alloc
-from starkware.cairo.common.math import assert_le
+from starkware.cairo.common.math import assert_le, assert_not_zero
 from starkware.cairo.common.uint256 import Uint256, uint256_eq, uint256_check
 
 // Constants
@@ -45,28 +45,7 @@ struct Card {
 // Functions
 //
 
-func card_is_null{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(card: Card) -> (
-  res: felt
-) {
-  let (is_artist_name_null) = uint256_eq(card.model.artist_name, Uint256(0, 0));
-  if (is_artist_name_null == FALSE) {
-    return (FALSE,);
-  }
-
-  if (card.model.season != 0) {
-    return (FALSE,);
-  }
-  if (card.model.scarcity != 0) {
-    return (FALSE,);
-  }
-  if (card.serial_number != 0) {
-    return (FALSE,);
-  }
-
-  return (TRUE,);
-}
-
-func get_card_id_from_card{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+func _card_to_card_id{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
   card: Card
 ) -> (card_id: Uint256) {
   alloc_locals;
@@ -90,9 +69,9 @@ func get_card_id_from_card{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range
   );
 }
 
-func get_card_from_card_id{
-  syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, bitwise_ptr: BitwiseBuiltin*, range_check_ptr
-}(card_id: Uint256) -> (card: Card) {
+func _card_id_to_card{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, bitwise_ptr: BitwiseBuiltin*, range_check_ptr}(
+  card_id: Uint256
+) -> (card: Card) {
   // artist name
   assert bitwise_ptr[0].x = card_id.high;
   assert bitwise_ptr[0].y = ARTIST_NAME_HIGH_MASK;
@@ -125,9 +104,16 @@ func get_card_from_card_id{
 
 // Guards
 
-func assert_season_is_valid{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  season: felt
+func _assert_artist_name_is_valid{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+  artist_name: Uint256
 ) {
+  with_attr error_message("Invalid artist name") {
+    assert_not_zero(artist_name.low * artist_name.high);
+  }
+  return ();
+}
+
+func _assert_season_is_valid{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(season: felt) {
   with_attr error_message("Invalid season") {
     assert_le(season, SEASON_MAX);
     assert_le(SEASON_MIN, season);
@@ -135,9 +121,7 @@ func assert_season_is_valid{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, rang
   return ();
 }
 
-func assert_scarcity_is_valid{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  scarcity: felt
-) {
+func _assert_scarcity_is_valid{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(scarcity: felt) {
   with_attr error_message("Invalid scarcity") {
     assert_le(scarcity, SCARCITY_MAX);
     assert_le(SCARCITY_MIN, scarcity);
@@ -145,7 +129,7 @@ func assert_scarcity_is_valid{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, ra
   return ();
 }
 
-func assert_serial_number_is_valid{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+func _assert_serial_number_is_valid{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
   serial_number: felt
 ) {
   with_attr error_message("Invalid serial number") {
@@ -157,16 +141,15 @@ func assert_serial_number_is_valid{syscall_ptr: felt*, pedersen_ptr: HashBuiltin
 
 // Internals
 
-func _assert_card_well_formed{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  card: Card
-) {
+func _assert_card_well_formed{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(card: Card) {
   with_attr error_message("Invalid artist name") {
     uint256_check(card.model.artist_name);
   }
 
-  assert_season_is_valid(card.model.season);
-  assert_scarcity_is_valid(card.model.scarcity);
-  assert_serial_number_is_valid(card.serial_number);
+  _assert_artist_name_is_valid(card.model.artist_name);
+  _assert_season_is_valid(card.model.season);
+  _assert_scarcity_is_valid(card.model.scarcity);
+  _assert_serial_number_is_valid(card.serial_number);
 
   return ();
 }

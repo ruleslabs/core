@@ -13,8 +13,6 @@ struct Metadata {
   multihash_identifier: felt,
 }
 
-// Guards
-
 func _assert_metadata_are_valid{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
   metadata: Metadata
 ) {
