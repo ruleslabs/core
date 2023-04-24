@@ -10,6 +10,9 @@ namespace IRulesCards {
 
   // Getters
 
+  func cardExists(card_id: Uint256) -> (exists: felt) {
+  }
+
   func getCard(card_id: Uint256) -> (card: Card, metadata: Metadata) {
   }
 }

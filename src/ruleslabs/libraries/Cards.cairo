@@ -78,9 +78,9 @@ namespace Cards {
       }
     }
 
-    let (_, old_card_metadata) = IRulesCards.getCard(rules_cards_address, card_id);
+    let (old_card_exists) = IRulesCards.cardExists(rules_cards_address, card_id);
 
-    if (metadata.multihash_identifier + old_card_metadata.multihash_identifier == 0) {
+    if (metadata.multihash_identifier + old_card_exists == 0) {
       return (FALSE,);
     } else {
       return (TRUE,);
@@ -89,6 +89,7 @@ namespace Cards {
 
   // Business logic
 
+  // IMPORTANT: there is not protection against double card creation
   func create_card{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     card: Card,
     metadata: Metadata
