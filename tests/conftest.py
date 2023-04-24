@@ -46,10 +46,7 @@ async def build_copyable_deployment():
   # Classes
   account_class = await declare(starknet, 'periphery/account/Account.cairo')
 
-  rules_data_class = await declare(starknet, 'src/ruleslabs/contracts/RulesData/RulesData.cairo')
-  rules_cards_class = await declare(starknet, 'src/ruleslabs/contracts/RulesCards/RulesCards.cairo')
-  rules_packs_class = await declare(starknet, 'src/ruleslabs/contracts/RulesPacks/RulesPacks.cairo')
-  rules_tokens_class = await declare(starknet, 'src/ruleslabs/contracts/RulesTokens/RulesTokens.cairo')
+  rules_class = await declare(starknet, 'src/ruleslabs/Rules.cairo')
 
   upgrade_class = await declare(starknet, 'src/test/upgrade.cairo')
 
@@ -66,49 +63,16 @@ async def build_copyable_deployment():
   )
 
   # Proxies
-  rules_data = await deploy_proxy(
+  rules = await deploy_proxy(
     starknet,
-    rules_data_class.abi,
+    rules_class.abi,
     [
-      rules_data_class.class_hash,
+      rules_class.class_hash,
       initialize_selector,
-      1,
-      accounts.owner.contract_address
-    ],
-  )
-  rules_cards = await deploy_proxy(
-    starknet,
-    rules_cards_class.abi,
-    [
-      rules_cards_class.class_hash,
-      initialize_selector,
-      2,
-      accounts.owner.contract_address,
-      rules_data.contract_address,
-    ],
-  )
-  rules_packs = await deploy_proxy(
-    starknet,
-    rules_packs_class.abi,
-    [
-      rules_packs_class.class_hash,
-      initialize_selector,
-      1,
-      accounts.owner.contract_address,
-    ],
-  )
-  rules_tokens = await deploy_proxy(
-    starknet,
-    rules_tokens_class.abi,
-    [
-      rules_tokens_class.class_hash,
-      initialize_selector,
-      5,
+      3,
       1,
       BASE_URI,
       accounts.owner.contract_address,
-      rules_cards.contract_address,
-      rules_packs.contract_address,
     ],
   )
 
@@ -116,13 +80,7 @@ async def build_copyable_deployment():
   owner_sender = TransactionSender(accounts.owner)
 
   await owner_sender.send_transaction([
-    (rules_data.contract_address, 'addMinter', [accounts.minter.contract_address]),
-    (rules_packs.contract_address, 'addMinter', [accounts.minter.contract_address]),
-    (rules_cards.contract_address, 'addMinter', [accounts.minter.contract_address]),
-    (rules_tokens.contract_address, 'addMinter', [accounts.minter.contract_address]),
-
-    (rules_cards.contract_address, 'addMinter', [rules_tokens.contract_address]),
-    (rules_packs.contract_address, 'addMinter', [rules_tokens.contract_address]),
+    (rules.contract_address, 'addMinter', [accounts.minter.contract_address]),
   ], signers['owner'])
 
   return SimpleNamespace(
@@ -136,10 +94,7 @@ async def build_copyable_deployment():
       rando3=serialize_contract(accounts.rando3, account_class.abi),
     ),
     serialized_contracts=dict(
-      rules_data=serialize_contract(rules_data, rules_data_class.abi),
-      rules_cards=serialize_contract(rules_cards, rules_cards_class.abi),
-      rules_packs=serialize_contract(rules_packs, rules_packs_class.abi),
-      rules_tokens=serialize_contract(rules_tokens, rules_tokens_class.abi),
+      rules=serialize_contract(rules, rules_class.abi),
     ),
     serialized_classes=dict(
       upgrade=serialize_class(upgrade_class),

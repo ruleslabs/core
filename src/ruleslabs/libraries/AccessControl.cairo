@@ -5,7 +5,7 @@ from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.alloc import alloc
 from starkware.starknet.common.syscalls import get_caller_address
 
-const ADMIN_ROLE = 0x0;
+const ADMIN_ROLE_ID = 0x0;
 
 //
 // Storage
@@ -46,7 +46,7 @@ namespace AccessControl {
   }
 
   func only_admin{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() {
-    only_role(ADMIN_ROLE);
+    only_role(ADMIN_ROLE_ID);
     return ();
   }
 
@@ -55,8 +55,8 @@ namespace AccessControl {
   func initialize{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     admin: felt
   ) {
-    roles_storage.write(role=ADMIN_ROLE, index=0, value=admin);
-    roles_storage_len.write(role=ADMIN_ROLE, value=1);
+    roles_storage.write(role=ADMIN_ROLE_ID, index=0, value=admin);
+    roles_storage_len.write(role=ADMIN_ROLE_ID, value=1);
 
     return ();
   }
@@ -92,21 +92,11 @@ namespace AccessControl {
   func grant_role{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     role: felt, account: felt
   ) {
-    alloc_locals;
-
     // modifiers
     only_admin();
 
     // body
-    let (local accounts_len) = roles_storage_len.read(role);
     _grant_role(role, account);
-
-    let (new_accounts_len) = roles_storage_len.read(role);
-    if (accounts_len == new_accounts_len) {
-      return ();
-    }
-
-    RoleGranted.emit(role, account);
 
     return ();
   }
@@ -180,6 +170,8 @@ namespace AccessControl {
 
     roles_storage.write(role=role, index=accounts_len, value=account);
     roles_storage_len.write(role, accounts_len + 1);
+
+    RoleGranted.emit(role, account);
 
     return ();
   }

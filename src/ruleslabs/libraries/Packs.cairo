@@ -4,7 +4,7 @@ from starkware.cairo.common.bool import TRUE, FALSE
 from starkware.cairo.common.alloc import alloc
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.cairo.common.uint256 import Uint256
-from starkware.cairo.common.math import assert_not_zero
+from starkware.cairo.common.math import assert_not_zero, assert_le
 
 // Libraries
 
@@ -33,10 +33,20 @@ func packs_max_supply_storage(pack_id: Uint256) -> (max_supply: felt) {
 }
 
 @storage_var
+func packs_available_supply_storage(pack_id: Uint256) -> (available_supply: felt) {
+}
+
+@storage_var
 func packs_metadata_storage(pack_id: Uint256) -> (metadata: Metadata) {
 }
 
+@storage_var
+func packs_unlocked_storage(owner: felt, pack_id: Uint256) -> (amount: felt) {
+}
+
 namespace Packs {
+
+  // Getters
 
   func pack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     pack_id: Uint256
@@ -50,11 +60,48 @@ namespace Packs {
   func unlocked{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     owner: felt,
     pack_id: Uint256
-  ) -> (res: Uint256) {
-    return (Uint256(0, 0),); // Not implemented yet
+  ) -> (amount: felt) {
+    let (amount) = packs_unlocked_storage.read(owner, pack_id);
+    return (amount,);
+  }
+
+  func pack_exists{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(pack_id: Uint256) -> (res: felt) {
+    let (metadata) = packs_metadata_storage.read(pack_id);
+
+    if (metadata.multihash_identifier == 0) {
+      return (FALSE,);
+    } else {
+      return (TRUE,);
+    }
   }
 
   // Business logic
+
+  func unlock{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    owner: felt,
+    pack_id: Uint256,
+    amount: felt
+  ) {
+    let (unlocked_amount) = packs_unlocked_storage.read(owner, pack_id);
+    packs_unlocked_storage.write(owner, pack_id, value=unlocked_amount + amount);
+
+    return ();
+  }
+
+  func lock{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    owner: felt,
+    pack_id: Uint256,
+    amount: felt
+  ) {
+    let (unlocked_amount) = packs_unlocked_storage.read(owner, pack_id);
+    with_attr error_message("Packs: cannot lock more than unlocked amount") {
+      assert_le(amount, unlocked_amount);
+    }
+
+    packs_unlocked_storage.write(owner, pack_id, value=unlocked_amount - amount);
+
+    return ();
+  }
 
   func create_pack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     max_supply: felt,
@@ -73,9 +120,14 @@ namespace Packs {
     // return pack ID
     let pack_id = Uint256(supply + 1, 0);
 
-    // store metadata and max supply
-    packs_max_supply_storage.write(pack_id, max_supply);
+    // store metadata
     packs_metadata_storage.write(pack_id, metadata);
+
+    // store max supply
+    packs_max_supply_storage.write(pack_id, max_supply);
+
+    // store available supply
+    packs_available_supply_storage.write(pack_id, max_supply);
 
     return (pack_id,);
   }
@@ -88,10 +140,12 @@ namespace Packs {
 
     _assert_season_is_valid(season);
 
-    // assert pack does not already exists
+    // get pack ID
     let pack_id = Uint256(0, season);
-    let (exists) = _pack_exists(pack_id);
+
+    // assert pack does not already exists
     with_attr error_message("Packs: a common pack already exists for this season") {
+      let (exists) = pack_exists(pack_id);
       assert exists = FALSE;
     }
 
@@ -141,15 +195,29 @@ namespace Packs {
     return ();
   }
 
-  // Internals
-
-  func _pack_exists{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(pack_id: Uint256) -> (res: felt) {
-    let (metadata) = packs_metadata_storage.read(pack_id);
-
-    if (metadata.multihash_identifier == 0) {
-      return (FALSE,);
-    } else {
-      return (TRUE,);
+  func decrease_available_pack_supply{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    pack_id: Uint256,
+    amount: felt
+  ) {
+    // just assert pack exists for common packs
+    if (pack_id.low == 0) {
+      with_attr error_message("Packs: pack does not exists") {
+        let (exists) = pack_exists(pack_id);
+        assert exists = TRUE;
+      }
+      return ();
     }
+
+    let (available_supply) = packs_available_supply_storage.read(pack_id);
+
+    // assert new available max supply is not too low
+    with_attr error_message("Packs: available pack supply too low") {
+      assert_le(amount, available_supply);
+    }
+
+    // update available supply
+    packs_available_supply_storage.write(pack_id, value=available_supply - amount);
+
+    return ();
   }
 }

@@ -160,14 +160,6 @@ def to_starknet_args(data):
   return tuple(items)
 
 
-def update_card(card, **new):
-  if 'serial_number' in new:
-    card = update_dict(card, serial_number=new['serial_number'])
-    del new['serial_number']
-
-  return update_dict(card, model=update_dict(card['model'], **new))
-
-
 def update_dict(dict, **new):
   return (lambda d: d.update(**new) or d)(dict.copy())
 
@@ -225,6 +217,6 @@ def felts_to_string(felts):
 
 def compute_card_id(card):
   return (
-    card['model']['artist_name'][0],
-    card['model']['artist_name'][1] + card['model']['scarcity'] * 2 ** 88 + card['model']['season'] * 2 ** 96 + card['serial_number'] * 2 ** 104
+    card['artist_name'][0],
+    card['artist_name'][1] + card['scarcity'] * 2 ** 88 + card['season'] * 2 ** 96 + card['serial_number'] * 2 ** 104
   )

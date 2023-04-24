@@ -30,14 +30,10 @@ const SCARCITY_SHIFT = 2 ** 88;
 // Structs
 //
 
-struct CardModel {
+struct Card {
   artist_name: Uint256,
   season: felt,  // uint16
   scarcity: felt,  // uint8
-}
-
-struct Card {
-  model: CardModel,
   serial_number: felt,  // uint32
 }
 
@@ -48,11 +44,6 @@ struct Card {
 func _card_to_card_id{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
   card: Card
 ) -> (card_id: Uint256) {
-  alloc_locals;
-
-  with_attr error_message("card: Card not well formed") {
-    _assert_card_well_formed(card);
-  }
 
   // [XXX X X 000] [00000000] [00000000] [00000000] <- card_id
   //  |   | |
@@ -61,11 +52,11 @@ func _card_to_card_id{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_chec
   //   -------> serial_number
 
   let serial_number = card.serial_number * SERIAL_NUMBER_SHIFT;
-  let season = card.model.season * SEASON_SHIFT;
-  let scarcity = card.model.scarcity * SCARCITY_SHIFT;
+  let season = card.season * SEASON_SHIFT;
+  let scarcity = card.scarcity * SCARCITY_SHIFT;
 
   return (
-    card_id=Uint256(card.model.artist_name.low, card.model.artist_name.high + serial_number + season + scarcity),
+    card_id=Uint256(card.artist_name.low, card.artist_name.high + serial_number + season + scarcity),
   );
 }
 
@@ -98,8 +89,7 @@ func _card_id_to_card{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, bitwise_pt
 
   let bitwise_ptr = bitwise_ptr + 4 * BitwiseBuiltin.SIZE;
 
-  let card_model = CardModel(artist_name, season, scarcity);
-  return (Card(card_model, serial_number),);
+  return (Card(artist_name, season, scarcity, serial_number),);
 }
 
 // Guards
@@ -108,7 +98,9 @@ func _assert_artist_name_is_valid{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*
   artist_name: Uint256
 ) {
   with_attr error_message("Invalid artist name") {
-    assert_not_zero(artist_name.low * artist_name.high);
+    uint256_check(artist_name);
+    assert_not_zero(artist_name.low + artist_name.high);
+    assert_le(artist_name.high, ARTIST_NAME_HIGH_MASK);
   }
   return ();
 }
@@ -139,16 +131,10 @@ func _assert_serial_number_is_valid{syscall_ptr: felt*, pedersen_ptr: HashBuilti
   return ();
 }
 
-// Internals
-
 func _assert_card_well_formed{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(card: Card) {
-  with_attr error_message("Invalid artist name") {
-    uint256_check(card.model.artist_name);
-  }
-
-  _assert_artist_name_is_valid(card.model.artist_name);
-  _assert_season_is_valid(card.model.season);
-  _assert_scarcity_is_valid(card.model.scarcity);
+  _assert_artist_name_is_valid(card.artist_name);
+  _assert_season_is_valid(card.season);
+  _assert_scarcity_is_valid(card.scarcity);
   _assert_serial_number_is_valid(card.serial_number);
 
   return ();

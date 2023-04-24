@@ -20,7 +20,6 @@ from periphery.proxy.library import Proxy
 from ruleslabs.utils.metadata import Metadata, _assert_metadata_are_valid
 from ruleslabs.utils.card import (
   Card,
-  CardModel,
   _card_id_to_card,
   _card_to_card_id,
   _assert_card_well_formed
@@ -38,6 +37,8 @@ func rules_cards_address_storage() -> (rules_cards_address: felt) {
 }
 
 namespace Cards {
+
+  // Getters
 
   func card{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, bitwise_ptr: BitwiseBuiltin*, range_check_ptr}(
     card_id: Uint256
@@ -57,6 +58,35 @@ namespace Cards {
     return (card, metadata);
   }
 
+  func cardId{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    card: Card
+  ) -> (card_id: Uint256) {
+    let (card_id) = _card_to_card_id(card);
+    return (card_id,);
+  }
+
+  func card_exists{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(card_id: Uint256) -> (res: felt) {
+    let (metadata) = cards_metadata_storage.read(card_id);
+
+    // check old cards aswell ):
+    let (rules_cards_address) = rules_cards_address_storage.read();
+    if (rules_cards_address == 0) {
+      if (metadata.multihash_identifier == 0) {
+        return (FALSE,);
+      } else {
+        return (TRUE,);
+      }
+    }
+
+    let (_, old_card_metadata) = IRulesCards.getCard(rules_cards_address, card_id);
+
+    if (metadata.multihash_identifier + old_card_metadata.multihash_identifier == 0) {
+      return (FALSE,);
+    } else {
+      return (TRUE,);
+    }
+  }
+
   // Business logic
 
   func create_card{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
@@ -70,8 +100,8 @@ namespace Cards {
     _assert_card_well_formed(card);
 
     // Check if the serial_number is valid, given the scarcity supply
-    let (max_supply) = Scarcity.max_supply(card.model.season, card.model.scarcity);
-    with_attr error_message("RulesCards: Invalid Serial") {
+    let (max_supply) = Scarcity.max_supply(card.season, card.scarcity);
+    with_attr error_message("Cards: Invalid Serial") {
       assert_le(card.serial_number, max_supply);
     }
 
@@ -79,8 +109,8 @@ namespace Cards {
     let (local card_id) = _card_to_card_id(card);
 
     // assert does not already exists
-    let (exists) = _card_exists(card_id);
-    with_attr error_message("Packs: a common pack already exists for this season") {
+    let (exists) = card_exists(card_id);
+    with_attr error_message("Cards: this card already exists") {
       assert exists = FALSE;
     }
 
@@ -113,21 +143,5 @@ namespace Cards {
       card_ids + Uint256.SIZE
     );
     return ();
-  }
-
-  // Internals
-
-  func _card_exists{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(card_id: Uint256) -> (res: felt) {
-    let (metadata) = cards_metadata_storage.read(card_id);
-
-    // check old cards aswell ):
-    let (rules_cards_address) = rules_cards_address_storage.read();
-    let (_, old_card_metadata) = IRulesCards.getCard(rules_cards_address, card_id);
-
-    if (metadata.multihash_identifier + old_card_metadata.multihash_identifier == 0) {
-      return (FALSE,);
-    } else {
-      return (TRUE,);
-    }
   }
 }

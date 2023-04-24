@@ -237,6 +237,10 @@ namespace ERC1155 {
   func mint{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     to: felt, token_id: Uint256, amount: Uint256, data_len: felt, data: felt*
   ) {
+    with_attr error_message("ERC1155: minting to null address is not allowed") {
+      assert_not_zero(to);
+    }
+
     // execute mint
     _mint(to, token_id, amount);
 

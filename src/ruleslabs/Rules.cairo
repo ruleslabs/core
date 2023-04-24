@@ -24,7 +24,7 @@ from ruleslabs.utils.card import Card
 
 // Constants
 
-from ruleslabs.utils.constants import MINTER_ROLE, CAPPER_ROLE, IDENTITY
+from ruleslabs.utils.constants import MINTER_ROLE_ID, CAPPER_ROLE_ID, IDENTITY
 
 // Init
 
@@ -39,6 +39,8 @@ func initialize{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
   Ownable.initialize(owner);
 
   AccessControl.initialize(owner);
+  AccessControl._grant_role(MINTER_ROLE_ID, owner);
+  AccessControl._grant_role(CAPPER_ROLE_ID, owner);
 
   Upgradeable.initialize();
 
@@ -76,7 +78,7 @@ func uri{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(id: Ui
 }
 
 @view
-func contractUri{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
+func contractURI{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (
   contractURI_len: felt,
   contractURI: felt*
 ) {
@@ -87,13 +89,13 @@ func contractUri{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
 // Roles
 
 @view
-func getMinterRole() -> (role: felt) {
-  return (MINTER_ROLE,);
+func MINTER_ROLE() -> (role: felt) {
+  return (MINTER_ROLE_ID,);
 }
 
 @view
-func getCapperRole() -> (role: felt) {
-  return (CAPPER_ROLE,);
+func CAPPER_ROLE() -> (role: felt) {
+  return (CAPPER_ROLE_ID,);
 }
 
 @view
@@ -144,6 +146,18 @@ func oldCard{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, bitwise_ptr: Bitwis
   return (card, metadata);
 }
 
+@view
+func cardId{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(card: Card) -> (card_id: Uint256) {
+  let (card_id) = Cards.cardId(card);
+  return (card_id,);
+}
+
+@view
+func cardExists{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(card_id: Uint256) -> (res: felt) {
+  let (exists) = Cards.card_exists(card_id);
+  return (exists,);
+}
+
 // packs
 
 @view
@@ -152,6 +166,12 @@ func pack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 ) -> (max_supply: felt, metadata: Metadata) {
   let (max_supply, metadata) = Packs.pack(pack_id);
   return (max_supply, metadata);
+}
+
+@view
+func packExists{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(pack_id: Uint256) -> (res: felt) {
+  let (exists) = Packs.pack_exists(pack_id);
+  return (exists,);
 }
 
 // Balance and supply
@@ -188,7 +208,7 @@ func isApprovedForAll{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_chec
 func getUnlocked{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
   owner: felt,
   token_id: Uint256
-) -> (amount: Uint256) {
+) -> (amount: felt) {
   let (amount) = Packs.unlocked(owner, token_id);
   return (amount,);
 }
@@ -237,13 +257,13 @@ func setApprovalForAll{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_che
 
 @external
 func addMinter{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(account: felt) {
-  AccessControl.grant_role(MINTER_ROLE, account);
+  AccessControl.grant_role(MINTER_ROLE_ID, account);
   return ();
 }
 
 @external
 func revokeMinter{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(account: felt) {
-  AccessControl.revoke_role(MINTER_ROLE, account);
+  AccessControl.revoke_role(MINTER_ROLE_ID, account);
   return ();
 }
 
@@ -251,13 +271,13 @@ func revokeMinter{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_pt
 
 @external
 func addCapper{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(account: felt) {
-  AccessControl.grant_role(CAPPER_ROLE, account);
+  AccessControl.grant_role(CAPPER_ROLE_ID, account);
   return ();
 }
 
 @external
 func revokeCapper{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(account: felt) {
-  AccessControl.revoke_role(CAPPER_ROLE, account);
+  AccessControl.revoke_role(CAPPER_ROLE_ID, account);
   return ();
 }
 
@@ -270,11 +290,14 @@ func createAndMintCard{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_che
   metadata: Metadata
 ) {
   // modifiers
-  AccessControl.only_role(MINTER_ROLE);
+  AccessControl.only_role(MINTER_ROLE_ID);
 
   // body
+
+  // create card
   let (card_id) = Cards.create_card(card, metadata);
 
+  // mint card
   let data = cast(0, felt*);
   ERC1155.mint(to, card_id, amount=Uint256(1, 0), data_len=0, data=data);
 
@@ -289,7 +312,7 @@ func createPack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
   metadata: Metadata
 ) -> (pack_id: Uint256) {
   // modifiers
-  AccessControl.only_role(MINTER_ROLE);
+  AccessControl.only_role(MINTER_ROLE_ID);
 
   // body
   let (pack_id) = Packs.create_pack(max_supply, metadata);
@@ -302,7 +325,7 @@ func createCommonPack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_chec
   metadata: Metadata
 ) -> (pack_id: Uint256) {
   // modifiers
-  AccessControl.only_role(MINTER_ROLE);
+  AccessControl.only_role(MINTER_ROLE_ID);
 
   // body
   let (pack_id) = Packs.create_common_pack(season, metadata);
@@ -311,17 +334,26 @@ func createCommonPack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_chec
 
 @external
 func mintPack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-  pack_id: Uint256,
   to: felt,
-  amount: Uint256
-) -> (token_id: Uint256) {
+  pack_id: Uint256,
+  amount: felt, // a Uint256 would be overkill
+  unlocked: felt
+) {
   // modifiers
-  AccessControl.only_role(MINTER_ROLE);
+  AccessControl.only_role(MINTER_ROLE_ID);
 
   // body
+  Packs.decrease_available_pack_supply(pack_id, amount);
+
   let data = cast(0, felt*);
-  ERC1155.mint(to, pack_id, amount, data_len=0, data=data);
-  return (pack_id,);
+  ERC1155.mint(to, pack_id, amount=Uint256(amount, 0), data_len=0, data=data);
+
+  if (unlocked == TRUE) {
+    Packs.unlock(to, pack_id, amount);
+    return ();
+  }
+
+  return ();
 }
 
 @external
@@ -334,7 +366,7 @@ func openPackFrom{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_pt
   metadata: Metadata*
 ) {
   // modifiers
-  AccessControl.only_role(MINTER_ROLE);
+  AccessControl.only_role(MINTER_ROLE_ID);
 
   // body
   Packs.open_pack_from(_from, pack_id, cards_len, cards, metadata_len, metadata);
@@ -349,7 +381,7 @@ func addScarcityForSeason{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_
   supply: felt
 ) -> (scarcity: felt) {
   // modifiers
-  AccessControl.only_role(CAPPER_ROLE);
+  AccessControl.only_role(CAPPER_ROLE_ID);
 
   let (scarcity) = Scarcity.add_scarcity(season, supply);
   return (scarcity,);
@@ -367,7 +399,7 @@ func safeTransferFrom{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_chec
   data: felt*
 ) {
   // assert there token is not a locked pack
-  _assert_unlocked(_from, token_id, amount);
+  _transfer_lock(_from, to, token_id, amount);
 
   ERC1155.safe_transfer_from(_from, to, token_id, amount, data_len, data);
   return ();
@@ -385,7 +417,7 @@ func safeBatchTransferFrom{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range
   data: felt*,
 ) {
   // assert there is not locked pack in the batch
-  _assert_unlocked_batch(_from, ids_len, ids, amounts);
+  _transfer_lock_batch(_from, to, ids_len, ids, amounts);
 
   ERC1155.safe_batch_transfer_from(_from, to, ids_len, ids, amounts_len, amounts, data_len, data);
   return ();
@@ -409,25 +441,25 @@ func renounceOwnership{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_che
 
 // Internals
 
-func _assert_unlocked{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+func _transfer_lock{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
   _from: felt,
+  to: felt,
   token_id: Uint256,
   amount: Uint256
 ) {
-  if (token_id.low * token_id.high == 0) {
+  if (token_id.low * token_id.high != 0) {
     return ();
   }
 
-  with_attr error_message("Rules: Cannot transfer locked packs") {
-    let (unlocked_amount) = Packs.unlocked(_from, token_id);
-    assert_le(amount.low, unlocked_amount.low); // Overkill to perform a Uint256 comparison
-  }
+  Packs.lock(_from, token_id, amount.low);
+  Packs.unlock(to, token_id, amount.low);
 
   return ();
 }
 
-func _assert_unlocked_batch{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+func _transfer_lock_batch{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
   _from: felt,
+  to: felt,
   ids_len: felt,
   ids: Uint256*,
   amounts: Uint256*,
@@ -437,9 +469,9 @@ func _assert_unlocked_batch{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, rang
     return ();
   }
 
-  _assert_unlocked(_from, [ids], [amounts]);
+  _transfer_lock(_from, to, [ids], [amounts]);
 
   // iterate
-  _assert_unlocked_batch(_from, ids_len - 1, ids + Uint256.SIZE, amounts + Uint256.SIZE);
+  _transfer_lock_batch(_from, to, ids_len - 1, ids + Uint256.SIZE, amounts + Uint256.SIZE);
   return ();
 }
