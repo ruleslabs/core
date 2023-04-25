@@ -17,7 +17,7 @@ from periphery.proxy.library import Proxy
 
 // Utils
 
-from ruleslabs.utils.metadata import Metadata, _assert_metadata_are_valid
+from ruleslabs.utils.metadata import Metadata, FeltMetadata, _assert_felt_metadata_are_valid
 from ruleslabs.utils.card import (
   Card,
   _card_id_to_card,
@@ -25,10 +25,15 @@ from ruleslabs.utils.card import (
   _assert_card_well_formed
 )
 
+// Constants
+
+from ruleslabs.utils.metadata import MULTIHASH_ID
+
 // Storage
 
+// Store a 32 bytes hash in a felt252 by passing the right nonce in the metadata to gain some space
 @storage_var
-func cards_metadata_storage(card_id: Uint256) -> (metadata: Metadata) {
+func cards_metadata_hash_storage(card_id: Uint256) -> (metadata_hash: felt) {
 }
 
 // deprecated
@@ -42,11 +47,18 @@ namespace Cards {
 
   func card{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, bitwise_ptr: BitwiseBuiltin*, range_check_ptr}(
     card_id: Uint256
-  ) -> (card: Card, metadata: Metadata) {
+  ) -> (card: Card, metadata: FeltMetadata) {
+    // get card
     let (card) = _card_id_to_card(card_id);
-    let (metadata) = cards_metadata_storage.read(card_id);
 
-    return (card, metadata);
+    // get metadata
+    let (metadata_hash) = cards_metadata_hash_storage.read(card_id);
+
+    if (metadata_hash == 0) {
+      return (card, FeltMetadata(0x0, 0x0)); // null metadata
+    } else {
+      return (card, FeltMetadata(metadata_hash, MULTIHASH_ID)); // TODO: valid uint256
+    }
   }
 
   func old_card{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, bitwise_ptr: BitwiseBuiltin*, range_check_ptr}(
@@ -66,12 +78,12 @@ namespace Cards {
   }
 
   func card_exists{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(card_id: Uint256) -> (res: felt) {
-    let (metadata) = cards_metadata_storage.read(card_id);
+    let (metadata_hash) = cards_metadata_hash_storage.read(card_id);
 
     // check old cards aswell ):
     let (rules_cards_address) = rules_cards_address_storage.read();
     if (rules_cards_address == 0) {
-      if (metadata.multihash_identifier == 0) {
+      if (metadata_hash == 0) {
         return (FALSE,);
       } else {
         return (TRUE,);
@@ -80,7 +92,7 @@ namespace Cards {
 
     let (old_card_exists) = IRulesCards.cardExists(rules_cards_address, card_id);
 
-    if (metadata.multihash_identifier + old_card_exists == 0) {
+    if (metadata_hash + old_card_exists == 0) {
       return (FALSE,);
     } else {
       return (TRUE,);
@@ -92,11 +104,11 @@ namespace Cards {
   // IMPORTANT: there is not protection against double card creation
   func create_card{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     card: Card,
-    metadata: Metadata
+    metadata: FeltMetadata
   ) -> (card_id: Uint256) {
     alloc_locals;
 
-    _assert_metadata_are_valid(metadata);
+    _assert_felt_metadata_are_valid(metadata);
 
     _assert_card_well_formed(card);
 
@@ -116,7 +128,7 @@ namespace Cards {
     }
 
     // get card id and save metadata
-    cards_metadata_storage.write(card_id, metadata);
+    cards_metadata_hash_storage.write(card_id, value=metadata.hash);
 
     return (card_id,);
   }
@@ -124,7 +136,7 @@ namespace Cards {
   func create_batch_of_cards{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     cards_len: felt,
     cards: Card*,
-    metadata: Metadata*,
+    metadata: FeltMetadata*,
     card_ids: Uint256*
   ) {
     // loop condition

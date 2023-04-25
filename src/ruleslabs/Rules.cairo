@@ -19,7 +19,7 @@ from ruleslabs.libraries.Scarcity import Scarcity
 
 // Utils
 
-from ruleslabs.utils.metadata import Metadata
+from ruleslabs.utils.metadata import Metadata, FeltMetadata
 from ruleslabs.utils.card import Card
 
 // Constants
@@ -133,7 +133,7 @@ func hasRole{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 @view
 func card{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, bitwise_ptr: BitwiseBuiltin*, range_check_ptr}(
   card_id: Uint256
-) -> (card: Card, metadata: Metadata) {
+) -> (card: Card, metadata: FeltMetadata) {
   let (card, metadata) = Cards.card(card_id);
   return (card, metadata);
 }
@@ -287,7 +287,7 @@ func revokeCapper{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_pt
 func createAndMintCard{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
   to: felt,
   card: Card,
-  metadata: Metadata
+  metadata: FeltMetadata
 ) {
   // modifiers
   AccessControl.only_role(MINTER_ROLE_ID);
@@ -363,7 +363,7 @@ func openPackFrom{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_pt
   cards_len: felt,
   cards: Card*,
   metadata_len: felt,
-  metadata: Metadata*
+  metadata: FeltMetadata*
 ) {
   // modifiers
   AccessControl.only_role(MINTER_ROLE_ID);

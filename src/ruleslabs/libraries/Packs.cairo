@@ -15,12 +15,13 @@ from ruleslabs.libraries.ERC1155.ERC1155 import ERC1155
 // Utils
 
 from ruleslabs.utils.memset import uint256_memset
-from ruleslabs.utils.metadata import Metadata, _assert_metadata_are_valid
+from ruleslabs.utils.metadata import FeltMetadata, Metadata, _assert_metadata_are_valid
 from ruleslabs.utils.card import Card, _assert_season_is_valid
 
 // Constants
 
 from ruleslabs.utils.card import SERIAL_NUMBER_MAX, SCARCITY_MIN
+from ruleslabs.utils.metadata import MULTIHASH_ID
 
 // Storage
 
@@ -37,7 +38,7 @@ func packs_available_supply_storage(pack_id: Uint256) -> (available_supply: felt
 }
 
 @storage_var
-func packs_metadata_storage(pack_id: Uint256) -> (metadata: Metadata) {
+func packs_metadata_hash_storage(pack_id: Uint256) -> (metadata_hash: Uint256) {
 }
 
 @storage_var
@@ -51,10 +52,10 @@ namespace Packs {
   func pack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     pack_id: Uint256
   ) -> (max_supply: felt, metadata: Metadata) {
-    let (metadata) = packs_metadata_storage.read(pack_id);
+    let (metadata_hash) = packs_metadata_hash_storage.read(pack_id);
     let (max_supply) = packs_max_supply_storage.read(pack_id);
 
-    return (max_supply, metadata);
+    return (max_supply, Metadata(metadata_hash, MULTIHASH_ID));
   }
 
   func unlocked{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
@@ -66,9 +67,9 @@ namespace Packs {
   }
 
   func pack_exists{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(pack_id: Uint256) -> (res: felt) {
-    let (metadata) = packs_metadata_storage.read(pack_id);
+    let (metadata_hash) = packs_metadata_hash_storage.read(pack_id);
 
-    if (metadata.multihash_identifier == 0) {
+    if (metadata_hash.low == 0) {
       return (FALSE,);
     } else {
       return (TRUE,);
@@ -121,7 +122,7 @@ namespace Packs {
     let pack_id = Uint256(supply + 1, 0);
 
     // store metadata
-    packs_metadata_storage.write(pack_id, metadata);
+    packs_metadata_hash_storage.write(pack_id, metadata.hash);
 
     // store max supply
     packs_max_supply_storage.write(pack_id, max_supply);
@@ -150,7 +151,7 @@ namespace Packs {
     }
 
     // store metadata
-    packs_metadata_storage.write(pack_id, metadata);
+    packs_metadata_hash_storage.write(pack_id, metadata.hash);
 
     return (pack_id,);
   }
@@ -161,7 +162,7 @@ namespace Packs {
     cards_len: felt,
     cards: Card*,
     metadata_len: felt,
-    metadata: Metadata*
+    metadata: FeltMetadata*
   ) {
     alloc_locals;
 
