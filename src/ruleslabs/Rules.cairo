@@ -213,6 +213,12 @@ func getUnlocked{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr
   return (amount,);
 }
 
+@view
+func marketplace{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (marketplace: felt) {
+  let (marketplace) = ERC1155.marketplace();
+  return (marketplace,);
+}
+
 //
 // Setters
 //
@@ -248,6 +254,16 @@ func setApprovalForAll{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_che
   approved: felt
 ) {
   ERC1155.set_approve_for_all(operator, approved);
+  return ();
+}
+
+@external
+func setMarketplace{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(marketplace: felt) {
+  // modifiers
+  Ownable.only_owner();
+
+  // body
+  ERC1155.set_marketplace(marketplace);
   return ();
 }
 

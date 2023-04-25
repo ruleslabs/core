@@ -9,6 +9,23 @@ from utils.misc import (
   SERIAL_NUMBER_MAX, get_declared_class, compute_card_id
 )
 
+# Marketplace
+
+async def _get_marketplace(ctx):
+  (marketplace,) = (
+    await ctx.rules.marketplace().call()
+  ).result
+  return marketplace
+
+
+async def _set_marketplace(ctx, signer_account_name, contract_addres):
+  await ctx.execute(
+    signer_account_name,
+    ctx.rules.contract_address,
+    'setMarketplace',
+    [contract_addres]
+  )
+
 
 # Cards
 
@@ -306,6 +323,13 @@ class ScenarioState:
 
   def __init__(self, ctx):
     self.ctx = ctx
+
+  # Marketplace
+
+  async def set_marketplace(self, signer_account_name, contract_name):
+    contract_address = get_account_address(self.ctx, contract_name)
+
+    await _set_marketplace(self.ctx, signer_account_name, contract_address)
 
   # Proxy
 
@@ -1163,3 +1187,35 @@ async def test_upgrade(ctx_factory):
       (OWNER, 'initialize', dict(params=[]), False),
     ]
   )
+
+
+@pytest.mark.asyncio
+async def test_settle_where_owner_set_marketplace(ctx_factory):
+  ctx = ctx_factory()
+
+  # Given
+  assert await _get_marketplace(ctx) == 0x0
+
+  # When
+  await run_scenario(
+    ctx,
+    [
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
+
+      (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=2, unlocked=True), True),
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), False),
+
+      (RANDO_2, 'set_marketplace', dict(contract_name=RANDO_2), False),
+      (OWNER, 'set_marketplace', dict(contract_name=RANDO_2), True),
+
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
+
+      (OWNER, 'set_marketplace', dict(contract_name=RANDO_3), True),
+
+      (RANDO_2, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), False),
+      (RANDO_3, 'safe_transfer', dict(token_id=to_uint(1), from_account_name=RANDO_1, to_account_name=RANDO_3, amount=1), True),
+    ]
+  )
+
+  # Then
+  assert await _get_marketplace(ctx) == get_account_address(ctx, RANDO_3)

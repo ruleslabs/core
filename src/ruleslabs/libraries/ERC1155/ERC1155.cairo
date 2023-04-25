@@ -77,6 +77,10 @@ func ERC1155_balances(owner: felt, token_id: Uint256) -> (balance: Uint256) {
 func ERC1155_operator_approvals(owner: felt, operator: felt) -> (res: felt) {
 }
 
+@storage_var
+func ERC1155_marketplace() -> (marketplace: felt) {
+}
+
 namespace ERC1155 {
 
   // Init
@@ -121,6 +125,11 @@ namespace ERC1155 {
     return (is_approved,);
   }
 
+  func marketplace{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}() -> (marketplace: felt) {
+    let (marketplace) = ERC1155_marketplace.read();
+    return (marketplace,);
+  }
+
   //
   // Setters
   //
@@ -156,6 +165,11 @@ namespace ERC1155 {
     // emit event
     ApprovalForAll.emit(caller, operator, approved);
 
+    return ();
+  }
+
+  func set_marketplace{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(marketplace: felt) {
+    ERC1155_marketplace.write(marketplace);
     return ();
   }
 
@@ -340,14 +354,25 @@ namespace ERC1155 {
     owner: felt
   ) -> (res: felt) {
     let (caller) = get_caller_address();
+
+    // is owner?
     if (owner == caller) {
       return (TRUE,);
     }
 
-    let (caller) = get_caller_address();
+    // is approved?
     let (is_approved) = approved_for_all(owner=owner, operator=caller);
+    if (is_approved == TRUE) {
+      return (TRUE,);
+    }
 
-    return (is_approved,);
+    // is marketplace?
+    let (marketplace_address) = marketplace(); // TODO: Replace with signatures mechanism
+    if (marketplace_address == caller) {
+      return (TRUE,);
+    } else {
+      return (FALSE,);
+    }
   }
 
   // Transfer
