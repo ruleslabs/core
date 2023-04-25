@@ -152,7 +152,7 @@ namespace Cards {
     create_batch_of_cards(
       cards_len - 1,
       cards + Card.SIZE,
-      metadata + Metadata.SIZE,
+      metadata + FeltMetadata.SIZE,
       card_ids + Uint256.SIZE
     );
     return ();

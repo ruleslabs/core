@@ -278,9 +278,17 @@ CAPPER_ROLE = 'CAPPER_ROLE'
 ROLES = dict(MINTER_ROLE='Minter', CAPPER_ROLE='Capper')
 
 METADATA_1 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1220))
+
 INVALID_METADATA_1 = dict(hash=(0x0, 0x1), multihash_identifier=(0x1220))
 INVALID_METADATA_2 = dict(hash=(0x1, 0x0), multihash_identifier=(0x1220))
 INVALID_METADATA_3 = dict(hash=(0x1, 0x1), multihash_identifier=(0x0))
+INVALID_METADATA_4 = dict(hash=(0x1, 0x1), multihash_identifier=(0x1221))
+
+FELT_METADATA_1 = dict(hash=(0x1), multihash_identifier=(0x1220))
+
+INVALID_FELT_METADATA_1 = dict(hash=(0x0), multihash_identifier=(0x1220))
+INVALID_FELT_METADATA_2 = dict(hash=(0x1), multihash_identifier=(0x0))
+INVALID_FELT_METADATA_3 = dict(hash=(0x1), multihash_identifier=(0x1221))
 
 ARTIST_1 = (0x416C7068612057616E6E, 0)
 ARTIST_2 = (0x6162636465666768696A6B6C6D6E6F70, 0x7172737475767778797A31)
@@ -424,10 +432,10 @@ async def test_settle_where_minter_create_valid_card(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=METADATA_1, to_account_name=RANDO_1), True),
-      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=METADATA_1, to_account_name=RANDO_1), False),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=FELT_METADATA_1, to_account_name=RANDO_1), True),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=FELT_METADATA_1, to_account_name=RANDO_1), False),
 
-      (MINTER, 'create_and_mint_card', dict(card=CARD_2, metadata=METADATA_1, to_account_name=RANDO_1), True),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_2, metadata=FELT_METADATA_1, to_account_name=RANDO_1), True),
     ]
   )
 
@@ -448,17 +456,17 @@ async def test_settle_where_minter_create_invalid_card(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, season=0), metadata=METADATA_1, to_account_name=RANDO_1), False),
-      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, serial_number=0), metadata=METADATA_1, to_account_name=RANDO_1), False),
-      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, season=2 ** 16), metadata=METADATA_1, to_account_name=RANDO_1), False),
-      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, scarcity=2 ** 8), metadata=METADATA_1, to_account_name=RANDO_1), False),
-      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, serial_number=2 ** 32), metadata=METADATA_1, to_account_name=RANDO_1), False),
+      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, season=0), metadata=FELT_METADATA_1, to_account_name=RANDO_1), False),
+      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, serial_number=0), metadata=FELT_METADATA_1, to_account_name=RANDO_1), False),
+      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, season=2 ** 16), metadata=FELT_METADATA_1, to_account_name=RANDO_1), False),
+      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, scarcity=2 ** 8), metadata=FELT_METADATA_1, to_account_name=RANDO_1), False),
+      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, serial_number=2 ** 32), metadata=FELT_METADATA_1, to_account_name=RANDO_1), False),
 
-      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=INVALID_METADATA_1, to_account_name=RANDO_1), False),
-      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=INVALID_METADATA_2, to_account_name=RANDO_1), False),
-      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=INVALID_METADATA_3, to_account_name=RANDO_1), False),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=INVALID_FELT_METADATA_1, to_account_name=RANDO_1), False),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=INVALID_FELT_METADATA_2, to_account_name=RANDO_1), False),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=INVALID_FELT_METADATA_3, to_account_name=RANDO_1), False),
 
-      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=METADATA_1, to_account_name=RANDO_1), True),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=FELT_METADATA_1, to_account_name=RANDO_1), True),
     ]
   )
 
@@ -653,14 +661,14 @@ async def test_settle_where_minter_create_card_with_invalid_serial_number(ctx_fa
     [
       (OWNER, 'add_scarcity_for_season', dict(season=1, supply=2), True),
 
-      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, scarcity=1, serial_number=3), metadata=METADATA_1, to_account_name=RANDO_1), False),
-      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, scarcity=1, serial_number=1), metadata=METADATA_1, to_account_name=RANDO_1), True),
-      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, scarcity=1, serial_number=2), metadata=METADATA_1, to_account_name=RANDO_1), True),
+      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, scarcity=1, serial_number=3), metadata=FELT_METADATA_1, to_account_name=RANDO_1), False),
+      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, scarcity=1, serial_number=1), metadata=FELT_METADATA_1, to_account_name=RANDO_1), True),
+      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, scarcity=1, serial_number=2), metadata=FELT_METADATA_1, to_account_name=RANDO_1), True),
 
       (OWNER, 'add_scarcity_for_season', dict(season=1, supply=1), True),
 
-      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, scarcity=2, serial_number=1), metadata=METADATA_1, to_account_name=RANDO_1), True),
-      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, scarcity=2, serial_number=2), metadata=METADATA_1, to_account_name=RANDO_1), False),
+      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, scarcity=2, serial_number=1), metadata=FELT_METADATA_1, to_account_name=RANDO_1), True),
+      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, scarcity=2, serial_number=2), metadata=FELT_METADATA_1, to_account_name=RANDO_1), False),
     ]
   )
 
@@ -686,12 +694,12 @@ async def test_settle_where_minter_create_and_mint_cards(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=METADATA_1, to_account_name=NULL), False),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=FELT_METADATA_1, to_account_name=NULL), False),
 
-      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=METADATA_1, to_account_name=MINTER), True),
-      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, serial_number=2), metadata=METADATA_1, to_account_name=RANDO_1), True),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=FELT_METADATA_1, to_account_name=MINTER), True),
+      (MINTER, 'create_and_mint_card', dict(card=update_dict(CARD_1, serial_number=2), metadata=FELT_METADATA_1, to_account_name=RANDO_1), True),
 
-      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=METADATA_1, to_account_name=MINTER), False),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=FELT_METADATA_1, to_account_name=MINTER), False),
     ]
   )
 
@@ -719,8 +727,8 @@ async def test_settle_where_minter_create_cards_and_mint_them(ctx_factory):
   await run_scenario(
     ctx,
     [
-      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=METADATA_1, to_account_name=MINTER), True),
-      (MINTER, 'create_and_mint_card', dict(card=CARD_2, metadata=METADATA_1, to_account_name=RANDO_1), True),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=FELT_METADATA_1, to_account_name=MINTER), True),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_2, metadata=FELT_METADATA_1, to_account_name=RANDO_1), True),
     ]
   )
 
@@ -893,6 +901,7 @@ async def test_settle_where_minter_create_valid_and_invalid_packs(ctx_factory):
       (MINTER, 'create_pack', dict(max_supply=0x42, metadata=INVALID_METADATA_1), False),
       (MINTER, 'create_pack', dict(max_supply=0x42, metadata=INVALID_METADATA_2), False),
       (MINTER, 'create_pack', dict(max_supply=0x42, metadata=INVALID_METADATA_3), False),
+      (MINTER, 'create_pack', dict(max_supply=0x42, metadata=INVALID_METADATA_4), False),
       (MINTER, 'create_pack', dict(max_supply=0x42, metadata=METADATA_1), True),
     ]
   )
@@ -926,6 +935,7 @@ async def test_settle_where_minter_create_valid_and_invalid_common_packs(ctx_fac
       (MINTER, 'create_common_pack', dict(season=40, metadata=INVALID_METADATA_1), False),
       (MINTER, 'create_common_pack', dict(season=40, metadata=INVALID_METADATA_2), False),
       (MINTER, 'create_common_pack', dict(season=40, metadata=INVALID_METADATA_3), False),
+      (MINTER, 'create_common_pack', dict(season=40, metadata=INVALID_METADATA_4), False),
       (MINTER, 'create_common_pack', dict(season=40, metadata=METADATA_1), True),
     ]
   )
@@ -999,15 +1009,15 @@ async def test_settle_where_owner_open_common_packs_1(ctx_factory):
       (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_2], metadata=[METADATA_1], from_account_name=RANDO_1), False),
 
       # cannot double mint
-      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_1], metadata=[METADATA_1, METADATA_1], from_account_name=RANDO_1), False),
-      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1], metadata=[METADATA_1], from_account_name=RANDO_1), True),
-      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1], metadata=[METADATA_1], from_account_name=RANDO_1), False),
+      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1, CARD_1], metadata=[FELT_METADATA_1, FELT_METADATA_1], from_account_name=RANDO_1), False),
+      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1], metadata=[FELT_METADATA_1], from_account_name=RANDO_1), True),
+      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1], metadata=[FELT_METADATA_1], from_account_name=RANDO_1), False),
 
       # cannot mint card twice
-      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=METADATA_1, to_account_name=RANDO_2), False),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_1, metadata=FELT_METADATA_1, to_account_name=RANDO_2), False),
 
       # multiples cards
-      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1_2, CARD_2_2], metadata=[METADATA_1, METADATA_1], from_account_name=RANDO_1), True),
+      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1 << 128), cards=[CARD_1_2, CARD_2_2], metadata=[FELT_METADATA_1, FELT_METADATA_1], from_account_name=RANDO_1), True),
     ]
   )
 
@@ -1046,12 +1056,12 @@ async def test_settle_where_owner_open_classic_packs_1(ctx_factory):
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=3), True),
 
-      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_1_2], metadata=[METADATA_1, METADATA_1, METADATA_1], from_account_name=RANDO_1), True),
-      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1), cards=[CARD_3], metadata=[METADATA_1, METADATA_1], from_account_name=RANDO_1), False),
+      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1), cards=[CARD_1, CARD_2, CARD_1_2], metadata=[FELT_METADATA_1, FELT_METADATA_1, FELT_METADATA_1], from_account_name=RANDO_1), True),
+      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1), cards=[CARD_3], metadata=[FELT_METADATA_1, FELT_METADATA_1], from_account_name=RANDO_1), False),
 
-      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1), cards=[CARD_3], metadata=[METADATA_1], from_account_name=RANDO_1), False),
+      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1), cards=[CARD_3], metadata=[FELT_METADATA_1], from_account_name=RANDO_1), False),
       (OWNER, 'add_scarcity_for_season', dict(season=1, supply=1), True),
-      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1), cards=[CARD_3], metadata=[METADATA_1], from_account_name=RANDO_1), True),
+      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1), cards=[CARD_3], metadata=[FELT_METADATA_1], from_account_name=RANDO_1), True),
     ]
   )
 
@@ -1085,9 +1095,9 @@ async def test_settle_where_owner_open_classic_packs_2(ctx_factory):
 
       (MINTER, 'mint_pack', dict(pack_id=to_uint(1), to_account_name=RANDO_1, amount=1), True),
 
-      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1), cards=[CARD_3_1, CARD_3_2, CARD_3_3], metadata=[METADATA_1, METADATA_1, METADATA_1], from_account_name=RANDO_1), True),
-      (MINTER, 'create_and_mint_card', dict(card=CARD_3_4, metadata=METADATA_1, to_account_name=RANDO_2), True),
-      (MINTER, 'create_and_mint_card', dict(card=CARD_3_5, metadata=METADATA_1, to_account_name=RANDO_2), False),
+      (OWNER, 'open_pack_from', dict(pack_id=to_uint(1), cards=[CARD_3_1, CARD_3_2, CARD_3_3], metadata=[FELT_METADATA_1, FELT_METADATA_1, FELT_METADATA_1], from_account_name=RANDO_1), True),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_3_4, metadata=FELT_METADATA_1, to_account_name=RANDO_2), True),
+      (MINTER, 'create_and_mint_card', dict(card=CARD_3_5, metadata=FELT_METADATA_1, to_account_name=RANDO_2), False),
     ]
   )
 
