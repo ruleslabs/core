@@ -11,7 +11,7 @@ from starkware.starknet.compiler.compile import get_selector_from_name
 from utils.Signer import Signer
 from utils.misc import (
   declare, deploy_proxy, serialize_contract, unserialize_contract, serialize_class, unserialize_class,
-  set_block_timestamp, uint, str_to_felt, to_starknet_args,
+  set_block_timestamp
 )
 from utils.TransactionSender import TransactionSender
 

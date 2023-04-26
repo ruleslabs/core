@@ -26,7 +26,6 @@ class TransactionSender():
     nonce: Optional[int] = None,
     max_fee: Optional[int] = 0
   ) -> TransactionExecutionInfo :
-    calls_with_selector = [(call[0], get_selector_from_name(call[1]), call[2]) for call in calls]
     call_array, calldata = from_call_to_call_array(calls)
 
     raw_invocation = self.account.__execute__(call_array, calldata)
@@ -47,11 +46,11 @@ class TransactionSender():
 
     external_tx = InvokeFunction(
       sender_address=self.account.contract_address,
-      entry_point_selector=None,
-      version=TRANSACTION_VERSION,
       calldata=raw_invocation.calldata,
+      entry_point_selector=None,
       signature=signature,
       max_fee=max_fee,
+      version=TRANSACTION_VERSION,
       nonce=nonce,
     )
 

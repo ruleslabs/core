@@ -2,7 +2,6 @@ import os
 
 import inspect
 import periphery
-import ruleslabs
 
 from functools import reduce
 from pathlib import Path
