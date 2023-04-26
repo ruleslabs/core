@@ -365,8 +365,8 @@ func mintPack{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
   ERC1155.mint(to, pack_id, amount=Uint256(amount, 0), data_len=0, data=data);
 
   if (unlocked == TRUE) {
-    Packs.unlock(to, pack_id, amount);
-    return ();
+  Packs.unlock(to, pack_id, amount);
+  return ();
   }
 
   return ();
@@ -464,7 +464,7 @@ func _transfer_lock{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_
   amount: Uint256
 ) {
   if (token_id.low * token_id.high != 0) {
-    return ();
+  return ();
   }
 
   Packs.lock(_from, token_id, amount.low);
@@ -482,7 +482,7 @@ func _transfer_lock_batch{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_
 ) {
   // condition
   if (ids_len == 0) {
-    return ();
+  return ();
   }
 
   _transfer_lock(_from, to, [ids], [amounts]);
