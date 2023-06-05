@@ -2,8 +2,8 @@ use starknet::testing;
 use debug::PrintTrait;
 
 // locals
-use rules_core::typed_data::TypedDataTrait;
-use rules_core::typed_data::voucher::Voucher;
+use rules_tokens::typed_data::TypedDataTrait;
+use rules_tokens::typed_data::voucher::Voucher;
 
 fn CHAIN_ID() -> felt252 {
   'SN_MAIN'

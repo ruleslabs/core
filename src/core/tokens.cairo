@@ -1,11 +1,11 @@
 use array::SpanTrait;
-use rules_core::utils::serde::SpanSerde;
+use rules_tokens::utils::serde::SpanSerde;
 
 // locals
-use rules_core::typed_data::voucher::Voucher;
+use rules_tokens::typed_data::voucher::Voucher;
 
 #[abi]
-trait RulesCoreABI {
+trait RulesTokensABI {
   #[view]
   fn voucher_signer() -> starknet::ContractAddress;
 
@@ -14,15 +14,15 @@ trait RulesCoreABI {
 }
 
 #[contract]
-mod RulesCore {
+mod RulesTokens {
   use array::SpanTrait;
   use rules_erc1155::erc1155::ERC1155;
   use rules_account::account;
 
   // locals
-  use rules_core::typed_data::TypedDataTrait;
+  use rules_tokens::typed_data::TypedDataTrait;
   use super::Voucher;
-  use super::super::interface::IRulesCore;
+  use super::super::interface::IRulesTokens;
 
   // dispatchers
   use rules_account::account::{ AccountABIDispatcher, AccountABIDispatcherTrait };
@@ -51,7 +51,7 @@ mod RulesCore {
   // impls
   //
 
-  impl RulesCore of IRulesCore {
+  impl RulesTokens of IRulesTokens {
     fn voucher_signer() -> starknet::ContractAddress {
       _voucher_signer::read()
     }
@@ -79,7 +79,7 @@ mod RulesCore {
 
   #[view]
   fn voucher_signer() -> starknet::ContractAddress {
-    RulesCore::voucher_signer()
+    RulesTokens::voucher_signer()
   }
 
   // ERC165
@@ -117,7 +117,7 @@ mod RulesCore {
 
   #[external]
   fn redeem_voucher(voucher: Voucher, signature: Span<felt252>) {
-    RulesCore::redeem_voucher(:voucher, :signature);
+    RulesTokens::redeem_voucher(:voucher, :signature);
   }
 
   //

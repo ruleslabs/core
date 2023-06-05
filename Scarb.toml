@@ -1,9 +1,9 @@
 [package]
-name = "rules_core"
+name = "rules_tokens"
 version = "0.1.0"
 
 [lib]
-name = "rules_core"
+name = "rules_tokens"
 
 # See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest
 

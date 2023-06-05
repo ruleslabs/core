@@ -5,14 +5,14 @@ use debug::PrintTrait;
 use alexandria_data_structures::array_ext::ArrayTraitExt;
 
 // locals
-use rules_core::core::RulesCore;
-use rules_core::typed_data::voucher::Voucher;
+use rules_tokens::core::RulesTokens;
+use rules_tokens::typed_data::voucher::Voucher;
 use super::mocks::signer::Signer;
 use super::utils;
 
 // dispatchers
 use rules_account::account::{ AccountABIDispatcher, AccountABIDispatcherTrait };
-use rules_core::core::{ RulesCoreABIDispatcher, RulesCoreABIDispatcherTrait };
+use rules_tokens::core::{ RulesTokensABIDispatcher, RulesTokensABIDispatcherTrait };
 
 fn URI() -> Array<felt252> {
   let mut uri = ArrayTrait::new();
@@ -54,7 +54,7 @@ fn VOUCHER_SIGNER_PUBLIC_KEY() -> felt252 {
   883045738439352841478194533192765345509759306772397516907181243450667673002
 }
 
-fn setup() -> RulesCoreABIDispatcher {
+fn setup() -> RulesTokensABIDispatcher {
   // setup chain id to compute vouchers hashes
   testing::set_chain_id(CHAIN_ID());
 
@@ -67,8 +67,8 @@ fn setup() -> RulesCoreABIDispatcher {
   calldata.append_all(ref uri);
   calldata.append(voucher_signer.contract_address.into());
 
-  let rules_core_address = utils::deploy(RulesCore::TEST_CLASS_HASH, calldata);
-  RulesCoreABIDispatcher { contract_address: rules_core_address }
+  let rules_tokens_address = utils::deploy(RulesTokens::TEST_CLASS_HASH, calldata);
+  RulesTokensABIDispatcher { contract_address: rules_tokens_address }
 }
 
 fn setup_voucher_signer() -> AccountABIDispatcher {
@@ -82,14 +82,14 @@ fn setup_voucher_signer() -> AccountABIDispatcher {
 #[test]
 #[available_gas(20000000)]
 fn test__verify_voucher_signature_valid() {
-  let rules_core = setup();
-  let voucher_signer = rules_core.voucher_signer();
+  let rules_tokens = setup();
+  let voucher_signer = rules_tokens.voucher_signer();
 
   let voucher = VOUCHER_1();
   let signature = VOUCHER_SIGNATURE_1();
 
   assert(
-    RulesCore::_is_voucher_signature_valid(:voucher, :signature, signer: voucher_signer),
+    RulesTokens::_is_voucher_signature_valid(:voucher, :signature, signer: voucher_signer),
     'Invalid voucher signature'
   );
 }
@@ -97,15 +97,15 @@ fn test__verify_voucher_signature_valid() {
 #[test]
 #[available_gas(20000000)]
 fn test__is_voucher_signature_valid_success() {
-  let rules_core = setup();
-  let voucher_signer = rules_core.voucher_signer();
+  let rules_tokens = setup();
+  let voucher_signer = rules_tokens.voucher_signer();
 
   let mut voucher = VOUCHER_1();
   voucher.amount += 1;
   let signature = VOUCHER_SIGNATURE_1();
 
   assert(
-    !RulesCore::_is_voucher_signature_valid(:voucher, :signature, signer: voucher_signer),
+    !RulesTokens::_is_voucher_signature_valid(:voucher, :signature, signer: voucher_signer),
     'Invalid voucher signature'
   );
 }
@@ -113,15 +113,15 @@ fn test__is_voucher_signature_valid_success() {
 #[test]
 #[available_gas(20000000)]
 fn test__is_voucher_signature_valid_failure() {
-  let rules_core = setup();
-  let voucher_signer = rules_core.voucher_signer();
+  let rules_tokens = setup();
+  let voucher_signer = rules_tokens.voucher_signer();
 
   let mut voucher = VOUCHER_1();
   voucher.amount += 1;
   let signature = VOUCHER_SIGNATURE_1();
 
   assert(
-    !RulesCore::_is_voucher_signature_valid(:voucher, :signature, signer: voucher_signer),
+    !RulesTokens::_is_voucher_signature_valid(:voucher, :signature, signer: voucher_signer),
     'Invalid voucher signature'
   );
 }
@@ -130,26 +130,26 @@ fn test__is_voucher_signature_valid_failure() {
 #[available_gas(20000000)]
 #[should_panic(expected: ('Invalid voucher signature', 'ENTRYPOINT_FAILED'))]
 fn test_redeem_voucher_invalid_signature() {
-  let rules_core = setup();
-  let voucher_signer = rules_core.voucher_signer();
+  let rules_tokens = setup();
+  let voucher_signer = rules_tokens.voucher_signer();
 
   let mut voucher = VOUCHER_1();
   voucher.nonce += 1;
   let signature = VOUCHER_SIGNATURE_1();
 
-  rules_core.redeem_voucher(:voucher, :signature);
+  rules_tokens.redeem_voucher(:voucher, :signature);
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Voucher already consumed', 'ENTRYPOINT_FAILED'))]
 fn test_redeem_voucher_already_consumed() {
-  let rules_core = setup();
-  let voucher_signer = rules_core.voucher_signer();
+  let rules_tokens = setup();
+  let voucher_signer = rules_tokens.voucher_signer();
 
   let voucher = VOUCHER_1();
   let signature = VOUCHER_SIGNATURE_1();
 
-  rules_core.redeem_voucher(:voucher, :signature);
-  rules_core.redeem_voucher(:voucher, :signature);
+  rules_tokens.redeem_voucher(:voucher, :signature);
+  rules_tokens.redeem_voucher(:voucher, :signature);
 }

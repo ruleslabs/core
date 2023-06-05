@@ -1,2 +1,2 @@
 [crate_roots]
-rules_core = "src"
+rules_tokens = "src"
