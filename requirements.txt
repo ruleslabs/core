@@ -1,2 +1,0 @@
-ruleslabs-periphery
-openzeppelin-cairo-contracts

@@ -1,0 +1,14 @@
+[package]
+name = "rules_core"
+version = "0.1.0"
+
+[lib]
+name = "rules_core"
+
+# See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest
+
+[dependencies]
+rules_erc1155 = { git = "https://github.com/ruleslabs/starknet-erc-1155.git" }
+starknet = ">=1.0.0"
+
+[[target.starknet-contract]]
