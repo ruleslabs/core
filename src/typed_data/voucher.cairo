@@ -5,7 +5,7 @@ use box::BoxTrait;
 use super::constants;
 use super::typed_data::Message;
 
-#[derive(Serde, Drop)]
+#[derive(Serde, Copy, Drop)]
 struct Voucher {
   receiver: starknet::ContractAddress,
   token_id: u256,
