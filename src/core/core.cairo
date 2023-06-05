@@ -1,13 +1,27 @@
+use rules_core::typed_data::voucher::Voucher;
+
+#[abi]
+trait RulesCoreABI {
+  #[view]
+  fn voucher_signer() -> starknet::ContractAddress;
+
+  #[external]
+  fn redeem_voucher(voucher: Voucher, signature: Array<felt252>);
+}
+
 #[contract]
 mod RulesCore {
   use array::Array;
-  use rules_account::account::{ AccountABIDispatcher, AccountABIDispatcherTrait };
   use rules_erc1155::erc1155::ERC1155;
+  use rules_account::account;
 
-  use rules_core::typed_data::voucher::Voucher;
+  // locals
   use rules_core::typed_data::TypedDataTrait;
-
+  use super::Voucher;
   use super::super::interface::IRulesCore;
+
+  // dispatchers
+  use rules_account::account::{ AccountABIDispatcher, AccountABIDispatcherTrait };
 
   //
   // Storage
@@ -15,7 +29,7 @@ mod RulesCore {
 
   struct Storage {
     // (receiver, nonce) -> (consumed)
-    _consumed_vouchers_nonce: LegacyMap<(starknet::ContractAddress, felt252), bool>,
+    _consumed_vouchers: LegacyMap<(starknet::ContractAddress, felt252), bool>,
     _voucher_signer: starknet::ContractAddress,
   }
 
@@ -33,11 +47,30 @@ mod RulesCore {
   //
 
   impl RulesCore of IRulesCore {
+    fn voucher_signer() -> starknet::ContractAddress {
+      _voucher_signer::read()
+    }
+
     fn redeem_voucher(voucher: Voucher, signature: Array<felt252>) {
-      _consume_voucher_nonce(:voucher);
-      _verify_voucher_signature(:voucher, :signature);
+      // check nonce
+      assert(!_is_voucher_consumed(:voucher), 'Voucher already consumed');
+
+      // check signature
+      let voucher_signer_ = _voucher_signer::read();
+      assert(_is_voucher_signature_valid(:voucher, :signature, signer: voucher_signer_), 'Invalid voucher signature');
     }
   }
+
+  // ERC1155
+
+  // Getters
+
+  #[view]
+  fn voucher_signer() -> starknet::ContractAddress {
+    RulesCore::voucher_signer()
+  }
+
+  // Voucher
 
   #[external]
   fn redeem_voucher(voucher: Voucher, signature: Array<felt252>) {
@@ -58,22 +91,27 @@ mod RulesCore {
   // Voucher
 
   #[internal]
-  fn _verify_voucher_signature(voucher: Voucher, signature: Array<felt252>) {
-    let voucher_signer_ = _voucher_signer::read();
-
+  fn _is_voucher_signature_valid(
+    voucher: Voucher,
+    signature: Array<felt252>,
+    signer: starknet::ContractAddress
+  ) -> bool {
     // compute voucher message hash
-    let hash = voucher.compute_hash_from(from: voucher_signer_);
+    let hash = voucher.compute_hash_from(from: signer);
 
-    // validate signature
-    let voucher_signer_account = AccountABIDispatcher { contract_address: voucher_signer_ };
-    voucher_signer_account.is_valid_signature(message: hash, :signature);
+    // check signature
+    let signer_account = AccountABIDispatcher { contract_address: signer };
+    signer_account.is_valid_signature(message: hash, :signature) == account::interface::ERC1271_VALIDATED
   }
 
-  // assert nonce has not been already consumed and consume it
   #[internal]
-  fn _consume_voucher_nonce(voucher: Voucher) {
-    assert(!_consumed_vouchers_nonce::read((voucher.receiver, voucher.nonce)), 'Voucher already consumed');
-    _consumed_vouchers_nonce::write((voucher.receiver, voucher.nonce), true);
+  fn _is_voucher_consumed(voucher: Voucher) -> bool {
+    _consumed_vouchers::read((voucher.receiver, voucher.nonce))
+  }
+
+  #[internal]
+  fn _consume_voucher(voucher: Voucher) {
+    _consumed_vouchers::write((voucher.receiver, voucher.nonce), true);
   }
 }
 

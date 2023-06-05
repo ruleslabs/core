@@ -1,4 +1,4 @@
 mod core;
-use core::RulesCore;
+use core::{ RulesCore, RulesCoreABIDispatcher, RulesCoreABIDispatcherTrait };
 
 mod interface;
