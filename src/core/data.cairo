@@ -25,8 +25,11 @@ trait RulesDataABI {
 
 #[contract]
 mod RulesData {
+  use zeroable::Zeroable;
+
   // locals
   use super::{ Scarcity, ScarcityTrait, CardModel, CardModelTrait, Metadata, MetadataTrait };
+  use rules_tokens::utils::zeroable::CardModelZeroable;
   use super::super::interface::{ IRulesData };
   use rules_tokens::utils::storage::{ ScarcityStorageAccess, CardModelStorageAccess, MetadataStorageAccess };
 
@@ -76,7 +79,7 @@ mod RulesData {
 
       // assert card model does not already exists
       let card_model_id = new_card_model.id();
-      assert(!card_model(:card_model_id).is_valid(), 'Card model already exists');
+      assert(card_model(:card_model_id).is_zero(), 'Card model already exists');
 
       _card_models::write(card_model_id, new_card_model);
 

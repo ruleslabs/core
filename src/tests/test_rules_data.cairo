@@ -1,8 +1,11 @@
 // locals
-use rules_tokens::core::data::RulesData;
+use rules_tokens::core::data::{ RulesData, CardModelTrait };
 use rules_tokens::core::interface::{ CardModel, Scarcity, Metadata, METADATA_MULTIHASH_IDENTIFIER };
+use rules_tokens::utils::partial_eq::{ CardModelEq, ScarcityEq };
+use rules_tokens::utils::zeroable::{ CardModelZeroable, ScarcityZeroable };
 use super::utils;
-use super::utils::partial_eq::{ CardModelEq, ScarcityEq, MetadataEq };
+use super::utils::partial_eq::MetadataEq;
+use super::utils::zeroable::MetadataZeroable;
 
 // dispatchers
 use rules_tokens::core::data::{ RulesDataABIDispatcher, RulesDataABIDispatcherTrait };
@@ -29,18 +32,10 @@ fn CARD_MODEL_ID() -> u128 {
   0x03096242471061f433ba6a63130aa948
 }
 
-fn setup() -> RulesDataABIDispatcher {
-  let rules_data = setup_rules_data();
+fn setup() {
+  RulesData::constructor();
 
-  rules_data.add_card_model(CARD_MODEL(), METADATA());
-
-  rules_data
-}
-
-fn setup_rules_data() -> RulesDataABIDispatcher {
-  let rules_data_address = utils::deploy(RulesData::TEST_CLASS_HASH, calldata: ArrayTrait::new());
-
-  RulesDataABIDispatcher { contract_address: rules_data_address }
+  RulesData::add_card_model(CARD_MODEL(), METADATA());
 }
 
 // Card model
@@ -48,44 +43,161 @@ fn setup_rules_data() -> RulesDataABIDispatcher {
 #[test]
 #[available_gas(20000000)]
 fn test_get_card_model() {
-  let rules_data = setup();
+  setup();
+
   let card_model = CARD_MODEL();
   let card_model_id = CARD_MODEL_ID();
 
-  assert(rules_data.card_model(:card_model_id) == card_model, 'Invalid card model');
+  assert(RulesData::card_model(:card_model_id) == card_model, 'Invalid card model');
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test_get_card_model_metadata() {
-  let rules_data = setup();
+  setup();
+
   let metadata = METADATA();
   let card_model_id = CARD_MODEL_ID();
 
-  assert(rules_data.card_model_metadata(:card_model_id) == metadata, 'Invalid card model');
+  assert(RulesData::card_model_metadata(:card_model_id) == metadata, 'Invalid metadata');
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test_add_card_model_returns_valid_id() {
-  let rules_data = setup_rules_data();
   let card_model = CARD_MODEL();
   let metadata = METADATA();
 
-  let card_model_id = rules_data.add_card_model(new_card_model: card_model, :metadata);
+  let card_model_id = RulesData::add_card_model(new_card_model: card_model, :metadata);
 
   assert(card_model_id == CARD_MODEL_ID(), 'Invalid card model id');
 }
 
 #[test]
 #[available_gas(20000000)]
-#[should_panic(expected: ('Card model already exists', 'ENTRYPOINT_FAILED'))]
+fn test_multiple_add_card_model() {
+  setup();
+
+  let metadata = METADATA();
+
+  // add card model
+
+  let mut card_model = CARD_MODEL();
+  card_model.artist_name += 1;
+
+  assert_state_before_add_card_model(:card_model);
+
+  let card_model_id = RulesData::add_card_model(new_card_model: card_model, :metadata);
+
+  assert_state_after_add_card_model(:card_model, :metadata);
+
+  // add card model
+
+  card_model = CARD_MODEL();
+  card_model.season += 1;
+
+  assert_state_before_add_card_model(:card_model);
+
+  let card_model_id = RulesData::add_card_model(new_card_model: card_model, :metadata);
+
+  assert_state_after_add_card_model(:card_model, :metadata);
+
+  // add card model
+
+  card_model = CARD_MODEL();
+  card_model.scarcity += 1;
+
+  assert_state_before_add_card_model(:card_model);
+
+  let card_model_id = RulesData::add_card_model(new_card_model: card_model, :metadata);
+
+  assert_state_after_add_card_model(:card_model, :metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Card model already exists',))]
 fn test_add_card_model_already_exists() {
-  let rules_data = setup();
+  setup();
+
   let card_model = CARD_MODEL();
   let metadata = METADATA();
 
-  rules_data.add_card_model(new_card_model: card_model, :metadata);
+  RulesData::add_card_model(new_card_model: card_model, :metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Invalid card model',))]
+fn test_add_card_model_invalid_artist_name() {
+  setup();
+
+  let mut card_model = CARD_MODEL();
+  let metadata = METADATA();
+
+  card_model.artist_name = 0;
+
+  RulesData::add_card_model(new_card_model: card_model, :metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Invalid card model',))]
+fn test_add_card_model_invalid_season() {
+  setup();
+
+  let mut card_model = CARD_MODEL();
+  let metadata = METADATA();
+
+  card_model.season = 0;
+
+  RulesData::add_card_model(new_card_model: card_model, :metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Invalid metadata',))]
+fn test_add_card_model_invalid_metadata_multihash_id() {
+  setup();
+
+  let card_model = CARD_MODEL();
+  let mut metadata = METADATA();
+
+  metadata.multihash_identifier += 1;
+
+  RulesData::add_card_model(new_card_model: card_model, :metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Invalid metadata',))]
+fn test_add_card_model_invalid_metadata_hash() {
+  setup();
+
+  let card_model = CARD_MODEL();
+  let mut metadata = METADATA();
+
+  metadata.hash = 0;
+
+  RulesData::add_card_model(new_card_model: card_model, :metadata);
 }
 
 // Scarcity
+
+//
+// Utils
+//
+
+fn assert_state_before_add_card_model(card_model: CardModel) {
+  let card_model_id = card_model.id();
+
+  assert(RulesData::card_model(:card_model_id) == CardModelZeroable::zero(), 'Invalid card model');
+  assert(RulesData::card_model_metadata(:card_model_id) == MetadataZeroable::zero(), 'Invalid metadata');
+}
+
+fn assert_state_after_add_card_model(card_model: CardModel, metadata: Metadata) {
+  let card_model_id = card_model.id();
+
+  assert(RulesData::card_model(:card_model_id) == card_model, 'Invalid card model');
+  assert(RulesData::card_model_metadata(:card_model_id) == metadata, 'Invalid metadata');
+}

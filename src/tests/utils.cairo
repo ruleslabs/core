@@ -1,4 +1,5 @@
 mod partial_eq;
+mod zeroable;
 
 use array::ArrayTrait;
 use core::result::ResultTrait;
