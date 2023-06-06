@@ -8,7 +8,7 @@ name = "rules_tokens"
 # See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest
 
 [dependencies]
-alexandria_data_structures = { git = "https://github.com/keep-starknet-strange/alexandria.git" }
+alexandria_data_structures = { git = "https://github.com/0xChqrles/alexandria.git" }
 rules_erc1155 = { git = "https://github.com/ruleslabs/starknet-erc-1155.git" }
 starknet = ">=1.0.0"
 

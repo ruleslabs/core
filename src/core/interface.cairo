@@ -1,10 +1,15 @@
+use traits::{ Into, TryInto };
 use array::ArrayTrait;
 use zeroable::Zeroable;
+use option::OptionTrait;
 
+use rules_tokens::utils::zeroable::U128Zeroable;
 use rules_tokens::typed_data::voucher::Voucher;
 use rules_tokens::utils::serde::SpanSerde;
 
-#[derive(Serde, Drop)]
+// Scarcity
+
+#[derive(Serde, Copy, Drop)]
 struct Scarcity {
   max_supply: u128,
   name: felt252,
@@ -15,27 +20,8 @@ struct Scarcity {
 #[derive(Serde, Copy, Drop)]
 struct CardModel {
   artist_name: felt252,
-  scarcity: felt252,
   season: felt252,
-}
-
-trait CardModelTrait {
-  fn is_valid(self: CardModel) -> bool;
-  fn id(self: CardModel) -> u128;
-}
-
-impl CardModelImpl of CardModelTrait {
-  fn is_valid(self: CardModel) -> bool {
-    if (self.artist_name.is_zero() | self.season.is_zero()) {
-      false
-    } else {
-      true
-    }
-  }
-
-  fn id(self: CardModel) -> u128 {
-    1_u128
-  }
+  scarcity: felt252,
 }
 
 //
@@ -53,5 +39,9 @@ trait IRulesTokens {
 trait IRulesData {
   fn card_model(card_model_id: u128) -> CardModel;
 
+  fn scarcity(season: felt252, scarcity: felt252) -> Scarcity;
+
   fn add_card_model(card_model: CardModel) -> u128;
+
+  fn add_scarcity(season: felt252, scarcity: Scarcity);
 }
