@@ -287,7 +287,7 @@ mod RulesTokens {
     let scarcity_ = scarcity(season: card_model_.season, scarcity_id: card_model_.scarcity_id);
     assert(
       card_token.serial_number.is_non_zero() & card_token.serial_number <= scarcity_.max_supply,
-      'Invalid card serial number'
+      'Serial number is out of range'
     );
 
     // assert card does not already exists

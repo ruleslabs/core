@@ -1,12 +1,15 @@
 use array::ArrayTrait;
 use traits::Into;
 use starknet::testing;
+use zeroable::Zeroable;
 use debug::PrintTrait;
-use alexandria_data_structures::array_ext::ArrayTraitExt;
 
 // locals
 use rules_tokens::core::RulesTokens;
+use rules_tokens::core::data::CardModelTrait;
+use rules_tokens::core::tokens::TokenIdTrait;
 use rules_tokens::typed_data::voucher::Voucher;
+use rules_tokens::utils::zeroable::U256Zeroable;
 use super::mocks::signer::Signer;
 use super::mocks::receiver::Receiver;
 use super::utils;
@@ -22,30 +25,37 @@ use super::constants::{
   CARD_MODEL_2,
   METADATA,
   RECEIVER_DEPLOYED_ADDRESS,
+  CARD_TOKEN_ID_2,
+  SCARCITY,
+  CARD_MODEL_3,
 };
 
 // dispatchers
 use rules_account::account::{ AccountABIDispatcher, AccountABIDispatcherTrait };
 use rules_tokens::core::{ RulesTokensABIDispatcher, RulesTokensABIDispatcherTrait };
 
-fn setup() -> RulesTokensABIDispatcher {
+fn setup() {
   // setup chain id to compute vouchers hashes
   testing::set_chain_id(CHAIN_ID());
 
   // setup voucher signer - 0x1
   let voucher_signer = setup_voucher_signer();
 
-  // setup rules tokens - 0x3
-  let mut calldata = ArrayTrait::new();
+  RulesTokens::constructor(
+    uri_: URI().span(),
+    voucher_signer_: voucher_signer.contract_address,
+    marketplace_: starknet::contract_address_const::<'marketplace'>()
+  );
 
-  let mut uri = URI();
-  calldata.append(uri.len().into());
-  calldata.append_all(ref uri);
-  calldata.append(voucher_signer.contract_address.into());
-  calldata.append('marketplace address');
+  // create some card models and scarcities
+  let card_model_2 = CARD_MODEL_2();
+  let card_model_3 = CARD_MODEL_3();
+  let metadata = METADATA();
+  let scarcity = SCARCITY();
 
-  let rules_tokens_address = utils::deploy(RulesTokens::TEST_CLASS_HASH, calldata);
-  RulesTokensABIDispatcher { contract_address: rules_tokens_address }
+  RulesTokens::add_scarcity(season: card_model_3.season, :scarcity);
+  RulesTokens::add_card_model(new_card_model: card_model_2, :metadata);
+  RulesTokens::add_card_model(new_card_model: card_model_3, :metadata);
 }
 
 fn setup_voucher_signer() -> AccountABIDispatcher {
@@ -57,17 +67,20 @@ fn setup_voucher_signer() -> AccountABIDispatcher {
 }
 
 // Always run it after `setup()`
-fn setup_receiver() {
+fn setup_receiver() -> AccountABIDispatcher {
   let receiver_address = utils::deploy(Receiver::TEST_CLASS_HASH, ArrayTrait::new());
 
   assert(receiver_address == RECEIVER_DEPLOYED_ADDRESS(), 'receiver setup failed');
+
+  AccountABIDispatcher { contract_address: receiver_address }
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test__verify_voucher_signature_valid() {
-  let rules_tokens = setup();
-  let voucher_signer = rules_tokens.voucher_signer();
+  setup();
+
+  let voucher_signer = RulesTokens::voucher_signer();
 
   let voucher = VOUCHER_1();
   let signature = VOUCHER_SIGNATURE_1();
@@ -81,8 +94,9 @@ fn test__verify_voucher_signature_valid() {
 #[test]
 #[available_gas(20000000)]
 fn test__is_voucher_signature_valid_success() {
-  let rules_tokens = setup();
-  let voucher_signer = rules_tokens.voucher_signer();
+  setup();
+
+  let voucher_signer = RulesTokens::voucher_signer();
 
   let mut voucher = VOUCHER_1();
   voucher.amount += 1;
@@ -97,8 +111,9 @@ fn test__is_voucher_signature_valid_success() {
 #[test]
 #[available_gas(20000000)]
 fn test__is_voucher_signature_valid_failure() {
-  let rules_tokens = setup();
-  let voucher_signer = rules_tokens.voucher_signer();
+  setup();
+
+  let voucher_signer = RulesTokens::voucher_signer();
 
   let mut voucher = VOUCHER_1();
   voucher.amount += 1;
@@ -112,36 +127,153 @@ fn test__is_voucher_signature_valid_failure() {
 
 #[test]
 #[available_gas(20000000)]
-#[should_panic(expected: ('Invalid voucher signature', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('Invalid voucher signature',))]
 fn test_redeem_voucher_invalid_signature() {
-  let rules_tokens = setup();
-  let voucher_signer = rules_tokens.voucher_signer();
+  setup();
 
   let mut voucher = VOUCHER_1();
   voucher.nonce += 1;
   let signature = VOUCHER_SIGNATURE_1();
 
-  rules_tokens.redeem_voucher(:voucher, :signature);
+  RulesTokens::redeem_voucher(:voucher, :signature);
 }
 
 #[test]
 #[available_gas(20000000)]
-#[should_panic(expected: ('Voucher already consumed', 'ENTRYPOINT_FAILED'))]
+#[should_panic(expected: ('Voucher already consumed',))]
 fn test_redeem_voucher_already_consumed() {
-  let rules_tokens = setup();
-  let voucher_signer = rules_tokens.voucher_signer();
+  setup();
+  let receiver = setup_receiver();
 
-  setup_receiver();
+  let voucher = VOUCHER_2();
+  let signature = VOUCHER_SIGNATURE_2();
 
-  let mut voucher = VOUCHER_2();
+  let card_model = CARD_MODEL_2();
+  let metadata = METADATA();
+
+  RulesTokens::redeem_voucher(:voucher, :signature);
+  RulesTokens::redeem_voucher(:voucher, :signature);
+}
+
+// Card
+
+#[test]
+#[available_gas(20000000)]
+fn test_balance_of_after_redeem_voucher() {
+  setup();
+  let receiver = setup_receiver();
+
+  let voucher = VOUCHER_2();
   let signature = VOUCHER_SIGNATURE_2();
 
   // create conditions to successfully redeem the voucher
   let card_model = CARD_MODEL_2();
   let metadata = METADATA();
+  let card_token_id = CARD_TOKEN_ID_2();
 
-  rules_tokens.add_card_model(new_card_model: CARD_MODEL_2(), metadata: METADATA());
+  assert(
+    RulesTokens::balance_of(account: receiver.contract_address, id: card_token_id).is_zero(),
+    'balance of before'
+  );
 
-  rules_tokens.redeem_voucher(:voucher, :signature);
-  rules_tokens.redeem_voucher(:voucher, :signature);
+  RulesTokens::redeem_voucher(:voucher, :signature);
+
+  assert(
+    RulesTokens::balance_of(account: receiver.contract_address, id: card_token_id) == voucher.amount,
+    'balance of after'
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_card_exists() {
+  setup();
+  let receiver = setup_receiver();
+
+  let card_token_id = CARD_TOKEN_ID_2();
+
+  assert(!RulesTokens::card_exists(:card_token_id), 'card exists before');
+
+  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+
+  assert(RulesTokens::card_exists(:card_token_id), 'card exists after');
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Card already minted',))]
+fn test__mint_card_already_minted() {
+  setup();
+  let receiver = setup_receiver();
+
+  let card_token_id = CARD_TOKEN_ID_2();
+
+  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Card model does not exists',))]
+fn test__mint_card_unknown_card_model() {
+  setup();
+  let receiver = setup_receiver();
+
+  let card_token_id = CARD_TOKEN_ID_2();
+
+  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id + 1), amount: 1);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Serial number is out of range',))]
+fn test__mint_card_out_of_range_serial_number() {
+  setup();
+  let receiver = setup_receiver();
+
+  let scarcity = SCARCITY();
+  let card_token_id = u256 { low: CARD_MODEL_3().id(), high: scarcity.max_supply + 1 };
+
+  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test__mint_card_in_range_serial_number() {
+  setup();
+  let receiver = setup_receiver();
+
+  let scarcity = SCARCITY();
+  let card_token_id = u256 { low: CARD_MODEL_3().id(), high: scarcity.max_supply };
+
+  assert(!RulesTokens::card_exists(:card_token_id), 'card exists before');
+
+  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+
+  assert(RulesTokens::card_exists(:card_token_id), 'card exists after');
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Card amount cannot exceed 1',))]
+fn test__mint_card_invalid_amount() {
+  setup();
+  let receiver = setup_receiver();
+
+  let card_token_id = CARD_TOKEN_ID_2();
+
+  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 2);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Packs tokens not supported yet',))]
+fn test__mint_pack() {
+  setup();
+  let receiver = setup_receiver();
+
+  let card_token_id = CARD_TOKEN_ID_2();
+  let pack_token_id = u256 { low: card_token_id.low, high: 0 };
+
+  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: pack_token_id), amount: 2);
 }

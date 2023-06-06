@@ -17,8 +17,8 @@ fn METADATA() -> Metadata {
 
 fn CARD_MODEL_1() -> CardModel {
   CardModel {
-    artist_name: 'King ju',
-    season: 1,
+    artist_name: 'ju',
+    season: 894,
     scarcity_id: 0,
   }
 }
@@ -31,8 +31,20 @@ fn CARD_MODEL_2() -> CardModel {
   }
 }
 
+fn CARD_MODEL_3() -> CardModel {
+  CardModel {
+    artist_name: 'Sully',
+    season: 33,
+    scarcity_id: 1,
+  }
+}
+
 fn CARD_MODEL_ID() -> u128 {
-  0x03096242471061f433ba6a63130aa948
+  0xf0579640f29841cc5a94e67ec97ed9e2
+}
+
+fn CARD_TOKEN_ID_2() -> u256 {
+  u256 { low: CARD_MODEL_2().id(), high: 0x42 }
 }
 
 fn COMMON_SCARCITY() -> Scarcity {
@@ -77,7 +89,7 @@ fn VOUCHER_1() -> Voucher {
 fn VOUCHER_2() -> Voucher {
   Voucher {
     receiver: RECEIVER_DEPLOYED_ADDRESS(),
-    token_id: u256 { low: CARD_MODEL_2().id(), high: 0x42 },
+    token_id: CARD_TOKEN_ID_2(),
     amount: u256 { low: 1, high: 0 },
     nonce: 1,
   }
@@ -99,8 +111,8 @@ fn VOUCHER_SIGNATURE_1() -> Span<felt252> {
 fn VOUCHER_SIGNATURE_2() -> Span<felt252> {
   let mut signature = ArrayTrait::new();
 
-  signature.append(2305388663398077516669640470607532907931150161441669616184452610369318970150);
-  signature.append(3165717456559673604699389572072320190973872032067044902297644067641220914862);
+  signature.append(162955642362368011989913260867916975600669866837796100948785074693871226951);
+  signature.append(3128866085346783933640779771102089720767887732308764977166603813018883898618);
 
   signature.span()
 }
@@ -110,5 +122,5 @@ fn VOUCHER_SIGNER_PUBLIC_KEY() -> felt252 {
 }
 
 fn RECEIVER_DEPLOYED_ADDRESS() -> starknet::ContractAddress {
-  starknet::contract_address_const::<0x3>()
+  starknet::contract_address_const::<0x2>()
 }
