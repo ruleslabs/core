@@ -167,8 +167,9 @@ mod RulesTokens {
 
   // Transfer
 
+  // dirty untested override until meta-transaction based marketplace
   #[external]
-  fn safe_transfer_from(
+  fn safeTransferFrom(
     from: starknet::ContractAddress,
     to: starknet::ContractAddress,
     id: u256,
@@ -177,12 +178,22 @@ mod RulesTokens {
   ) {
     let caller = starknet::get_caller_address();
 
-    // dirty untested override until meta-transaction based marketplace
     if (caller == _marketplace::read()) {
-      ERC1155::safe_transfer_from(:from, :to, :id, :amount, :data);
+      ERC1155::_safe_transfer_from(:from, :to, :id, :amount, :data);
     } else {
       ERC1155::safe_transfer_from(:from, :to, :id, :amount, :data);
     }
+  }
+
+  #[external]
+  fn safe_transfer_from(
+    from: starknet::ContractAddress,
+    to: starknet::ContractAddress,
+    id: u256,
+    amount: u256,
+    data: Span<felt252>
+  ) {
+    ERC1155::safe_transfer_from(:from, :to, :id, :amount, :data);
   }
 
   #[external]
