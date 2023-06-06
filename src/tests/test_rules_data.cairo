@@ -1,11 +1,21 @@
 // locals
 use rules_tokens::core::data::RulesData;
-use rules_tokens::core::interface::CardModel;
+use rules_tokens::core::interface::{ CardModel, Scarcity, Metadata, METADATA_MULTIHASH_IDENTIFIER };
 use super::utils;
-use super::utils::partial_eq::{ CardModelEq, ScarcityEq };
+use super::utils::partial_eq::{ CardModelEq, ScarcityEq, MetadataEq };
 
 // dispatchers
 use rules_tokens::core::data::{ RulesDataABIDispatcher, RulesDataABIDispatcherTrait };
+
+fn METADATA() -> Metadata {
+  Metadata {
+    multihash_identifier: METADATA_MULTIHASH_IDENTIFIER,
+    hash: u256 {
+      low: 'hash low',
+      high: 'hash high',
+    },
+  }
+}
 
 fn CARD_MODEL() -> CardModel {
   CardModel {
@@ -22,7 +32,7 @@ fn CARD_MODEL_ID() -> u128 {
 fn setup() -> RulesDataABIDispatcher {
   let rules_data = setup_rules_data();
 
-  rules_data.add_card_model(CARD_MODEL());
+  rules_data.add_card_model(CARD_MODEL(), METADATA());
 
   rules_data
 }
@@ -39,16 +49,30 @@ fn setup_rules_data() -> RulesDataABIDispatcher {
 #[available_gas(20000000)]
 fn test_get_card_model() {
   let rules_data = setup();
+  let card_model = CARD_MODEL();
+  let card_model_id = CARD_MODEL_ID();
 
-  assert(rules_data.card_model(CARD_MODEL_ID()) == CARD_MODEL(), 'Invalid card model');
+  assert(rules_data.card_model(:card_model_id) == card_model, 'Invalid card model');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_get_card_model_metadata() {
+  let rules_data = setup();
+  let metadata = METADATA();
+  let card_model_id = CARD_MODEL_ID();
+
+  assert(rules_data.card_model_metadata(:card_model_id) == metadata, 'Invalid card model');
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test_add_card_model_returns_valid_id() {
   let rules_data = setup_rules_data();
+  let card_model = CARD_MODEL();
+  let metadata = METADATA();
 
-  let card_model_id = rules_data.add_card_model(CARD_MODEL());
+  let card_model_id = rules_data.add_card_model(new_card_model: card_model, :metadata);
 
   assert(card_model_id == CARD_MODEL_ID(), 'Invalid card model id');
 }
@@ -58,8 +82,10 @@ fn test_add_card_model_returns_valid_id() {
 #[should_panic(expected: ('Card model already exists', 'ENTRYPOINT_FAILED'))]
 fn test_add_card_model_already_exists() {
   let rules_data = setup();
+  let card_model = CARD_MODEL();
+  let metadata = METADATA();
 
-  rules_data.add_card_model(CARD_MODEL());
+  rules_data.add_card_model(new_card_model: card_model, :metadata);
 }
 
 // Scarcity

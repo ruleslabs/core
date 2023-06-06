@@ -7,6 +7,16 @@ use rules_tokens::utils::zeroable::U128Zeroable;
 use rules_tokens::typed_data::voucher::Voucher;
 use rules_tokens::utils::serde::SpanSerde;
 
+const METADATA_MULTIHASH_IDENTIFIER: u16 = 0x1220;
+
+// Metadata
+
+#[derive(Serde, Copy, Drop)]
+struct Metadata {
+  multihash_identifier: u16,
+  hash: u256,
+}
+
 // Scarcity
 
 #[derive(Serde, Copy, Drop)]
@@ -39,9 +49,11 @@ trait IRulesTokens {
 trait IRulesData {
   fn card_model(card_model_id: u128) -> CardModel;
 
+  fn card_model_metadata(card_model_id: u128) -> Metadata;
+
   fn scarcity(season: felt252, scarcity: felt252) -> Scarcity;
 
-  fn add_card_model(new_card_model: CardModel) -> u128;
+  fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128;
 
   fn add_scarcity(season: felt252, scarcity: Scarcity);
 }

@@ -20,7 +20,7 @@ mod RulesTokens {
   use rules_account::account;
 
   // locals
-  use super::super::interface::{ Scarcity, CardModel };
+  use super::super::interface::{ Scarcity, CardModel, Metadata };
   use super::super::data::RulesData;
   use rules_tokens::typed_data::TypedDataTrait;
   use super::Voucher;
@@ -122,9 +122,14 @@ mod RulesTokens {
     RulesData::card_model(:card_model_id)
   }
 
+  #[view]
+  fn card_model_metadata(card_model_id: u128) -> Metadata {
+    RulesData::card_model_metadata(:card_model_id)
+  }
+
   #[external]
-  fn add_card_model(new_card_model: CardModel) -> u128 {
-    RulesData::add_card_model(:new_card_model)
+  fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128 {
+    RulesData::add_card_model(:new_card_model, :metadata)
   }
 
   // Scarcity

@@ -2,7 +2,7 @@ use array::{ ArrayTrait, SpanTrait };
 use traits::PartialEq;
 
 // locals
-use rules_tokens::core::interface::{ Scarcity, CardModel };
+use rules_tokens::core::interface::{ Scarcity, CardModel, Metadata };
 
 impl ScarcityEq of PartialEq<Scarcity> {
   fn eq(lhs: Scarcity, rhs: Scarcity) -> bool {
@@ -22,6 +22,17 @@ impl CardModelEq of PartialEq<CardModel> {
 
   #[inline(always)]
   fn ne(lhs: CardModel, rhs: CardModel) -> bool {
+    !(lhs == rhs)
+  }
+}
+
+impl MetadataEq of PartialEq<Metadata> {
+  fn eq(lhs: Metadata, rhs: Metadata) -> bool {
+    lhs.multihash_identifier == rhs.multihash_identifier & lhs.hash == rhs.hash
+  }
+
+  #[inline(always)]
+  fn ne(lhs: Metadata, rhs: Metadata) -> bool {
     !(lhs == rhs)
   }
 }

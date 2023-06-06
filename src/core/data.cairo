@@ -2,8 +2,8 @@ use zeroable::Zeroable;
 use traits::Into;
 
 // locals
-use rules_tokens::utils::zeroable::U128Zeroable;
-use super::interface::{ Scarcity, CardModel };
+use rules_tokens::utils::zeroable::{ U128Zeroable, U256Zeroable };
+use super::interface::{ Scarcity, CardModel, Metadata, METADATA_MULTIHASH_IDENTIFIER };
 
 #[abi]
 trait RulesDataABI {
@@ -11,10 +11,13 @@ trait RulesDataABI {
   fn card_model(card_model_id: u128) -> CardModel;
 
   #[view]
+  fn card_model_metadata(card_model_id: u128) -> Metadata;
+
+  #[view]
   fn scarcity(season: felt252, scarcity: felt252) -> Scarcity;
 
   #[external]
-  fn add_card_model(new_card_model: CardModel) -> u128;
+  fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128;
 
   #[external]
   fn add_scarcity(season: felt252, scarcity: Scarcity);
@@ -23,9 +26,9 @@ trait RulesDataABI {
 #[contract]
 mod RulesData {
   // locals
-  use super::{ Scarcity, ScarcityTrait, CardModel, CardModelTrait };
+  use super::{ Scarcity, ScarcityTrait, CardModel, CardModelTrait, Metadata, MetadataTrait };
   use super::super::interface::{ IRulesData };
-  use rules_tokens::utils::storage::{ ScarcityStorageAccess, CardModelStorageAccess };
+  use rules_tokens::utils::storage::{ ScarcityStorageAccess, CardModelStorageAccess, MetadataStorageAccess };
 
   //
   // Storage
@@ -38,6 +41,8 @@ mod RulesData {
     _scarcities: LegacyMap<(felt252, felt252), Scarcity>,
     // card_model_id -> CardModel
     _card_models: LegacyMap<u128, CardModel>,
+    // card_model_id -> Metadata
+    _card_models_metadata: LegacyMap<u128, Metadata>,
   }
 
   //
@@ -56,17 +61,27 @@ mod RulesData {
       _card_models::read(card_model_id)
     }
 
+    fn card_model_metadata(card_model_id: u128) -> Metadata {
+      _card_models_metadata::read(card_model_id)
+    }
+
     fn scarcity(season: felt252, scarcity: felt252) -> Scarcity {
       _scarcities::read((season, scarcity))
     }
 
-    fn add_card_model(new_card_model: CardModel) -> u128 {
+    fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128 {
+      // assert card model and metadata are valid
       assert(new_card_model.is_valid(), 'Invalid card model');
+      assert(metadata.is_valid(), 'Invalid metadata');
 
+      // assert card model does not already exists
       let card_model_id = new_card_model.id();
       assert(!card_model(:card_model_id).is_valid(), 'Card model already exists');
 
       _card_models::write(card_model_id, new_card_model);
+
+      // save metadata
+      _card_models_metadata::write(card_model_id, metadata);
 
       card_model_id
     }
@@ -93,6 +108,11 @@ mod RulesData {
   }
 
   #[view]
+  fn card_model_metadata(card_model_id: u128) -> Metadata {
+    RulesData::card_model_metadata(:card_model_id)
+  }
+
+  #[view]
   fn scarcity(season: felt252, scarcity: felt252) -> Scarcity {
     RulesData::scarcity(:season, :scarcity)
   }
@@ -102,13 +122,27 @@ mod RulesData {
   //
 
   #[external]
-  fn add_card_model(new_card_model: CardModel) -> u128 {
-    RulesData::add_card_model(:new_card_model)
+  fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128 {
+    RulesData::add_card_model(:new_card_model, :metadata)
   }
 
   #[external]
   fn add_scarcity(season: felt252, scarcity: Scarcity) {
     RulesData::add_scarcity(:season, :scarcity)
+  }
+}
+
+trait MetadataTrait {
+  fn is_valid(self: Metadata) -> bool;
+}
+
+impl MetadataImpl of MetadataTrait {
+  fn is_valid(self: Metadata) -> bool {
+    if (self.multihash_identifier != METADATA_MULTIHASH_IDENTIFIER | self.hash.is_zero()) {
+      false
+    } else {
+      true
+    }
   }
 }
 
