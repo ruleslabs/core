@@ -43,6 +43,7 @@ mod RulesTokens {
   use rules_account::account;
 
   // locals
+  use rules_tokens::access::ownable::Ownable;
   use rules_tokens::typed_data::TypedDataTrait;
   use rules_tokens::utils::zeroable::{ CardModelZeroable, U128Zeroable };
   use super::super::interface::{
@@ -87,6 +88,7 @@ mod RulesTokens {
     marketplace_: starknet::ContractAddress
   ) {
     ERC1155::initializer(:uri_);
+    Ownable::initializer();
     initializer(:voucher_signer_, :marketplace_);
   }
 
@@ -117,11 +119,29 @@ mod RulesTokens {
     }
   }
 
+  //
+  // Upgrade
+  //
+
+  // TODO: use Upgradeable impl with more custom call after upgrade
+  #[external]
+  fn upgrade(new_implementation: starknet::ClassHash) {
+    Ownable::assert_only_owner();
+
+    // set new impl
+    starknet::replace_class_syscall(new_implementation);
+  }
+
   // Getters
 
   #[view]
   fn uri(tokenId: u256) -> Span<felt252> {
     ERC1155::uri(:tokenId)
+  }
+
+  #[view]
+  fn owner() -> starknet::ContractAddress {
+    Ownable::owner()
   }
 
   #[view]
@@ -139,6 +159,18 @@ mod RulesTokens {
   #[view]
   fn supports_interface(interface_id: u32) -> bool {
     ERC1155::supports_interface(:interface_id)
+  }
+
+  // Ownable
+
+  #[external]
+  fn transfer_ownership(new_owner: starknet::ContractAddress) {
+    Ownable::transfer_ownership(:new_owner);
+  }
+
+  #[external]
+  fn renounce_ownership() {
+    Ownable::renounce_ownership();
   }
 
   // Balance
