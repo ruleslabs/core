@@ -17,7 +17,10 @@ trait RulesDataABI {
   fn card_model_metadata(card_model_id: u128) -> Metadata;
 
   #[view]
-  fn scarcity(season: felt252, scarcity: felt252) -> Scarcity;
+  fn scarcity(season: felt252, scarcity_id: felt252) -> Scarcity;
+
+  #[view]
+  fn uncommon_scarcities_count(season: felt252) -> felt252;
 
   #[external]
   fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128;
@@ -41,8 +44,8 @@ mod RulesData {
   //
 
   struct Storage {
-    // season -> scarcity count
-    _scarcities_count: LegacyMap<felt252, felt252>,
+    // season -> uncommon scarcities count
+    _uncommon_scarcities_count: LegacyMap<felt252, felt252>,
     // (season, scarcity_id) -> Scarcity
     _scarcities: LegacyMap<(felt252, felt252), Scarcity>,
     // card_model_id -> CardModel
@@ -71,12 +74,16 @@ mod RulesData {
       _card_models_metadata::read(card_model_id)
     }
 
-    fn scarcity(season: felt252, scarcity: felt252) -> Scarcity {
-      if (scarcity.is_zero()) {
+    fn scarcity(season: felt252, scarcity_id: felt252) -> Scarcity {
+      if (scarcity_id.is_zero()) {
         ScarcityTrait::common()
       } else {
-        _scarcities::read((season, scarcity))
+        _scarcities::read((season, scarcity_id))
       }
+    }
+
+    fn uncommon_scarcities_count(season: felt252) -> felt252 {
+      _uncommon_scarcities_count::read(season)
     }
 
     fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128 {
@@ -89,7 +96,7 @@ mod RulesData {
       assert(card_model(:card_model_id).is_zero(), 'Card model already exists');
 
       // assert scarcity exists
-      let scarcity_ = scarcity(season: new_card_model.season, scarcity: new_card_model.scarcity);
+      let scarcity_ = scarcity(season: new_card_model.season, scarcity_id: new_card_model.scarcity_id);
       assert(scarcity_.is_non_zero(), 'Scarcity does not exists');
 
       // save card model and metadata
@@ -104,11 +111,10 @@ mod RulesData {
       assert(scarcity.is_valid(), 'Invalid scarcity');
 
       // get new scarcities count
-      let scarcities_count_ = _scarcities_count::read(season);
-      let new_scarcities_count_ = scarcities_count_ + 1;
+      let new_uncommon_scarcities_count = uncommon_scarcities_count(season) + 1;
 
-      _scarcities_count::write(season, new_scarcities_count_);
-      _scarcities::write((season, new_scarcities_count_), scarcity);
+      _uncommon_scarcities_count::write(season, new_uncommon_scarcities_count);
+      _scarcities::write((season, new_uncommon_scarcities_count), scarcity);
     }
   }
 
@@ -127,8 +133,13 @@ mod RulesData {
   }
 
   #[view]
-  fn scarcity(season: felt252, scarcity: felt252) -> Scarcity {
-    RulesData::scarcity(:season, :scarcity)
+  fn scarcity(season: felt252, scarcity_id: felt252) -> Scarcity {
+    RulesData::scarcity(:season, :scarcity_id)
+  }
+
+  #[view]
+  fn uncommon_scarcities_count(season: felt252) -> felt252 {
+    RulesData::uncommon_scarcities_count(:season)
   }
 
   //
@@ -200,7 +211,7 @@ impl CardModelImpl of CardModelTrait {
   fn id(self: CardModel) -> u128 {
     let mut hash = pedersen(0, self.artist_name);
     hash = pedersen(hash, self.season);
-    hash = pedersen(hash, self.scarcity);
+    hash = pedersen(hash, self.scarcity_id);
     hash = pedersen(hash, 3);
 
     Into::<felt252, u256>::into(hash).low

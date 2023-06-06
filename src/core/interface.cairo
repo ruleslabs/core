@@ -31,7 +31,7 @@ struct Scarcity {
 struct CardModel {
   artist_name: felt252,
   season: felt252,
-  scarcity: felt252,
+  scarcity_id: felt252,
 }
 
 //
@@ -51,7 +51,9 @@ trait IRulesData {
 
   fn card_model_metadata(card_model_id: u128) -> Metadata;
 
-  fn scarcity(season: felt252, scarcity: felt252) -> Scarcity;
+  fn scarcity(season: felt252, scarcity_id: felt252) -> Scarcity;
+
+  fn uncommon_scarcities_count(season: felt252) -> felt252;
 
   fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128;
 

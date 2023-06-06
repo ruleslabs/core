@@ -135,8 +135,13 @@ mod RulesTokens {
   // Scarcity
 
   #[view]
-  fn scarcity(season: felt252, scarcity: felt252) -> Scarcity {
-    RulesData::scarcity(:season, :scarcity)
+  fn scarcity(season: felt252, scarcity_id: felt252) -> Scarcity {
+    RulesData::scarcity(:season, :scarcity_id)
+  }
+
+  #[view]
+  fn uncommon_scarcities_count(season: felt252) -> felt252 {
+    RulesData::uncommon_scarcities_count(:season)
   }
 
   #[external]

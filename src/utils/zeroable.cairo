@@ -43,7 +43,7 @@ impl CardModelZeroable of Zeroable<CardModel> {
     CardModel {
       artist_name: 0,
       season: 0,
-      scarcity: 0,
+      scarcity_id: 0,
     }
   }
 

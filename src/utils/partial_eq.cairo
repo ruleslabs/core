@@ -16,7 +16,7 @@ impl ScarcityEq of PartialEq<Scarcity> {
 
 impl CardModelEq of PartialEq<CardModel> {
   fn eq(lhs: CardModel, rhs: CardModel) -> bool {
-    lhs.artist_name == rhs.artist_name & lhs.scarcity == rhs.scarcity & lhs.season == rhs.season
+    lhs.artist_name == rhs.artist_name & lhs.scarcity_id == rhs.scarcity_id & lhs.season == rhs.season
   }
 
   #[inline(always)]
