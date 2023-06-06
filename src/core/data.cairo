@@ -5,6 +5,21 @@ use traits::Into;
 use rules_tokens::utils::zeroable::U128Zeroable;
 use super::interface::{ Scarcity, CardModel };
 
+#[abi]
+trait RulesDataABI {
+  #[view]
+  fn card_model(card_model_id: u128) -> CardModel;
+
+  #[view]
+  fn scarcity(season: felt252, scarcity: felt252) -> Scarcity;
+
+  #[external]
+  fn add_card_model(new_card_model: CardModel) -> u128;
+
+  #[external]
+  fn add_scarcity(season: felt252, scarcity: Scarcity);
+}
+
 #[contract]
 mod RulesData {
   // locals
@@ -45,13 +60,13 @@ mod RulesData {
       _scarcities::read((season, scarcity))
     }
 
-    fn add_card_model(card_model: CardModel) -> u128 {
-      assert(card_model.is_valid(), 'Invalid card model');
+    fn add_card_model(new_card_model: CardModel) -> u128 {
+      assert(new_card_model.is_valid(), 'Invalid card model');
 
-      let mut card_model_id = card_model.id();
+      let card_model_id = new_card_model.id();
       assert(!card_model(:card_model_id).is_valid(), 'Card model already exists');
 
-      _card_models::write(card_model_id, card_model);
+      _card_models::write(card_model_id, new_card_model);
 
       card_model_id
     }
@@ -87,8 +102,8 @@ mod RulesData {
   //
 
   #[external]
-  fn add_card_model(card_model: CardModel) -> u128 {
-    RulesData::add_card_model(:card_model)
+  fn add_card_model(new_card_model: CardModel) -> u128 {
+    RulesData::add_card_model(:new_card_model)
   }
 
   #[external]

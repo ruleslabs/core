@@ -20,6 +20,8 @@ mod RulesTokens {
   use rules_account::account;
 
   // locals
+  use super::super::interface::{ Scarcity, CardModel };
+  use super::super::data::RulesData;
   use rules_tokens::typed_data::TypedDataTrait;
   use super::Voucher;
   use super::super::interface::IRulesTokens;
@@ -111,6 +113,30 @@ mod RulesTokens {
   #[view]
   fn is_approved_for_all(account: starknet::ContractAddress, operator: starknet::ContractAddress) -> bool {
     ERC1155::is_approved_for_all(:account, :operator)
+  }
+
+  // Card models
+
+  #[view]
+  fn card_model(card_model_id: u128) -> CardModel {
+    RulesData::card_model(:card_model_id)
+  }
+
+  #[external]
+  fn add_card_model(new_card_model: CardModel) -> u128 {
+    RulesData::add_card_model(:new_card_model)
+  }
+
+  // Scarcity
+
+  #[view]
+  fn scarcity(season: felt252, scarcity: felt252) -> Scarcity {
+    RulesData::scarcity(:season, :scarcity)
+  }
+
+  #[external]
+  fn add_scarcity(season: felt252, scarcity: Scarcity) {
+    RulesData::add_scarcity(:season, :scarcity)
   }
 
   // Voucher

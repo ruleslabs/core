@@ -57,6 +57,6 @@ impl CardModelStorageAccess of StorageAccess::<CardModel> {
 
     storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 1_u8), value.season)?;
 
-    storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 1_u8), value.scarcity)
+    storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, 2_u8), value.scarcity)
   }
 }

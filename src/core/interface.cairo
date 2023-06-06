@@ -41,7 +41,7 @@ trait IRulesData {
 
   fn scarcity(season: felt252, scarcity: felt252) -> Scarcity;
 
-  fn add_card_model(card_model: CardModel) -> u128;
+  fn add_card_model(new_card_model: CardModel) -> u128;
 
   fn add_scarcity(season: felt252, scarcity: Scarcity);
 }
