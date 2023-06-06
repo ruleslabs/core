@@ -72,6 +72,8 @@ mod RulesTokens {
     _voucher_signer: starknet::ContractAddress,
     // card_token_id -> minted
     _minted_cards: LegacyMap<u256, bool>,
+    // TODO: remove contract based marketplace support
+    _marketplace: starknet::ContractAddress,
   }
 
   //
@@ -79,9 +81,13 @@ mod RulesTokens {
   //
 
   #[constructor]
-  fn constructor(uri_: Span<felt252>, voucher_signer_: starknet::ContractAddress) {
+  fn constructor(
+    uri_: Span<felt252>,
+    voucher_signer_: starknet::ContractAddress,
+    marketplace_: starknet::ContractAddress
+  ) {
     ERC1155::initializer(:uri_);
-    initializer(:voucher_signer_);
+    initializer(:voucher_signer_, :marketplace_);
   }
 
   //
@@ -159,6 +165,37 @@ mod RulesTokens {
     ERC1155::is_approved_for_all(:account, :operator)
   }
 
+  // Transfer
+
+  #[external]
+  fn safe_transfer_from(
+    from: starknet::ContractAddress,
+    to: starknet::ContractAddress,
+    id: u256,
+    amount: u256,
+    data: Span<felt252>
+  ) {
+    let caller = starknet::get_caller_address();
+
+    // dirty untested override until meta-transaction based marketplace
+    if (caller == _marketplace::read()) {
+      ERC1155::safe_transfer_from(:from, :to, :id, :amount, :data);
+    } else {
+      ERC1155::safe_transfer_from(:from, :to, :id, :amount, :data);
+    }
+  }
+
+  #[external]
+  fn safe_batch_transfer_from(
+    from: starknet::ContractAddress,
+    to: starknet::ContractAddress,
+    ids: Span<u256>,
+    amounts: Span<u256>,
+    data: Span<felt252>
+  ) {
+    ERC1155::safe_batch_transfer_from(:from, :to, :ids, :amounts, :data);
+  }
+
   // Card models
 
   #[view]
@@ -207,8 +244,9 @@ mod RulesTokens {
   // Init
 
   #[internal]
-  fn initializer(voucher_signer_: starknet::ContractAddress) {
+  fn initializer(voucher_signer_: starknet::ContractAddress, marketplace_: starknet::ContractAddress) {
     _voucher_signer::write(voucher_signer_);
+    _marketplace::write(marketplace_);
   }
 
   // Mint

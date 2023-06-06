@@ -42,6 +42,7 @@ fn setup() -> RulesTokensABIDispatcher {
   calldata.append(uri.len().into());
   calldata.append_all(ref uri);
   calldata.append(voucher_signer.contract_address.into());
+  calldata.append('marketplace address');
 
   let rules_tokens_address = utils::deploy(RulesTokens::TEST_CLASS_HASH, calldata);
   RulesTokensABIDispatcher { contract_address: rules_tokens_address }
