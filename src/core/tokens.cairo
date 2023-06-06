@@ -1,7 +1,11 @@
 use array::SpanTrait;
+use zeroable::Zeroable;
 use rules_tokens::utils::serde::SpanSerde;
 
 // locals
+use rules_tokens::constants;
+use rules_tokens::utils::zeroable::{ U128Zeroable };
+use super::interface::{ Token, TokenId, CardToken, PackToken, CardModel, Scarcity, Metadata };
 use rules_tokens::typed_data::voucher::Voucher;
 
 #[abi]
@@ -9,22 +13,51 @@ trait RulesTokensABI {
   #[view]
   fn voucher_signer() -> starknet::ContractAddress;
 
+  #[view]
+  fn card_model(card_model_id: u128) -> CardModel;
+
+  #[view]
+  fn card_model_metadata(card_model_id: u128) -> Metadata;
+
+  #[view]
+  fn scarcity(season: felt252, scarcity_id: felt252) -> Scarcity;
+
+  #[view]
+  fn uncommon_scarcities_count(season: felt252) -> felt252;
+
+  #[external]
+  fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128;
+
+  #[external]
+  fn add_scarcity(season: felt252, scarcity: Scarcity);
+
   #[external]
   fn redeem_voucher(voucher: Voucher, signature: Span<felt252>);
 }
 
 #[contract]
 mod RulesTokens {
-  use array::SpanTrait;
+  use array::{ ArrayTrait, SpanTrait };
+  use zeroable::Zeroable;
   use rules_erc1155::erc1155::ERC1155;
   use rules_account::account;
 
   // locals
-  use super::super::interface::{ Scarcity, CardModel, Metadata };
-  use super::super::data::RulesData;
   use rules_tokens::typed_data::TypedDataTrait;
-  use super::Voucher;
-  use super::super::interface::IRulesTokens;
+  use rules_tokens::utils::zeroable::{ CardModelZeroable, U128Zeroable };
+  use super::super::interface::{
+    IRulesTokens,
+    Scarcity,
+    CardModel,
+    Metadata,
+    Voucher,
+    CardToken,
+    PackToken,
+    TokenId,
+    Token,
+  };
+  use super::super::data::RulesData;
+  use super::{ TokenIdTrait };
 
   // dispatchers
   use rules_account::account::{ AccountABIDispatcher, AccountABIDispatcherTrait };
@@ -34,9 +67,11 @@ mod RulesTokens {
   //
 
   struct Storage {
-    // (receiver, nonce) -> (consumed)
+    // (receiver, nonce) -> consumed
     _consumed_vouchers: LegacyMap<(starknet::ContractAddress, felt252), bool>,
     _voucher_signer: starknet::ContractAddress,
+    // card_token_id -> minted
+    _minted_cards: LegacyMap<u256, bool>,
   }
 
   //
@@ -58,6 +93,10 @@ mod RulesTokens {
       _voucher_signer::read()
     }
 
+    fn card_exists(card_token_id: u256) -> bool {
+      _minted_cards::read(card_token_id)
+    }
+
     fn redeem_voucher(voucher: Voucher, signature: Span<felt252>) {
       // assert voucher has not been already consumed and consume it
       assert(!_is_voucher_consumed(:voucher), 'Voucher already consumed');
@@ -68,7 +107,7 @@ mod RulesTokens {
       assert(_is_voucher_signature_valid(:voucher, :signature, signer: voucher_signer_), 'Invalid voucher signature');
 
       // mint token id
-      _mint(to: voucher.receiver, token_id: voucher.token_id, amount: voucher.amount);
+      _mint(to: voucher.receiver, token_id: TokenIdTrait::new(id: voucher.token_id), amount: voucher.amount);
     }
   }
 
@@ -82,6 +121,11 @@ mod RulesTokens {
   #[view]
   fn voucher_signer() -> starknet::ContractAddress {
     RulesTokens::voucher_signer()
+  }
+
+  #[view]
+  fn card_exists(card_token_id: u256) -> bool {
+    RulesTokens::card_exists(:card_token_id)
   }
 
   // ERC165
@@ -169,8 +213,47 @@ mod RulesTokens {
 
   // Mint
 
-  fn _mint(to: starknet::ContractAddress, token_id: u256, amount: u256) {
-    // TODO
+  #[internal]
+  fn _mint(to: starknet::ContractAddress, token_id: TokenId, amount: u256) {
+    match (token_id.parse()) {
+      Token::card(card_token) => {
+        _mint_card(:to, :card_token, :amount);
+      },
+      Token::pack(pack_token) => {
+        _mint_pack(:to, :pack_token, :amount);
+      },
+    }
+  }
+
+  #[internal]
+  fn _mint_card(to: starknet::ContractAddress, card_token: CardToken, amount: u256) {
+    // assert amount is valid
+    assert(amount == 1, 'Card amount cannot exceed 1');
+
+    // assert card model exists
+    let card_model_ = card_model(card_model_id: card_token.card_model_id);
+    assert(card_model_.is_non_zero(), 'Card model does not exists');
+
+    // assert serial number is in a valid range: [1, scarcity max supply]
+    let scarcity_ = scarcity(season: card_model_.season, scarcity_id: card_model_.scarcity_id);
+    assert(
+      card_token.serial_number.is_non_zero() & card_token.serial_number <= scarcity_.max_supply,
+      'Invalid card serial number'
+    );
+
+    // assert card does not already exists
+    assert(!card_exists(card_token_id: card_token.id), 'Card already minted');
+
+    // save card as minted
+    _minted_cards::write(card_token.id, true);
+
+    // mint token
+    ERC1155::_mint(:to, id: card_token.id, :amount, data: ArrayTrait::<felt252>::new().span());
+  }
+
+  #[internal]
+  fn _mint_pack(to: starknet::ContractAddress, pack_token: PackToken, amount: u256) {
+    panic_with_felt252('Packs tokens not supported yet');
   }
 
   // Voucher
@@ -200,5 +283,28 @@ mod RulesTokens {
   }
 }
 
-// add scarcity for season
-// create card model for scarcity and season
+trait TokenIdTrait {
+  fn new(id: u256) -> TokenId;
+  fn parse(self: TokenId) -> Token;
+}
+
+impl TokenIdImpl of TokenIdTrait {
+  fn new(id: u256) -> TokenId {
+    TokenId { id }
+  }
+
+  fn parse(self: TokenId) -> Token {
+    if (self.id.high.is_non_zero()) {
+      Token::card(CardToken {
+        serial_number: self.id.high,
+        card_model_id: self.id.low,
+        id: self.id,
+      })
+    } else {
+      Token::pack(PackToken {
+        pack_id: self.id.high,
+        id: self.id,
+      })
+    }
+  }
+}

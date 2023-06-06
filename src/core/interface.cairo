@@ -34,6 +34,32 @@ struct CardModel {
   scarcity_id: felt252,
 }
 
+// Token id
+
+#[derive(Serde, Drop)]
+struct TokenId {
+  id: u256,
+}
+
+// TODO: pack support
+#[derive(Drop)]
+struct PackToken {
+  pack_id: u128,
+  id: u256,
+}
+
+#[derive(Drop)]
+struct CardToken {
+  card_model_id: u128,
+  serial_number: u128,
+  id: u256,
+}
+
+enum Token {
+  card: CardToken,
+  pack: PackToken,
+}
+
 //
 // Interfaces
 //
@@ -41,6 +67,8 @@ struct CardModel {
 #[abi]
 trait IRulesTokens {
   fn voucher_signer() -> starknet::ContractAddress;
+
+  fn card_exists(card_token_id: u256) -> bool;
 
   fn redeem_voucher(voucher: Voucher, signature: Span<felt252>);
 }

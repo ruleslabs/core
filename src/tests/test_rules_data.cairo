@@ -2,57 +2,21 @@ use zeroable::Zeroable;
 
 // locals
 use rules_tokens::core::data::{ RulesData, CardModelTrait, ScarcityTrait };
-use rules_tokens::core::interface::{ CardModel, Scarcity, Metadata, METADATA_MULTIHASH_IDENTIFIER };
+use rules_tokens::core::interface::{ CardModel, Scarcity, Metadata };
 use rules_tokens::utils::partial_eq::{ CardModelEq, ScarcityEq };
 use rules_tokens::utils::zeroable::{ CardModelZeroable, ScarcityZeroable };
 use super::utils;
 use super::utils::partial_eq::MetadataEq;
 use super::utils::zeroable::MetadataZeroable;
+use super::constants::{ METADATA, CARD_MODEL_1, CARD_MODEL_ID, COMMON_SCARCITY, SCARCITY, SEASON };
 
 // dispatchers
 use rules_tokens::core::data::{ RulesDataABIDispatcher, RulesDataABIDispatcherTrait };
 
-fn METADATA() -> Metadata {
-  Metadata {
-    multihash_identifier: METADATA_MULTIHASH_IDENTIFIER,
-    hash: u256 {
-      low: 'hash low',
-      high: 'hash high',
-    },
-  }
-}
-
-fn CARD_MODEL() -> CardModel {
-  CardModel {
-    artist_name: 'King ju',
-    season: 1,
-    scarcity_id: 0,
-  }
-}
-
-fn CARD_MODEL_ID() -> u128 {
-  0x03096242471061f433ba6a63130aa948
-}
-
-fn COMMON_SCARCITY() -> Scarcity {
-  ScarcityTrait::common()
-}
-
-fn SCARCITY() -> Scarcity {
-  Scarcity {
-    max_supply: 1,
-    name: 'silver',
-  }
-}
-
-fn SEASON() -> felt252 {
-  'I\'ll be dead until this season'
-}
-
 fn setup() {
   RulesData::constructor();
 
-  RulesData::add_card_model(CARD_MODEL(), METADATA());
+  RulesData::add_card_model(CARD_MODEL_1(), METADATA());
 }
 
 // Card model
@@ -62,7 +26,7 @@ fn setup() {
 fn test_get_card_model() {
   setup();
 
-  let card_model = CARD_MODEL();
+  let card_model = CARD_MODEL_1();
   let card_model_id = CARD_MODEL_ID();
 
   assert(RulesData::card_model(:card_model_id) == card_model, 'Invalid card model');
@@ -82,7 +46,7 @@ fn test_get_card_model_metadata() {
 #[test]
 #[available_gas(20000000)]
 fn test_add_card_model_returns_valid_id() {
-  let card_model = CARD_MODEL();
+  let card_model = CARD_MODEL_1();
   let metadata = METADATA();
 
   let card_model_id = RulesData::add_card_model(new_card_model: card_model, :metadata);
@@ -99,7 +63,7 @@ fn test_multiple_add_card_model() {
 
   // add card model
 
-  let mut card_model = CARD_MODEL();
+  let mut card_model = CARD_MODEL_1();
   card_model.artist_name += 1;
 
   assert_state_before_add_card_model(:card_model);
@@ -110,7 +74,7 @@ fn test_multiple_add_card_model() {
 
   // add card model
 
-  card_model = CARD_MODEL();
+  card_model = CARD_MODEL_1();
   card_model.season += 1;
 
   assert_state_before_add_card_model(:card_model);
@@ -121,7 +85,7 @@ fn test_multiple_add_card_model() {
 
   // add card model
 
-  card_model = CARD_MODEL();
+  card_model = CARD_MODEL_1();
   card_model.scarcity_id += 1;
   RulesData::add_scarcity(season: card_model.season, scarcity: SCARCITY());
 
@@ -138,7 +102,7 @@ fn test_multiple_add_card_model() {
 fn test_add_card_model_already_exists() {
   setup();
 
-  let card_model = CARD_MODEL();
+  let card_model = CARD_MODEL_1();
   let metadata = METADATA();
 
   RulesData::add_card_model(new_card_model: card_model, :metadata);
@@ -150,7 +114,7 @@ fn test_add_card_model_already_exists() {
 fn test_add_card_model_invalid_artist_name() {
   setup();
 
-  let mut card_model = CARD_MODEL();
+  let mut card_model = CARD_MODEL_1();
   let metadata = METADATA();
 
   card_model.artist_name = 0;
@@ -164,7 +128,7 @@ fn test_add_card_model_invalid_artist_name() {
 fn test_add_card_model_invalid_season() {
   setup();
 
-  let mut card_model = CARD_MODEL();
+  let mut card_model = CARD_MODEL_1();
   let metadata = METADATA();
 
   card_model.season = 0;
@@ -178,7 +142,7 @@ fn test_add_card_model_invalid_season() {
 fn test_add_card_model_invalid_scarcity() {
   setup();
 
-  let mut card_model = CARD_MODEL();
+  let mut card_model = CARD_MODEL_1();
   let metadata = METADATA();
 
   card_model.scarcity_id += 1;
@@ -192,7 +156,7 @@ fn test_add_card_model_invalid_scarcity() {
 fn test_add_card_model_invalid_metadata_multihash_id() {
   setup();
 
-  let card_model = CARD_MODEL();
+  let card_model = CARD_MODEL_1();
   let mut metadata = METADATA();
 
   metadata.multihash_identifier += 1;
@@ -206,7 +170,7 @@ fn test_add_card_model_invalid_metadata_multihash_id() {
 fn test_add_card_model_invalid_metadata_hash() {
   setup();
 
-  let card_model = CARD_MODEL();
+  let card_model = CARD_MODEL_1();
   let mut metadata = METADATA();
 
   metadata.hash = 0;
