@@ -5,6 +5,9 @@ use traits::Into;
 use rules_tokens::utils::zeroable::{ U128Zeroable, U256Zeroable };
 use super::interface::{ Scarcity, CardModel, Metadata, METADATA_MULTIHASH_IDENTIFIER };
 
+const COMMON_SCARCITY_MAX_SUPPLY: u128 = 0xffffffffffffffffffffffffffffffff;
+const COMMON_SCARCITY_NAME: felt252 = 'Common';
+
 #[abi]
 trait RulesDataABI {
   #[view]
@@ -29,7 +32,7 @@ mod RulesData {
 
   // locals
   use super::{ Scarcity, ScarcityTrait, CardModel, CardModelTrait, Metadata, MetadataTrait };
-  use rules_tokens::utils::zeroable::CardModelZeroable;
+  use rules_tokens::utils::zeroable::{ CardModelZeroable, ScarcityZeroable };
   use super::super::interface::{ IRulesData };
   use rules_tokens::utils::storage::{ ScarcityStorageAccess, CardModelStorageAccess, MetadataStorageAccess };
 
@@ -69,7 +72,11 @@ mod RulesData {
     }
 
     fn scarcity(season: felt252, scarcity: felt252) -> Scarcity {
-      _scarcities::read((season, scarcity))
+      if (scarcity.is_zero()) {
+        ScarcityTrait::common()
+      } else {
+        _scarcities::read((season, scarcity))
+      }
     }
 
     fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128 {
@@ -81,11 +88,15 @@ mod RulesData {
       let card_model_id = new_card_model.id();
       assert(card_model(:card_model_id).is_zero(), 'Card model already exists');
 
-      _card_models::write(card_model_id, new_card_model);
+      // assert scarcity exists
+      let scarcity_ = scarcity(season: new_card_model.season, scarcity: new_card_model.scarcity);
+      assert(scarcity_.is_non_zero(), 'Scarcity does not exists');
 
-      // save metadata
+      // save card model and metadata
+      _card_models::write(card_model_id, new_card_model);
       _card_models_metadata::write(card_model_id, metadata);
 
+      // return card model id
       card_model_id
     }
 
@@ -151,6 +162,8 @@ impl MetadataImpl of MetadataTrait {
 
 trait ScarcityTrait {
   fn is_valid(self: Scarcity) -> bool;
+
+  fn common() -> Scarcity;
 }
 
 impl ScarcityImpl of ScarcityTrait {
@@ -159,6 +172,13 @@ impl ScarcityImpl of ScarcityTrait {
       false
     } else {
       true
+    }
+  }
+
+  fn common() -> Scarcity {
+    Scarcity {
+      max_supply: COMMON_SCARCITY_MAX_SUPPLY,
+      name: COMMON_SCARCITY_NAME,
     }
   }
 }

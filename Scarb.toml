@@ -13,3 +13,4 @@ rules_erc1155 = { git = "https://github.com/ruleslabs/starknet-erc-1155.git" }
 starknet = ">=1.0.0"
 
 [[target.starknet-contract]]
+  allowed-libfuncs-list.name = "experimental_v0.1.0"

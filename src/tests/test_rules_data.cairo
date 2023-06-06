@@ -32,6 +32,13 @@ fn CARD_MODEL_ID() -> u128 {
   0x03096242471061f433ba6a63130aa948
 }
 
+fn SCARCITY() -> Scarcity {
+  Scarcity {
+    max_supply: 1,
+    name: 'silver',
+  }
+}
+
 fn setup() {
   RulesData::constructor();
 
@@ -106,6 +113,7 @@ fn test_multiple_add_card_model() {
 
   card_model = CARD_MODEL();
   card_model.scarcity += 1;
+  RulesData::add_scarcity(season: card_model.season, scarcity: SCARCITY());
 
   assert_state_before_add_card_model(:card_model);
 
