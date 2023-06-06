@@ -1,7 +1,9 @@
 use array::ArrayTrait;
-use traits::Into;
+use traits::{ Into, TryInto };
+use option::OptionTrait;
 use starknet::testing;
 use zeroable::Zeroable;
+use starknet::class_hash::Felt252TryIntoClassHash;
 use debug::PrintTrait;
 
 // locals
@@ -28,6 +30,9 @@ use super::constants::{
   CARD_TOKEN_ID_2,
   SCARCITY,
   CARD_MODEL_3,
+  OWNER,
+  OTHER,
+  ZERO,
 };
 
 // dispatchers
@@ -41,6 +46,7 @@ fn setup() {
   // setup voucher signer - 0x1
   let voucher_signer = setup_voucher_signer();
 
+  testing::set_caller_address(OWNER());
   RulesTokens::constructor(
     uri_: URI().span(),
     voucher_signer_: voucher_signer.contract_address,
@@ -276,4 +282,26 @@ fn test__mint_pack() {
   let pack_token_id = u256 { low: card_token_id.low, high: 0 };
 
   RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: pack_token_id), amount: 2);
+}
+
+// Upgrade
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is not the owner',))]
+fn test_upgrade_unauthorized() {
+  setup();
+
+  testing::set_caller_address(OTHER());
+  RulesTokens::upgrade(new_implementation: 'new implementation'.try_into().unwrap());
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is the zero address',))]
+fn test_upgrade_from_zero() {
+  setup();
+
+  testing::set_caller_address(ZERO());
+  RulesTokens::upgrade(new_implementation: 'new implementation'.try_into().unwrap());
 }

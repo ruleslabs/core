@@ -26,6 +26,9 @@ trait RulesTokensABI {
   fn uncommon_scarcities_count(season: felt252) -> felt252;
 
   #[external]
+  fn upgrade(new_implementation: starknet::ClassHash);
+
+  #[external]
   fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128;
 
   #[external]

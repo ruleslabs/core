@@ -14,14 +14,14 @@ mod Ownable {
 
   #[internal]
   fn initializer() {
-    let caller: starknet::ContractAddress = starknet::get_caller_address();
+    let caller = starknet::get_caller_address();
     _transfer_ownership(caller);
   }
 
   #[internal]
   fn assert_only_owner() {
-    let owner: starknet::ContractAddress = _owner::read();
-    let caller: starknet::ContractAddress = starknet::get_caller_address();
+    let owner = _owner::read();
+    let caller = starknet::get_caller_address();
     assert(!caller.is_zero(), 'Caller is the zero address');
     assert(caller == owner, 'Caller is not the owner');
   }
@@ -46,7 +46,7 @@ mod Ownable {
 
   #[internal]
   fn _transfer_ownership(new_owner: starknet::ContractAddress) {
-    let previous_owner: starknet::ContractAddress = _owner::read();
+    let previous_owner = _owner::read();
     _owner::write(new_owner);
     OwnershipTransferred(previous_owner, new_owner);
   }

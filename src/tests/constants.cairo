@@ -124,3 +124,15 @@ fn VOUCHER_SIGNER_PUBLIC_KEY() -> felt252 {
 fn RECEIVER_DEPLOYED_ADDRESS() -> starknet::ContractAddress {
   starknet::contract_address_const::<0x2>()
 }
+
+fn ZERO() -> starknet::ContractAddress {
+  Zeroable::zero()
+}
+
+fn OWNER() -> starknet::ContractAddress {
+  starknet::contract_address_const::<10>()
+}
+
+fn OTHER() -> starknet::ContractAddress {
+  starknet::contract_address_const::<20>()
+}
