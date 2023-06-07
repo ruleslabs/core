@@ -1,10 +1,7 @@
-use array::ArrayTrait;
-use array::SpanTrait;
-use serde::Serde;
-use serde::serialize_array_helper;
-use serde::deserialize_array_helper;
+use array::{ ArrayTrait, SpanTrait };
+use serde::{ Serde, serialize_array_helper, deserialize_array_helper };
 
-impl SpanSerde<T, impl TSerde: Serde<T>, impl TCopy: Copy<T>, impl TDrop: Drop<T>> of Serde<Span<T>> {
+impl SpanSerde<T, impl TSerde: Serde<T>, impl TDrop: Drop<T>> of Serde<Span<T>> {
   fn serialize(self: @Span<T>, ref output: Array<felt252>) {
     (*self).len().serialize(ref output);
     serialize_array_helper(*self, ref output);
