@@ -87,12 +87,12 @@ mod RulesTokens {
   #[constructor]
   fn constructor(
     uri_: Span<felt252>,
+    owner_: starknet::ContractAddress,
     voucher_signer_: starknet::ContractAddress,
     marketplace_: starknet::ContractAddress
   ) {
-    ERC1155::initializer(:uri_);
-    Ownable::initializer();
-    initializer(:voucher_signer_, :marketplace_);
+    ERC1155::initializer(:uri_,);
+    initializer(:owner_, :voucher_signer_, :marketplace_);
   }
 
   //
@@ -301,7 +301,12 @@ mod RulesTokens {
   // Init
 
   #[internal]
-  fn initializer(voucher_signer_: starknet::ContractAddress, marketplace_: starknet::ContractAddress) {
+  fn initializer(
+    owner_: starknet::ContractAddress,
+    voucher_signer_: starknet::ContractAddress,
+    marketplace_: starknet::ContractAddress
+  ) {
+    Ownable::_transfer_ownership(new_owner: owner_);
     _voucher_signer::write(voucher_signer_);
     _marketplace::write(marketplace_);
   }

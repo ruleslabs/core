@@ -47,9 +47,9 @@ fn setup() {
   // setup voucher signer - 0x1
   let voucher_signer = setup_voucher_signer();
 
-  testing::set_caller_address(OWNER());
   RulesTokens::constructor(
     uri_: URI().span(),
+    owner_: OWNER(),
     voucher_signer_: voucher_signer.contract_address,
     marketplace_: starknet::contract_address_const::<'marketplace'>()
   );
@@ -60,6 +60,7 @@ fn setup() {
   let metadata = METADATA();
   let scarcity = SCARCITY();
 
+  testing::set_caller_address(OWNER());
   RulesTokens::add_scarcity(season: card_model_3.season, :scarcity);
   RulesTokens::add_card_model(new_card_model: card_model_2, :metadata);
   RulesTokens::add_card_model(new_card_model: card_model_3, :metadata);
