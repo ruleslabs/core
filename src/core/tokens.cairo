@@ -129,7 +129,10 @@ mod RulesTokens {
   // TODO: use Upgradeable impl with more custom call after upgrade
   #[external]
   fn upgrade(new_implementation: starknet::ClassHash) {
+    // Modifiers
     Ownable::assert_only_owner();
+
+    // Body
 
     // set new impl
     starknet::replace_class_syscall(new_implementation);
@@ -256,6 +259,10 @@ mod RulesTokens {
 
   #[external]
   fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128 {
+    // Modifiers
+    Ownable::assert_only_owner();
+
+    // Body
     RulesData::add_card_model(:new_card_model, :metadata)
   }
 
@@ -273,6 +280,10 @@ mod RulesTokens {
 
   #[external]
   fn add_scarcity(season: felt252, scarcity: Scarcity) {
+    // Modifiers
+    Ownable::assert_only_owner();
+
+    // Body
     RulesData::add_scarcity(:season, :scarcity)
   }
 

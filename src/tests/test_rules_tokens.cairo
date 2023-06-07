@@ -33,6 +33,7 @@ use super::constants::{
   OWNER,
   OTHER,
   ZERO,
+  SEASON,
 };
 
 // dispatchers
@@ -304,4 +305,56 @@ fn test_upgrade_from_zero() {
 
   testing::set_caller_address(ZERO());
   RulesTokens::upgrade(new_implementation: 'new implementation'.try_into().unwrap());
+}
+
+// Add scarcity
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is the zero address',))]
+fn test_add_scarcity_from_zero() {
+  setup();
+
+  let season = SEASON();
+
+  testing::set_caller_address(ZERO());
+  RulesTokens::add_scarcity(:season, scarcity: SCARCITY());
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is not the owner',))]
+fn test_add_scarcity_unauthorized() {
+  setup();
+
+  let season = SEASON();
+
+  testing::set_caller_address(OTHER());
+  RulesTokens::add_scarcity(:season, scarcity: SCARCITY());
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is the zero address',))]
+fn test_add_card_model_from_zero() {
+  setup();
+
+  let card_model_2 = CARD_MODEL_2();
+  let metadata = METADATA();
+
+  testing::set_caller_address(ZERO());
+  RulesTokens::add_card_model(new_card_model: card_model_2, :metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is not the owner',))]
+fn test_add_card_model_unauthorized() {
+  setup();
+
+  let card_model_2 = CARD_MODEL_2();
+  let metadata = METADATA();
+
+  testing::set_caller_address(OTHER());
+  RulesTokens::add_card_model(new_card_model: card_model_2, :metadata);
 }
