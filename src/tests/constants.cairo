@@ -23,6 +23,7 @@ fn CARD_MODEL_1() -> CardModel {
   }
 }
 
+// 0x1eeb9e09cde37e1ddec3ac07df646ce0
 fn CARD_MODEL_2() -> CardModel {
   CardModel {
     artist_name: 'Double P',
@@ -81,7 +82,7 @@ fn VOUCHER_1() -> Voucher {
     receiver: starknet::contract_address_const::<'receiver 1'>(),
     token_id: u256 { low: 'token id 1 low', high: 'token id 1 high' },
     amount: u256 { low: 'amount 1 low', high: 'amount 1 high' },
-    nonce: 1,
+    salt: 1,
   }
 }
 
@@ -91,7 +92,7 @@ fn VOUCHER_2() -> Voucher {
     receiver: RECEIVER_DEPLOYED_ADDRESS(),
     token_id: CARD_TOKEN_ID_2(),
     amount: u256 { low: 1, high: 0 },
-    nonce: 1,
+    salt: 1,
   }
 }
 
@@ -102,8 +103,8 @@ fn VOUCHER_SIGNER() -> starknet::ContractAddress {
 fn VOUCHER_SIGNATURE_1() -> Span<felt252> {
   let mut signature = ArrayTrait::new();
 
-  signature.append(2695953738417365536425985872255638063085251035130087155136805057258727647085);
-  signature.append(1604661661602024228358883734337166978451574222073686573714095457989525633748);
+  signature.append(3087695227963934782411443355974054330531912780999299366340358158172188798955);
+  signature.append(2936225994738482437582710271434813684883822280549795930447609837161446520483);
 
   signature.span()
 }
@@ -111,8 +112,8 @@ fn VOUCHER_SIGNATURE_1() -> Span<felt252> {
 fn VOUCHER_SIGNATURE_2() -> Span<felt252> {
   let mut signature = ArrayTrait::new();
 
-  signature.append(162955642362368011989913260867916975600669866837796100948785074693871226951);
-  signature.append(3128866085346783933640779771102089720767887732308764977166603813018883898618);
+  signature.append(1567101499423974405132552866654397941796461247734137894210715097651800024623);
+  signature.append(2406489013391837256524712835539748966140428060639388300020587314195643879538);
 
   signature.span()
 }

@@ -1,6 +1,6 @@
 use array::SpanTrait;
 use zeroable::Zeroable;
-use rules_tokens::utils::serde::SpanSerde;
+use rules_erc1155::utils::serde::SpanSerde;
 
 // locals
 use rules_tokens::constants;
@@ -61,6 +61,7 @@ mod RulesTokens {
     Token,
   };
   use super::super::data::RulesData;
+  use super::super::messages::RulesMessages;
   use super::{ TokenIdTrait };
 
   // dispatchers
@@ -71,9 +72,6 @@ mod RulesTokens {
   //
 
   struct Storage {
-    // (receiver, nonce) -> consumed
-    _consumed_vouchers: LegacyMap<(starknet::ContractAddress, felt252), bool>,
-    _voucher_signer: starknet::ContractAddress,
     // card_token_id -> minted
     _minted_cards: LegacyMap<u256, bool>,
     // TODO: remove contract based marketplace support
@@ -88,11 +86,12 @@ mod RulesTokens {
   fn constructor(
     uri_: Span<felt252>,
     owner_: starknet::ContractAddress,
-    voucher_signer_: starknet::ContractAddress,
-    marketplace_: starknet::ContractAddress
+    marketplace_: starknet::ContractAddress,
+    voucher_signer_: starknet::ContractAddress
   ) {
     ERC1155::initializer(:uri_,);
-    initializer(:owner_, :voucher_signer_, :marketplace_);
+    RulesMessages::initializer(:voucher_signer_);
+    initializer(:owner_, :marketplace_);
   }
 
   //
@@ -100,22 +99,12 @@ mod RulesTokens {
   //
 
   impl RulesTokens of IRulesTokens {
-    fn voucher_signer() -> starknet::ContractAddress {
-      _voucher_signer::read()
-    }
-
     fn card_exists(card_token_id: u256) -> bool {
       _minted_cards::read(card_token_id)
     }
 
     fn redeem_voucher(voucher: Voucher, signature: Span<felt252>) {
-      // assert voucher has not been already consumed and consume it
-      assert(!_is_voucher_consumed(:voucher), 'Voucher already consumed');
-      _consume_voucher(:voucher);
-
-      // assert voucher signature is valid
-      let voucher_signer_ = _voucher_signer::read();
-      assert(_is_voucher_signature_valid(:voucher, :signature, signer: voucher_signer_), 'Invalid voucher signature');
+      RulesMessages::consume_valid_voucher(:voucher, :signature);
 
       // mint token id
       _mint(to: voucher.receiver, token_id: TokenIdTrait::new(id: voucher.token_id), amount: voucher.amount);
@@ -152,7 +141,7 @@ mod RulesTokens {
 
   #[view]
   fn voucher_signer() -> starknet::ContractAddress {
-    RulesTokens::voucher_signer()
+    RulesMessages::voucher_signer()
   }
 
   #[view]
@@ -183,6 +172,11 @@ mod RulesTokens {
 
   #[view]
   fn balance_of(account: starknet::ContractAddress, id: u256) -> u256 {
+    ERC1155::balance_of(:account, :id)
+  }
+
+  #[view]
+  fn balanceOf(account: starknet::ContractAddress, id: u256) -> u256 {
     ERC1155::balance_of(:account, :id)
   }
 
@@ -301,13 +295,8 @@ mod RulesTokens {
   // Init
 
   #[internal]
-  fn initializer(
-    owner_: starknet::ContractAddress,
-    voucher_signer_: starknet::ContractAddress,
-    marketplace_: starknet::ContractAddress
-  ) {
+  fn initializer(owner_: starknet::ContractAddress, marketplace_: starknet::ContractAddress) {
     Ownable::_transfer_ownership(new_owner: owner_);
-    _voucher_signer::write(voucher_signer_);
     _marketplace::write(marketplace_);
   }
 
@@ -354,32 +343,6 @@ mod RulesTokens {
   #[internal]
   fn _mint_pack(to: starknet::ContractAddress, pack_token: PackToken, amount: u256) {
     panic_with_felt252('Packs tokens not supported yet');
-  }
-
-  // Voucher
-
-  #[internal]
-  fn _is_voucher_signature_valid(
-    voucher: Voucher,
-    signature: Span<felt252>,
-    signer: starknet::ContractAddress
-  ) -> bool {
-    // compute voucher message hash
-    let hash = voucher.compute_hash_from(from: signer);
-
-    // check signature
-    let signer_account = AccountABIDispatcher { contract_address: signer };
-    signer_account.is_valid_signature(message: hash, :signature) == account::interface::ERC1271_VALIDATED
-  }
-
-  #[internal]
-  fn _is_voucher_consumed(voucher: Voucher) -> bool {
-    _consumed_vouchers::read((voucher.receiver, voucher.nonce))
-  }
-
-  #[internal]
-  fn _consume_voucher(voucher: Voucher) {
-    _consumed_vouchers::write((voucher.receiver, voucher.nonce), true);
   }
 }
 

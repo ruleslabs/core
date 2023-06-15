@@ -5,6 +5,7 @@ use option::OptionTrait;
 
 use rules_tokens::utils::zeroable::U128Zeroable;
 use rules_tokens::typed_data::voucher::Voucher;
+use rules_tokens::typed_data::order::Order;
 use rules_tokens::utils::serde::SpanSerde;
 
 const METADATA_MULTIHASH_IDENTIFIER: u16 = 0x1220;
@@ -66,8 +67,6 @@ enum Token {
 
 #[abi]
 trait IRulesTokens {
-  fn voucher_signer() -> starknet::ContractAddress;
-
   fn card_exists(card_token_id: u256) -> bool;
 
   fn redeem_voucher(voucher: Voucher, signature: Span<felt252>);
@@ -86,4 +85,13 @@ trait IRulesData {
   fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128;
 
   fn add_scarcity(season: felt252, scarcity: Scarcity);
+}
+
+#[abi]
+trait IRulesMessages {
+  fn voucher_signer() -> starknet::ContractAddress;
+
+  fn consume_valid_voucher(voucher: Voucher, signature: Span<felt252>);
+
+  fn consume_valid_order_from(from: starknet::ContractAddress, order: Order, signature: Span<felt252>);
 }

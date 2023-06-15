@@ -50,8 +50,8 @@ fn setup() {
   RulesTokens::constructor(
     uri_: URI().span(),
     owner_: OWNER(),
-    voucher_signer_: voucher_signer.contract_address,
-    marketplace_: starknet::contract_address_const::<'marketplace'>()
+    marketplace_: starknet::contract_address_const::<'marketplace'>(),
+    voucher_signer_: voucher_signer.contract_address
   );
 
   // create some card models and scarcities
@@ -85,62 +85,12 @@ fn setup_receiver() -> AccountABIDispatcher {
 
 #[test]
 #[available_gas(20000000)]
-fn test__verify_voucher_signature_valid() {
-  setup();
-
-  let voucher_signer = RulesTokens::voucher_signer();
-
-  let voucher = VOUCHER_1();
-  let signature = VOUCHER_SIGNATURE_1();
-
-  assert(
-    RulesTokens::_is_voucher_signature_valid(:voucher, :signature, signer: voucher_signer),
-    'Invalid voucher signature'
-  );
-}
-
-#[test]
-#[available_gas(20000000)]
-fn test__is_voucher_signature_valid_success() {
-  setup();
-
-  let voucher_signer = RulesTokens::voucher_signer();
-
-  let mut voucher = VOUCHER_1();
-  voucher.amount += 1;
-  let signature = VOUCHER_SIGNATURE_1();
-
-  assert(
-    !RulesTokens::_is_voucher_signature_valid(:voucher, :signature, signer: voucher_signer),
-    'Invalid voucher signature'
-  );
-}
-
-#[test]
-#[available_gas(20000000)]
-fn test__is_voucher_signature_valid_failure() {
-  setup();
-
-  let voucher_signer = RulesTokens::voucher_signer();
-
-  let mut voucher = VOUCHER_1();
-  voucher.amount += 1;
-  let signature = VOUCHER_SIGNATURE_1();
-
-  assert(
-    !RulesTokens::_is_voucher_signature_valid(:voucher, :signature, signer: voucher_signer),
-    'Invalid voucher signature'
-  );
-}
-
-#[test]
-#[available_gas(20000000)]
 #[should_panic(expected: ('Invalid voucher signature',))]
 fn test_redeem_voucher_invalid_signature() {
   setup();
 
   let mut voucher = VOUCHER_1();
-  voucher.nonce += 1;
+  voucher.salt += 1;
   let signature = VOUCHER_SIGNATURE_1();
 
   RulesTokens::redeem_voucher(:voucher, :signature);
