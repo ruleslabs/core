@@ -47,12 +47,7 @@ fn setup() {
   // setup voucher signer - 0x1
   let voucher_signer = setup_voucher_signer();
 
-  RulesTokens::constructor(
-    uri_: URI().span(),
-    owner_: OWNER(),
-    marketplace_: starknet::contract_address_const::<'marketplace'>(),
-    voucher_signer_: voucher_signer.contract_address
-  );
+  RulesTokens::constructor(uri_: URI().span(), owner_: OWNER(), voucher_signer_: voucher_signer.contract_address);
 
   // create some card models and scarcities
   let card_model_2 = CARD_MODEL_2();

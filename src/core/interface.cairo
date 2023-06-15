@@ -70,6 +70,17 @@ trait IRulesTokens {
   fn card_exists(card_token_id: u256) -> bool;
 
   fn redeem_voucher(voucher: Voucher, signature: Span<felt252>);
+
+  fn fulfill_order_from(from: starknet::ContractAddress, order: Order, signature: Span<felt252>);
+
+  fn cancel_order(order: Order, signature: Span<felt252>);
+
+  fn redeem_voucher_and_fulfill_order(
+    voucher: Voucher,
+    voucher_signature: Span<felt252>,
+    order: Order,
+    order_signature: Span<felt252>
+  );
 }
 
 #[abi]

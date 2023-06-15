@@ -4,7 +4,7 @@ use debug::PrintTrait;
 // locals
 use rules_tokens::typed_data::TypedDataTrait;
 use rules_tokens::typed_data::voucher::Voucher;
-use rules_tokens::typed_data::order::{ Order, Item, ERC_20_Item, ERC_1155_Item };
+use rules_tokens::typed_data::order::{ Order, Item, ERC20_Item, ERC1155_Item };
 
 fn CHAIN_ID() -> felt252 {
   'SN_MAIN'
@@ -33,12 +33,12 @@ fn VOUCHER_HASH() -> felt252 {
 
 fn ORDER() -> Order {
   Order {
-    offer_item: Item::ERC_1155(ERC_1155_Item {
+    offer_item: Item::ERC1155(ERC1155_Item {
       token: starknet::contract_address_const::<1>(),
       identifier: u256 { low: 2, high: 3 },
       amount: u256 { low: 4, high: 5 },
     }),
-    consideration_item: Item::ERC_20(ERC_20_Item {
+    consideration_item: Item::ERC20(ERC20_Item {
       token: starknet::contract_address_const::<6>(),
       amount: u256 { low: 7, high: 8 },
     }),

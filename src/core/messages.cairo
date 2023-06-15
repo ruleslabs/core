@@ -18,7 +18,7 @@ trait RulesMessagesABI {
   fn consume_valid_voucher(voucher: Voucher, signature: Span<felt252>);
 
   #[external]
-  fn consume_valid_order(order: Order, signature: Span<felt252>);
+  fn consume_valid_order_from(from: starknet::ContractAddress, order: Order, signature: Span<felt252>);
 }
 
 #[contract]
@@ -29,6 +29,7 @@ mod RulesMessages {
 
   // locals
   use rules_erc1155::utils::serde::SpanSerde;
+  use rules_tokens::utils::zeroable::{ U64Zeroable };
   use rules_tokens::typed_data::TypedDataTrait;
   use super::super::interface::{ IRulesMessages, Voucher, Order };
 
@@ -75,11 +76,26 @@ mod RulesMessages {
       _consume_message(:hash);
 
       // assert voucher signature is valid
-      let voucher_signer_ = _voucher_signer::read();
       assert(_is_message_signature_valid(:hash, :signature, signer: voucher_signer_), 'Invalid voucher signature');
     }
 
     fn consume_valid_order_from(from: starknet::ContractAddress, order: Order, signature: Span<felt252>) {
+      // compute voucher message hash
+      let hash = order.compute_hash_from(:from);
+
+      // assert order has not been already consumed and consume it
+      assert(!_is_message_consumed(:hash), 'Order already consumed');
+      _consume_message(:hash);
+
+      // assert order signature is valid
+      assert(_is_message_signature_valid(:hash, :signature, signer: from), 'Invalid order signature');
+
+      // assert end time is not passed
+      if (order.end_time.is_non_zero()) {
+        let block_timestamp = starknet::get_block_timestamp();
+
+        assert(block_timestamp <= order.end_time, 'Order ended');
+      }
     }
   }
 
