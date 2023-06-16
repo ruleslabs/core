@@ -437,3 +437,41 @@ fn test_balance_of_after_redeem_voucher_to_() {
     'balance of after'
   );
 }
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Invalid voucher signature',))]
+fn test_redeem_voucher_to_invalid_signature() {
+  setup();
+  let receiver = setup_receiver();
+
+  let mut voucher = VOUCHER_2();
+  voucher.salt += 1;
+  let signature = VOUCHER_SIGNATURE_2();
+
+  let card_model = CARD_MODEL_2();
+  let metadata = METADATA();
+
+  testing::set_caller_address(MARKETPLACE());
+  RulesTokens::redeem_voucher_to(to: OTHER(), :voucher, :signature);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Voucher already consumed',))]
+fn test_redeem_voucher_to_already_consumed() {
+  setup();
+  setup_receiver();
+
+  let receiver = setup_other_receiver();
+
+  let voucher = VOUCHER_2();
+  let signature = VOUCHER_SIGNATURE_2();
+
+  let card_model = CARD_MODEL_2();
+  let metadata = METADATA();
+
+  testing::set_caller_address(MARKETPLACE());
+  RulesTokens::redeem_voucher_to(to: receiver.contract_address, :voucher, :signature);
+  RulesTokens::redeem_voucher_to(to: receiver.contract_address, :voucher, :signature);
+}
