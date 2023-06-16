@@ -4,8 +4,7 @@ use zeroable::Zeroable;
 use option::OptionTrait;
 
 use rules_tokens::utils::zeroable::U128Zeroable;
-use rules_tokens::typed_data::voucher::Voucher;
-use rules_tokens::typed_data::order::Order;
+use super::voucher::Voucher;
 use rules_tokens::utils::serde::SpanSerde;
 
 const METADATA_MULTIHASH_IDENTIFIER: u16 = 0x1220;
@@ -70,17 +69,6 @@ trait IRulesTokens {
   fn card_exists(card_token_id: u256) -> bool;
 
   fn redeem_voucher(voucher: Voucher, signature: Span<felt252>);
-
-  fn fulfill_order_from(from: starknet::ContractAddress, order: Order, signature: Span<felt252>);
-
-  fn cancel_order(order: Order, signature: Span<felt252>);
-
-  fn redeem_voucher_and_fulfill_order(
-    voucher: Voucher,
-    voucher_signature: Span<felt252>,
-    order: Order,
-    order_signature: Span<felt252>
-  );
 }
 
 #[abi]
@@ -103,6 +91,4 @@ trait IRulesMessages {
   fn voucher_signer() -> starknet::ContractAddress;
 
   fn consume_valid_voucher(voucher: Voucher, signature: Span<felt252>);
-
-  fn consume_valid_order_from(from: starknet::ContractAddress, order: Order, signature: Span<felt252>);
 }

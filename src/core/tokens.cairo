@@ -5,7 +5,7 @@ use rules_erc1155::utils::serde::SpanSerde;
 // locals
 use rules_tokens::constants;
 use rules_tokens::utils::zeroable::{ U128Zeroable };
-use super::interface::{ Token, TokenId, CardToken, PackToken, CardModel, Scarcity, Metadata, Voucher, Order };
+use super::interface::{ Token, TokenId, CardToken, PackToken, CardModel, Scarcity, Metadata, Voucher };
 
 #[abi]
 trait RulesTokensABI {
@@ -35,20 +35,6 @@ trait RulesTokensABI {
 
   #[external]
   fn redeem_voucher(voucher: Voucher, signature: Span<felt252>);
-
-  #[external]
-  fn fulfill_order_from(from: starknet::ContractAddress, order: Order, signature: Span<felt252>);
-
-  #[external]
-  fn cancel_order(order: Order, signature: Span<felt252>);
-
-  #[external]
-  fn redeem_voucher_and_fulfill_order(
-    voucher: Voucher,
-    voucher_signature: Span<felt252>,
-    order: Order,
-    order_signature: Span<felt252>
-  );
 }
 
 #[contract]
@@ -57,11 +43,10 @@ mod RulesTokens {
   use zeroable::Zeroable;
   use rules_erc1155::erc1155::ERC1155;
   use rules_account::account;
+  use messages::typed_data::TypedDataTrait;
 
   // locals
   use rules_tokens::access::ownable::Ownable;
-  use rules_tokens::typed_data::TypedDataTrait;
-  use rules_tokens::typed_data::order::Item;
   use rules_tokens::utils::zeroable::{ CardModelZeroable, U128Zeroable };
   use super::super::interface::{
     IRulesTokens,
@@ -69,7 +54,6 @@ mod RulesTokens {
     CardModel,
     Metadata,
     Voucher,
-    Order,
     CardToken,
     PackToken,
     TokenId,
@@ -81,8 +65,6 @@ mod RulesTokens {
 
   // dispatchers
   use rules_account::account::{ AccountABIDispatcher, AccountABIDispatcherTrait };
-  use rules_tokens::token::erc20::{ IERC20Dispatcher, IERC20DispatcherTrait };
-  use rules_erc1155::erc1155::{ ERC1155ABIDispatcher, ERC1155ABIDispatcherTrait };
 
   //
   // Storage
@@ -122,45 +104,6 @@ mod RulesTokens {
 
       // mint token id
       _mint(to: voucher.receiver, token_id: TokenIdTrait::new(id: voucher.token_id), amount: voucher.amount);
-    }
-
-    fn fulfill_order_from(from: starknet::ContractAddress, order: Order, signature: Span<felt252>) {
-      RulesMessages::consume_valid_order_from(:from, :order, :signature);
-
-      // transfer offer to caller
-      let caller = starknet::get_caller_address();
-
-      _transfer_item_from(:from, to: caller, item: order.offer_item);
-
-      // transfer consideration to offerer
-      _transfer_item_from(from: caller, to: from, item: order.consideration_item);
-    }
-
-    fn cancel_order(order: Order, signature: Span<felt252>) {
-      let caller = starknet::get_caller_address();
-
-      RulesMessages::consume_valid_order_from(from: caller, :order, :signature);
-    }
-
-    fn redeem_voucher_and_fulfill_order(
-      voucher: Voucher,
-      voucher_signature: Span<felt252>,
-      order: Order,
-      order_signature: Span<felt252>
-    ) {
-      let offerer = voucher.receiver;
-
-      // consume both messages
-      RulesMessages::consume_valid_voucher(:voucher, signature: voucher_signature);
-      RulesMessages::consume_valid_order_from(from: offerer, :order, signature: order_signature);
-
-      // mint offer to caller
-      let caller = starknet::get_caller_address();
-
-      _transfer_item_from(from: starknet::contract_address_const::<0>(), to: caller, item: order.offer_item);
-
-      // transfer consideration to offerer
-      _transfer_item_from(from: caller, to: offerer, item: order.consideration_item);
     }
   }
 
@@ -323,28 +266,6 @@ mod RulesTokens {
     RulesTokens::redeem_voucher(:voucher, :signature);
   }
 
-  // Order
-
-  #[external]
-  fn fulfill_order_from(from: starknet::ContractAddress, order: Order, signature: Span<felt252>) {
-    RulesTokens::fulfill_order_from(:from, :order, :signature);
-  }
-
-  #[external]
-  fn cancel_order(order: Order, signature: Span<felt252>) {
-    RulesTokens::cancel_order(:order, :signature);
-  }
-
-  #[external]
-  fn redeem_voucher_and_fulfill_order(
-    voucher: Voucher,
-    voucher_signature: Span<felt252>,
-    order: Order,
-    order_signature: Span<felt252>
-  ) {
-    RulesTokens::redeem_voucher_and_fulfill_order(:voucher, :voucher_signature, :order, :order_signature);
-  }
-
   //
   // Internals
   //
@@ -399,54 +320,6 @@ mod RulesTokens {
   #[internal]
   fn _mint_pack(to: starknet::ContractAddress, pack_token: PackToken, amount: u256) {
     panic_with_felt252('Packs tokens not supported yet');
-  }
-
-  // Order
-
-  #[internal]
-  fn _transfer_item_from(from: starknet::ContractAddress, to: starknet::ContractAddress, item: Item) {
-    // TODO: add case fallback support
-
-    match item {
-      Item::ERC20(erc_20_item) => {
-        let ERC20 = IERC20Dispatcher { contract_address: erc_20_item.token };
-
-        ERC20.transferFrom(sender: from, recipient: to, amount: erc_20_item.amount);
-      },
-
-      Item::ERC1155(erc_1155_item) => {
-        let self = starknet::get_contract_address();
-
-        if (self == erc_1155_item.token) {
-          // item is a Rules token
-
-          // Mint if from is zero, or transfer
-          if (from.is_zero()) {
-            _mint(:to, token_id: TokenIdTrait::new(id: erc_1155_item.identifier), amount: erc_1155_item.amount);
-          } else {
-            safe_transfer_from(
-              :from,
-              :to,
-              id: erc_1155_item.identifier,
-              amount: erc_1155_item.amount,
-              data: ArrayTrait::<felt252>::new().span()
-            );
-          }
-        } else {
-          // item is a random ERC1155 token
-
-          let ERC1155 = ERC1155ABIDispatcher { contract_address: erc_1155_item.token };
-
-          ERC1155.safe_transfer_from(
-            :from,
-            :to,
-            id: erc_1155_item.identifier,
-            amount: erc_1155_item.amount,
-            data: ArrayTrait::<felt252>::new().span()
-          );
-        }
-      },
-    }
   }
 }
 

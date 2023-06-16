@@ -10,9 +10,6 @@ use super::constants::{
   VOUCHER_1,
   VOUCHER_SIGNATURE_1,
   VOUCHER_SIGNER_PUBLIC_KEY,
-  ORDER_1,
-  ORDER_SIGNATURE_1,
-  ORDER_SIGNER_PUBLIC_KEY,
 };
 use super::utils;
 use super::mocks::signer::Signer;
@@ -80,69 +77,4 @@ fn test_consume_valid_voucher_already_consumed() {
 
   RulesMessages::consume_valid_voucher(:voucher, :signature);
   RulesMessages::consume_valid_voucher(:voucher, :signature);
-}
-
-// ORDER
-
-#[test]
-#[available_gas(20000000)]
-fn test_consume_valid_order_from_valid() {
-  setup();
-
-  // setup order signer - 0x2
-  let signer = setup_signer(ORDER_SIGNER_PUBLIC_KEY());
-
-  let order = ORDER_1();
-  let signature = ORDER_SIGNATURE_1();
-
-  RulesMessages::consume_valid_order_from(from: signer.contract_address, :order, :signature);
-}
-
-#[test]
-#[available_gas(20000000)]
-#[should_panic(expected: ('Invalid order signature',))]
-fn test_consume_valid_order_from_invalid() {
-  setup();
-
-  // setup order signer - 0x2
-  let signer = setup_signer(ORDER_SIGNER_PUBLIC_KEY());
-
-  let mut order = ORDER_1();
-  order.salt += 1;
-  let signature = ORDER_SIGNATURE_1();
-
-  RulesMessages::consume_valid_order_from(from: signer.contract_address, :order, :signature);
-}
-
-#[test]
-#[available_gas(20000000)]
-#[should_panic(expected: ('Order already consumed',))]
-fn test_consume_valid_order_from_already_consumed() {
-  setup();
-
-  // setup order signer - 0x2
-  let signer = setup_signer(ORDER_SIGNER_PUBLIC_KEY());
-
-  let order = ORDER_1();
-  let signature = ORDER_SIGNATURE_1();
-
-  RulesMessages::consume_valid_order_from(from: signer.contract_address, :order, :signature);
-  RulesMessages::consume_valid_order_from(from: signer.contract_address, :order, :signature);
-}
-
-#[test]
-#[available_gas(20000000)]
-#[should_panic(expected: ('Order ended',))]
-fn test_consume_valid_order_from_ended() {
-  setup();
-
-  // setup order signer - 0x2
-  let signer = setup_signer(ORDER_SIGNER_PUBLIC_KEY());
-
-  testing::set_block_timestamp(BLOCK_TIMESTAMP() + 1);
-
-  let order = ORDER_1();
-  let signature = ORDER_SIGNATURE_1();
-
-  RulesMessages::consume_valid_order_from(from: signer.contract_address, :order, :signature);
 }

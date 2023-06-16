@@ -9,6 +9,7 @@ name = "rules_tokens"
 
 [dependencies]
 rules_erc1155 = { git = "https://github.com/ruleslabs/starknet-erc-1155.git" }
+messages = { git = "https://github.com/ruleslabs/starknet-messages.git" }
 starknet = ">=1.0.0"
 
 [[target.starknet-contract]]

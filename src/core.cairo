@@ -3,5 +3,6 @@ use tokens::{ RulesTokens, RulesTokensABIDispatcher, RulesTokensABIDispatcherTra
 
 mod data;
 mod messages;
+mod voucher;
 
 mod interface;

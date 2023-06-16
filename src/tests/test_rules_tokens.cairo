@@ -9,7 +9,7 @@ use starknet::class_hash::Felt252TryIntoClassHash;
 use rules_tokens::core::RulesTokens;
 use rules_tokens::core::data::CardModelTrait;
 use rules_tokens::core::tokens::TokenIdTrait;
-use rules_tokens::typed_data::voucher::Voucher;
+use rules_tokens::core::voucher::Voucher;
 use rules_tokens::utils::zeroable::U256Zeroable;
 use super::mocks::signer::Signer;
 use super::mocks::receiver::Receiver;
