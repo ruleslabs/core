@@ -1,5 +1,4 @@
 use starknet::testing;
-use debug::PrintTrait;
 
 // locals
 use rules_tokens::typed_data::TypedDataTrait;

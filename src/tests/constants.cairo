@@ -4,6 +4,7 @@ use array::ArrayTrait;
 use rules_tokens::core::data::{ RulesData, CardModelTrait, ScarcityTrait };
 use rules_tokens::core::interface::{ CardModel, Scarcity, Metadata, METADATA_MULTIHASH_IDENTIFIER };
 use rules_tokens::typed_data::voucher::Voucher;
+use rules_tokens::typed_data::order::{ Order, Item, ERC20_Item, ERC1155_Item };
 
 fn METADATA() -> Metadata {
   Metadata {
@@ -77,6 +78,14 @@ fn CHAIN_ID() -> felt252 {
   'SN_MAIN'
 }
 
+fn BLOCK_TIMESTAMP() -> u64 {
+  103374042_u64
+}
+
+//
+// VOUCHERS
+//
+
 fn VOUCHER_1() -> Voucher {
   Voucher {
     receiver: starknet::contract_address_const::<'receiver 1'>(),
@@ -119,8 +128,47 @@ fn VOUCHER_SIGNATURE_2() -> Span<felt252> {
 }
 
 fn VOUCHER_SIGNER_PUBLIC_KEY() -> felt252 {
-  883045738439352841478194533192765345509759306772397516907181243450667673002
+  0x1f3c942d7f492a37608cde0d77b884a5aa9e11d2919225968557370ddb5a5aa
 }
+
+//
+// ORDERS
+//
+
+fn ORDER_1() -> Order {
+  Order {
+    offer_item: Item::ERC1155(ERC1155_Item {
+      token: starknet::contract_address_const::<'offer token 1'>(),
+      identifier: u256 { low: 'offer id 1 low', high: 'offer id 1 high' },
+      amount: u256 { low: 'offer qty 1 low', high: 'offer qty 1 high' },
+    }),
+    consideration_item: Item::ERC20(ERC20_Item {
+      token: starknet::contract_address_const::<'consideration token 1'>(),
+      amount: u256 { low: 'cons qty 1 low', high: 'cons qty 1 high' },
+    }),
+    end_time: BLOCK_TIMESTAMP() + 1,
+    salt: 'salt 1',
+  }
+}
+
+fn ORDER_SIGNER() -> starknet::ContractAddress {
+  starknet::contract_address_const::<'order signer'>()
+}
+
+fn ORDER_SIGNATURE_1() -> Span<felt252> {
+  let mut signature = ArrayTrait::new();
+
+  signature.append(3237959813748497657862449788898314067503717469340761365314380802108721860625);
+  signature.append(1398567426642486998238399998023820315663915285444134720048195322876322419898);
+
+  signature.span()
+}
+
+fn ORDER_SIGNER_PUBLIC_KEY() -> felt252 {
+  0x1766831fbcbc258a953dd0c0505ecbcd28086c673355c7a219bc031b710b0d6
+}
+
+// ADDRESSES
 
 fn RECEIVER_DEPLOYED_ADDRESS() -> starknet::ContractAddress {
   starknet::contract_address_const::<0x2>()

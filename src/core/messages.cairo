@@ -94,7 +94,7 @@ mod RulesMessages {
       if (order.end_time.is_non_zero()) {
         let block_timestamp = starknet::get_block_timestamp();
 
-        assert(block_timestamp <= order.end_time, 'Order ended');
+        assert(block_timestamp < order.end_time, 'Order ended');
       }
     }
   }

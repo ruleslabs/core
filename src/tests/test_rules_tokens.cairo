@@ -4,7 +4,6 @@ use option::OptionTrait;
 use starknet::testing;
 use zeroable::Zeroable;
 use starknet::class_hash::Felt252TryIntoClassHash;
-use debug::PrintTrait;
 
 // locals
 use rules_tokens::core::RulesTokens;
