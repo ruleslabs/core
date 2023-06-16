@@ -66,9 +66,15 @@ enum Token {
 
 #[abi]
 trait IRulesTokens {
+  fn marketplace() -> starknet::ContractAddress;
+
+  fn set_marketplace(marketplace_: starknet::ContractAddress);
+
   fn card_exists(card_token_id: u256) -> bool;
 
   fn redeem_voucher(voucher: Voucher, signature: Span<felt252>);
+
+  fn redeem_voucher_to(to: starknet::ContractAddress, voucher: Voucher, signature: Span<felt252>);
 }
 
 #[abi]

@@ -28,6 +28,9 @@ trait RulesTokensABI {
   fn upgrade(new_implementation: starknet::ClassHash);
 
   #[external]
+  fn set_marketplace(marketplace_: starknet::ContractAddress);
+
+  #[external]
   fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128;
 
   #[external]
@@ -73,6 +76,9 @@ mod RulesTokens {
   struct Storage {
     // card_token_id -> minted
     _minted_cards: LegacyMap<u256, bool>,
+
+    // Marketplace address
+    _marketplace: starknet::ContractAddress,
   }
 
   //
@@ -83,11 +89,12 @@ mod RulesTokens {
   fn constructor(
     uri_: Span<felt252>,
     owner_: starknet::ContractAddress,
-    voucher_signer_: starknet::ContractAddress
+    voucher_signer_: starknet::ContractAddress,
+    marketplace_: starknet::ContractAddress
   ) {
     ERC1155::initializer(:uri_,);
     RulesMessages::initializer(:voucher_signer_);
-    initializer(:owner_);
+    initializer(:owner_, :marketplace_);
   }
 
   //
@@ -95,6 +102,14 @@ mod RulesTokens {
   //
 
   impl RulesTokens of IRulesTokens {
+    fn marketplace() -> starknet::ContractAddress {
+      _marketplace::read()
+    }
+
+    fn set_marketplace(marketplace_: starknet::ContractAddress) {
+      _marketplace::write(marketplace_);
+    }
+
     fn card_exists(card_token_id: u256) -> bool {
       _minted_cards::read(card_token_id)
     }
@@ -104,6 +119,13 @@ mod RulesTokens {
 
       // mint token id
       _mint(to: voucher.receiver, token_id: TokenIdTrait::new(id: voucher.token_id), amount: voucher.amount);
+    }
+
+    fn redeem_voucher_to(to: starknet::ContractAddress, voucher: Voucher, signature: Span<felt252>) {
+      RulesMessages::consume_valid_voucher(:voucher, :signature);
+
+      // mint token id
+      _mint(:to, token_id: TokenIdTrait::new(id: voucher.token_id), amount: voucher.amount);
     }
   }
 
@@ -140,6 +162,10 @@ mod RulesTokens {
     RulesMessages::voucher_signer()
   }
 
+  fn marketplace() -> starknet::ContractAddress {
+    RulesTokens::marketplace()
+  }
+
   #[view]
   fn card_exists(card_token_id: u256) -> bool {
     RulesTokens::card_exists(:card_token_id)
@@ -150,6 +176,17 @@ mod RulesTokens {
   #[view]
   fn supports_interface(interface_id: u32) -> bool {
     ERC1155::supports_interface(:interface_id)
+  }
+
+  // Setters
+
+  #[external]
+  fn set_marketplace(marketplace_: starknet::ContractAddress) {
+    // Modifiers
+    Ownable::assert_only_owner();
+
+    // Body
+    RulesData::set_marketplace(:marketplace_)
   }
 
   // Ownable
@@ -266,6 +303,16 @@ mod RulesTokens {
     RulesTokens::redeem_voucher(:voucher, :signature);
   }
 
+  #[external]
+  fn redeem_voucher_to(to: starknet::ContractAddress, voucher: Voucher, signature: Span<felt252>) {
+    // TODO: access control
+    // Modifiers
+    _only_marketplace();
+
+    // Body
+    RulesTokens::redeem_voucher_to(:to, :voucher, :signature);
+  }
+
   //
   // Internals
   //
@@ -273,8 +320,18 @@ mod RulesTokens {
   // Init
 
   #[internal]
-  fn initializer(owner_: starknet::ContractAddress) {
+  fn initializer(owner_: starknet::ContractAddress, marketplace_: starknet::ContractAddress) {
     Ownable::_transfer_ownership(new_owner: owner_);
+  }
+
+  // Marketplace
+
+  #[internal]
+  fn _only_marketplace() {
+    let caller = starknet::get_caller_address();
+    let marketplace_ = marketplace();
+
+    assert(marketplace_ == caller, 'Caller is not the marketplace');
   }
 
   // Mint

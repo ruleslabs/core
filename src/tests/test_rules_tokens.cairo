@@ -33,6 +33,7 @@ use super::constants::{
   OTHER,
   ZERO,
   SEASON,
+  MARKETPLACE,
 };
 
 // dispatchers
@@ -46,7 +47,12 @@ fn setup() {
   // setup voucher signer - 0x1
   let voucher_signer = setup_voucher_signer();
 
-  RulesTokens::constructor(uri_: URI().span(), owner_: OWNER(), voucher_signer_: voucher_signer.contract_address);
+  RulesTokens::constructor(
+    uri_: URI().span(),
+    owner_: OWNER(),
+    voucher_signer_: voucher_signer.contract_address,
+    marketplace_: MARKETPLACE()
+  );
 
   // create some card models and scarcities
   let card_model_2 = CARD_MODEL_2();

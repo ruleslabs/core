@@ -147,3 +147,7 @@ fn OWNER() -> starknet::ContractAddress {
 fn OTHER() -> starknet::ContractAddress {
   starknet::contract_address_const::<20>()
 }
+
+fn MARKETPLACE() -> starknet::ContractAddress {
+  starknet::contract_address_const::<'marketplace'>()
+}
