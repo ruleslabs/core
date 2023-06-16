@@ -13,6 +13,9 @@ trait RulesTokensABI {
   fn voucher_signer() -> starknet::ContractAddress;
 
   #[view]
+  fn marketplace() -> starknet::ContractAddress;
+
+  #[view]
   fn card_model(card_model_id: u128) -> CardModel;
 
   #[view]
@@ -186,7 +189,7 @@ mod RulesTokens {
     Ownable::assert_only_owner();
 
     // Body
-    RulesData::set_marketplace(:marketplace_)
+    RulesTokens::set_marketplace(:marketplace_)
   }
 
   // Ownable
@@ -322,6 +325,7 @@ mod RulesTokens {
   #[internal]
   fn initializer(owner_: starknet::ContractAddress, marketplace_: starknet::ContractAddress) {
     Ownable::_transfer_ownership(new_owner: owner_);
+    _marketplace::write(marketplace_);
   }
 
   // Marketplace
@@ -331,6 +335,7 @@ mod RulesTokens {
     let caller = starknet::get_caller_address();
     let marketplace_ = marketplace();
 
+    assert(caller.is_non_zero(), 'Caller is the zero address');
     assert(marketplace_ == caller, 'Caller is not the marketplace');
   }
 

@@ -26,6 +26,7 @@ use super::constants::{
   CARD_MODEL_2,
   METADATA,
   RECEIVER_DEPLOYED_ADDRESS,
+  OTHER_RECEIVER_DEPLOYED_ADDRESS,
   CARD_TOKEN_ID_2,
   SCARCITY,
   CARD_MODEL_3,
@@ -79,6 +80,14 @@ fn setup_receiver() -> AccountABIDispatcher {
   let receiver_address = utils::deploy(Receiver::TEST_CLASS_HASH, ArrayTrait::new());
 
   assert(receiver_address == RECEIVER_DEPLOYED_ADDRESS(), 'receiver setup failed');
+
+  AccountABIDispatcher { contract_address: receiver_address }
+}
+
+fn setup_other_receiver() -> AccountABIDispatcher {
+  let receiver_address = utils::deploy(Receiver::TEST_CLASS_HASH, ArrayTrait::new());
+
+  assert(receiver_address == OTHER_RECEIVER_DEPLOYED_ADDRESS(), 'receiver setup failed');
 
   AccountABIDispatcher { contract_address: receiver_address }
 }
@@ -308,4 +317,123 @@ fn test_add_card_model_unauthorized() {
 
   testing::set_caller_address(OTHER());
   RulesTokens::add_card_model(new_card_model: card_model_2, :metadata);
+}
+
+// Marketplace
+
+#[test]
+#[available_gas(20000000)]
+fn test_marketplace() {
+  setup();
+
+  let marketplace = MARKETPLACE();
+
+  assert(RulesTokens::marketplace() == marketplace, 'Invalid marketplace address');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_set_marketplace() {
+  setup();
+
+  let marketplace = MARKETPLACE();
+  let new_marketplace = OTHER();
+
+  assert(RulesTokens::marketplace() == marketplace, 'Invalid marketplace address');
+
+  RulesTokens::set_marketplace(marketplace_: new_marketplace);
+
+  assert(RulesTokens::marketplace() == new_marketplace, 'Invalid marketplace address');
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is the zero address',))]
+fn test_set_marketplace_from_zero() {
+  setup();
+
+  let marketplace = MARKETPLACE();
+  let new_marketplace = OTHER();
+
+  testing::set_caller_address(ZERO());
+  RulesTokens::set_marketplace(marketplace_: new_marketplace);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is not the owner',))]
+fn test_set_marketplace_unauthorized() {
+  setup();
+
+  let marketplace = MARKETPLACE();
+  let new_marketplace = OTHER();
+
+  testing::set_caller_address(OTHER());
+  RulesTokens::set_marketplace(marketplace_: new_marketplace);
+}
+
+// Reedem voucher to
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is not the marketplace',))]
+fn test_redeem_voucher_to_unauthorized() {
+  setup();
+  let receiver = setup_receiver();
+
+  let voucher = VOUCHER_2();
+  let signature = VOUCHER_SIGNATURE_2();
+
+  let card_model = CARD_MODEL_2();
+  let metadata = METADATA();
+
+  testing::set_caller_address(OWNER());
+  RulesTokens::redeem_voucher_to(to: OTHER(), :voucher, :signature);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is the zero address',))]
+fn test_redeem_voucher_to_from_zero() {
+  setup();
+  let receiver = setup_receiver();
+
+  let voucher = VOUCHER_2();
+  let signature = VOUCHER_SIGNATURE_2();
+
+  let card_model = CARD_MODEL_2();
+  let metadata = METADATA();
+
+  testing::set_caller_address(ZERO());
+  RulesTokens::redeem_voucher_to(to: OTHER(), :voucher, :signature);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_balance_of_after_redeem_voucher_to_() {
+  setup();
+  setup_receiver();
+
+  let receiver = setup_other_receiver();
+
+  let voucher = VOUCHER_2();
+  let signature = VOUCHER_SIGNATURE_2();
+
+  // create conditions to successfully redeem the voucher
+  let card_model = CARD_MODEL_2();
+  let metadata = METADATA();
+  let card_token_id = CARD_TOKEN_ID_2();
+
+  assert(
+    RulesTokens::balance_of(account: receiver.contract_address, id: card_token_id).is_zero(),
+    'balance of before'
+  );
+
+  testing::set_caller_address(MARKETPLACE());
+  RulesTokens::redeem_voucher_to(to: receiver.contract_address, :voucher, :signature);
+
+  assert(
+    RulesTokens::balance_of(account: receiver.contract_address, id: card_token_id) == voucher.amount,
+    'balance of after'
+  );
 }

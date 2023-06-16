@@ -136,6 +136,10 @@ fn RECEIVER_DEPLOYED_ADDRESS() -> starknet::ContractAddress {
   starknet::contract_address_const::<0x2>()
 }
 
+fn OTHER_RECEIVER_DEPLOYED_ADDRESS() -> starknet::ContractAddress {
+  starknet::contract_address_const::<0x3>()
+}
+
 fn ZERO() -> starknet::ContractAddress {
   Zeroable::zero()
 }
