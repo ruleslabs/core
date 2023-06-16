@@ -4,9 +4,6 @@ use rules_erc1155::utils::serde::SpanSerde;
 use messages::typed_data::typed_data::Domain;
 
 // locals
-use rules_tokens::constants;
-use rules_tokens::utils::zeroable::{ U128Zeroable };
-use super::interface::{ Token, TokenId, CardToken, PackToken, CardModel, Scarcity, Metadata };
 use super::voucher::Voucher;
 
 fn DOMAIN() -> Domain {
