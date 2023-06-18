@@ -35,6 +35,8 @@ use super::constants::{
   ZERO,
   SEASON,
   MARKETPLACE,
+  ROYALTIES_RECEIVER,
+  ROYALTIES_PERCENTAGE
 };
 
 // dispatchers
@@ -52,7 +54,9 @@ fn setup() {
     uri_: URI().span(),
     owner_: OWNER(),
     voucher_signer_: voucher_signer.contract_address,
-    marketplace_: MARKETPLACE()
+    marketplace_: MARKETPLACE(),
+    royalties_receiver_: ROYALTIES_RECEIVER(),
+    royalties_percentage_: ROYALTIES_PERCENTAGE()
   );
 
   // create some card models and scarcities

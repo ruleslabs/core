@@ -5,6 +5,21 @@ use rules_tokens::core::interface::{ Scarcity, CardModel, Metadata };
 use super::partial_eq::{ CardModelEq, ScarcityEq };
 
 // Not available in cairo@1.1.0 but coming soon
+impl U16Zeroable of Zeroable<u16> {
+  fn zero() -> u16 {
+    0
+  }
+  #[inline(always)]
+  fn is_zero(self: u16) -> bool {
+    self == U16Zeroable::zero()
+  }
+  #[inline(always)]
+  fn is_non_zero(self: u16) -> bool {
+    self != U16Zeroable::zero()
+  }
+}
+
+// Not available in cairo@1.1.0 but coming soon
 impl U64Zeroable of Zeroable<u64> {
   fn zero() -> u64 {
     0

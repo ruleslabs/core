@@ -27,6 +27,15 @@ trait RulesTokensABI {
   #[view]
   fn uncommon_scarcities_count(season: felt252) -> felt252;
 
+  #[view]
+  fn royalty_info(token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256);
+
+  #[external]
+  fn set_royalties_receiver(new_receiver: starknet::ContractAddress);
+
+  #[external]
+  fn set_royalties_percentage(new_percentage: u16);
+
   #[external]
   fn upgrade(new_implementation: starknet::ClassHash);
 
@@ -52,6 +61,7 @@ mod RulesTokens {
   use messages::typed_data::TypedDataTrait;
 
   // locals
+  use rules_tokens::royalties::erc2981::ERC2981;
   use rules_tokens::access::ownable::Ownable;
   use rules_tokens::utils::zeroable::{ CardModelZeroable, U128Zeroable };
   use super::super::interface::{
@@ -93,11 +103,13 @@ mod RulesTokens {
     uri_: Span<felt252>,
     owner_: starknet::ContractAddress,
     voucher_signer_: starknet::ContractAddress,
-    marketplace_: starknet::ContractAddress
+    marketplace_: starknet::ContractAddress,
+    royalties_receiver_: starknet::ContractAddress,
+    royalties_percentage_: u16
   ) {
     ERC1155::initializer(:uri_,);
     RulesMessages::initializer(:voucher_signer_);
-    initializer(:owner_, :marketplace_);
+    initializer(:owner_, :marketplace_, :royalties_receiver_, :royalties_percentage_);
   }
 
   //
@@ -178,7 +190,14 @@ mod RulesTokens {
 
   #[view]
   fn supports_interface(interface_id: u32) -> bool {
-    ERC1155::supports_interface(:interface_id)
+    ERC1155::supports_interface(:interface_id) | ERC2981::supports_interface(:interface_id)
+  }
+
+  // ERC2981
+
+  #[view]
+  fn royalty_info(token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256) {
+    ERC2981::royalty_info(:token_id, :sale_price)
   }
 
   // Setters
@@ -190,6 +209,22 @@ mod RulesTokens {
 
     // Body
     RulesTokens::set_marketplace(:marketplace_)
+  }
+
+  // ERC2981
+
+  #[external]
+  fn set_royalties_receiver(new_receiver: starknet::ContractAddress) {
+    // Modifiers
+    Ownable::assert_only_owner();
+
+    // Body
+    ERC2981::_set_royalty_receiver(:new_receiver);
+  }
+
+  #[external]
+  fn set_royalties_percentage(new_percentage: u16) {
+    ERC2981::_set_royalty_percentage(:new_percentage);
   }
 
   // Ownable
@@ -323,8 +358,17 @@ mod RulesTokens {
   // Init
 
   #[internal]
-  fn initializer(owner_: starknet::ContractAddress, marketplace_: starknet::ContractAddress) {
+  fn initializer(
+    owner_: starknet::ContractAddress,
+    marketplace_: starknet::ContractAddress,
+    royalties_receiver_: starknet::ContractAddress,
+    royalties_percentage_: u16
+  ) {
     Ownable::_transfer_ownership(new_owner: owner_);
+
+    ERC2981::_set_royalty_receiver(new_receiver: royalties_receiver_);
+    ERC2981::_set_royalty_percentage(new_percentage: royalties_percentage_);
+
     _marketplace::write(marketplace_);
   }
 

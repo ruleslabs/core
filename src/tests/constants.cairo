@@ -155,3 +155,13 @@ fn OTHER() -> starknet::ContractAddress {
 fn MARKETPLACE() -> starknet::ContractAddress {
   starknet::contract_address_const::<'marketplace'>()
 }
+
+fn ROYALTIES_RECEIVER() -> starknet::ContractAddress {
+  starknet::contract_address_const::<'royalties receiver'>()
+}
+
+// MISC
+
+fn ROYALTIES_PERCENTAGE() -> u16 {
+  500 // 5%
+}
