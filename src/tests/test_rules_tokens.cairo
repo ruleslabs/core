@@ -479,3 +479,155 @@ fn test_redeem_voucher_to_already_consumed() {
   RulesTokens::redeem_voucher_to(to: receiver.contract_address, :voucher, :signature);
   RulesTokens::redeem_voucher_to(to: receiver.contract_address, :voucher, :signature);
 }
+
+// ERC2981 - Royalties
+
+#[test]
+#[available_gas(20000000)]
+fn test_royalty_info_amount_without_reminder() {
+  setup();
+
+  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 100);
+  assert(royalty_amount == 5, 'Invalid royalty amount');
+
+  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 20);
+  assert(royalty_amount == 1, 'Invalid royalty amount');
+
+  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 0xfffffff0);
+  assert(royalty_amount == 0xccccccc, 'Invalid royalty amount');
+
+  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 0);
+  assert(royalty_amount == 0, 'Invalid royalty amount');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_royalty_info_amount_with_reminder() {
+  setup();
+
+  let  royalties_receiver = ROYALTIES_RECEIVER();
+
+  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 101);
+  assert(royalty_amount == 6, 'Invalid royalty amount');
+
+  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 119);
+  assert(royalty_amount == 6, 'Invalid royalty amount');
+
+  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 19);
+  assert(royalty_amount == 1, 'Invalid royalty amount');
+
+  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 1);
+  assert(royalty_amount == 1, 'Invalid royalty amount');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_royalty_info_receiver() {
+  setup();
+
+  let  royalties_receiver = ROYALTIES_RECEIVER();
+
+  let (receiver, _) = RulesTokens::royalty_info(token_id: 100, sale_price: 100);
+  assert(receiver == royalties_receiver, 'Invalid royalty receiver');
+
+  let (receiver, _) = RulesTokens::royalty_info(token_id: 20, sale_price: 20);
+  assert(receiver == royalties_receiver, 'Invalid royalty receiver');
+
+  let (receiver, _) = RulesTokens::royalty_info(token_id: 0x42, sale_price: 0x42);
+  assert(receiver == royalties_receiver, 'Invalid royalty receiver');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_set_royalty_receiver() {
+  setup();
+
+  let new_royalties_receiver = OTHER();
+
+  RulesTokens::set_royalties_receiver(new_receiver: new_royalties_receiver);
+
+  let (receiver, _) = RulesTokens::royalty_info(token_id: 0x42, sale_price: 0x42);
+  assert(receiver == new_royalties_receiver, 'Invalid royalty receiver');
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is not the owner',))]
+fn test_set_royalty_receiver_unauthorized() {
+  setup();
+
+  testing::set_caller_address(OTHER());
+  RulesTokens::set_royalties_receiver(new_receiver: OTHER());
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is the zero address',))]
+fn test_set_royalty_receiver_from_zero() {
+  setup();
+
+  testing::set_caller_address(ZERO());
+  RulesTokens::set_royalties_receiver(new_receiver: OTHER());
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_set_royalty_percentage_50() {
+  setup();
+
+  RulesTokens::set_royalties_percentage(new_percentage: 5000); // 50%
+
+  let (_, royalties_amount) = RulesTokens::royalty_info(token_id: 0x42, sale_price: 0x42);
+  assert(royalties_amount == 0x21, 'Invalid royalty amount');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_set_royalty_percentage_100() {
+  setup();
+
+  RulesTokens::set_royalties_percentage(new_percentage: 10000); // 100%
+
+  let (_, royalties_amount) = RulesTokens::royalty_info(token_id: 0x42, sale_price: 0x42);
+  assert(royalties_amount == 0x42, 'Invalid royalty amount');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_set_royalty_percentage_zero() {
+  setup();
+
+  RulesTokens::set_royalties_percentage(new_percentage: 0); // 0%
+
+  let (_, royalties_amount) = RulesTokens::royalty_info(token_id: 0x42, sale_price: 0x42);
+  assert(royalties_amount == 0, 'Invalid royalty amount');
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Invalid percentage',))]
+fn test_set_royalty_percentage_above_100() {
+  setup();
+
+  RulesTokens::set_royalties_percentage(new_percentage: 10001); // 100.01%
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is not the owner',))]
+fn test_set_royalty_percentage_unauthorized() {
+  setup();
+
+  testing::set_caller_address(OTHER());
+  RulesTokens::set_royalties_percentage(new_percentage: 1);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is the zero address',))]
+fn test_set_royalty_percentage_from_zero() {
+  setup();
+
+  testing::set_caller_address(ZERO());
+  RulesTokens::set_royalties_percentage(new_percentage: 1);
+}

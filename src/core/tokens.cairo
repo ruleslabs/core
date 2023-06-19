@@ -224,6 +224,10 @@ mod RulesTokens {
 
   #[external]
   fn set_royalties_percentage(new_percentage: u16) {
+    // Modifiers
+    Ownable::assert_only_owner();
+
+    // Body
     ERC2981::_set_royalty_percentage(:new_percentage);
   }
 

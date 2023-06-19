@@ -58,7 +58,12 @@ mod ERC2981 {
             Into::<u16, felt252>::into(HUNDRED_PERCENT / royalties_percentage_).try_into().unwrap()
           ).unwrap()
         );
-        royalty_amount = u256 { low: q + r, high: 0 };
+        royalty_amount = u256 { low: q, high: 0 };
+
+        // if there is a remainder, we round up
+        if (r.is_non_zero()) {
+          royalty_amount += 1;
+        }
       }
 
       (royalties_receiver_, royalty_amount)
