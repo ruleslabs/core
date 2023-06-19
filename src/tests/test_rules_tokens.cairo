@@ -4,8 +4,10 @@ use option::OptionTrait;
 use starknet::testing;
 use zeroable::Zeroable;
 use starknet::class_hash::Felt252TryIntoClassHash;
+use rules_erc1155::erc1155::interface::IERC1155_ID;
 
 // locals
+use rules_tokens::royalties::erc2981::IERC2981_ID;
 use rules_tokens::core::RulesTokens;
 use rules_tokens::core::data::CardModelTrait;
 use rules_tokens::core::tokens::TokenIdTrait;
@@ -94,6 +96,19 @@ fn setup_other_receiver() -> AccountABIDispatcher {
   assert(receiver_address == OTHER_RECEIVER_DEPLOYED_ADDRESS(), 'receiver setup failed');
 
   AccountABIDispatcher { contract_address: receiver_address }
+}
+
+//
+// TESTS
+//
+
+#[test]
+#[available_gas(20000000)]
+fn test_supports_interface() {
+  setup();
+
+  assert(RulesTokens::supports_interface(interface_id: IERC1155_ID), 'Does not support IERC1155');
+  assert(RulesTokens::supports_interface(interface_id: IERC2981_ID), 'Does not support IERC2981');
 }
 
 #[test]
