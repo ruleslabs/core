@@ -142,6 +142,23 @@ mod RulesTokens {
       // mint token id
       _mint(:to, token_id: TokenIdTrait::new(id: voucher.token_id), amount: voucher.amount);
     }
+
+    fn safe_transfer_from(
+      from: starknet::ContractAddress,
+      to: starknet::ContractAddress,
+      id: u256,
+      amount: u256,
+      data: Span<felt252>
+    ) {
+      let caller = starknet::get_caller_address();
+      let marketplace = marketplace();
+
+      if (caller == marketplace) {
+        ERC1155::_safe_transfer_from(:from, :to, :id, :amount, :data);
+      } else {
+        ERC1155::safe_transfer_from(:from, :to, :id, :amount, :data);
+      }
+    }
   }
 
   //
@@ -177,6 +194,7 @@ mod RulesTokens {
     RulesMessages::voucher_signer()
   }
 
+  #[view]
   fn marketplace() -> starknet::ContractAddress {
     RulesTokens::marketplace()
   }
@@ -282,7 +300,7 @@ mod RulesTokens {
     amount: u256,
     data: Span<felt252>
   ) {
-    ERC1155::safe_transfer_from(:from, :to, :id, :amount, :data);
+    RulesTokens::safe_transfer_from(:from, :to, :id, :amount, :data);
   }
 
   #[external]

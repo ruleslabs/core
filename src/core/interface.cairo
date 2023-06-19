@@ -75,6 +75,14 @@ trait IRulesTokens {
   fn redeem_voucher(voucher: Voucher, signature: Span<felt252>);
 
   fn redeem_voucher_to(to: starknet::ContractAddress, voucher: Voucher, signature: Span<felt252>);
+
+  fn safe_transfer_from(
+    from: starknet::ContractAddress,
+    to: starknet::ContractAddress,
+    id: u256,
+    amount: u256,
+    data: Span<felt252>
+  );
 }
 
 #[abi]

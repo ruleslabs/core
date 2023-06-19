@@ -1,4 +1,4 @@
-use array::ArrayTrait;
+use array::{ ArrayTrait, SpanTrait };
 use traits::{ Into, TryInto };
 use option::OptionTrait;
 use starknet::testing;
@@ -645,4 +645,49 @@ fn test_set_royalty_percentage_from_zero() {
 
   testing::set_caller_address(ZERO());
   RulesTokens::set_royalties_percentage(new_percentage: 1);
+}
+
+// Tranfer from marketplace
+
+#[test]
+#[available_gas(20000000)]
+fn test_safe_transfer_from_marketplace() {
+  setup();
+  let receiver = setup_receiver();
+  let other_receiver = setup_other_receiver();
+
+  let card_token_id = CARD_TOKEN_ID_2();
+
+  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+
+  testing::set_caller_address(MARKETPLACE());
+  RulesTokens::safe_transfer_from(
+    from: receiver.contract_address,
+    to: other_receiver.contract_address,
+    id: card_token_id,
+    amount: 1,
+    data: ArrayTrait::<felt252>::new().span()
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('ERC1155: caller not allowed',))]
+fn test_safe_transfer_from_unauthorized() {
+  setup();
+  let receiver = setup_receiver();
+  let other_receiver = setup_other_receiver();
+
+  let card_token_id = CARD_TOKEN_ID_2();
+
+  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+
+  testing::set_caller_address(OTHER());
+  RulesTokens::safe_transfer_from(
+    from: receiver.contract_address,
+    to: other_receiver.contract_address,
+    id: card_token_id,
+    amount: 1,
+    data: ArrayTrait::<felt252>::new().span()
+  );
 }
