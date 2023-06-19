@@ -1,6 +1,5 @@
-use core::option::OptionTrait;
+use core::traits::TryInto;
 const IERC2981_ID: u32 = 0x2a55205a;
-const ROYALTIES_PERCENTAGE: u256 = 500_u256; // 5%
 
 const HUNDRED_PERCENT: u16 = 10000;
 
@@ -13,14 +12,14 @@ trait IERC2981 {
 
 #[contract]
 mod ERC2981 {
-  use traits::{ Into, DivRem };
+  use traits::{ Into, TryInto, DivRem };
   use zeroable::Zeroable;
-  use integer::{ U256DivRem, Felt252IntoU256, u256_try_as_non_zero };
+  use integer::{ U128DivRem, u128_try_as_non_zero };
   use option::OptionTrait;
 
   use super::HUNDRED_PERCENT;
   use rules_tokens::royalties::erc2981;
-  use rules_tokens::utils::zeroable::U16Zeroable;
+  use rules_tokens::utils::zeroable::{ U16Zeroable, U128Zeroable };
 
   //
   // Storage
@@ -45,17 +44,21 @@ mod ERC2981 {
     }
 
     fn royalty_info(token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256) {
+      assert(sale_price.high.is_zero(), 'Unsupported sale price');
+
       let royalties_receiver_ = _royalties_receiver::read();
       let royalties_percentage_ = _royalties_percentage::read();
 
       let mut royalty_amount = 0_u256;
 
       if (royalties_percentage_.is_non_zero()) {
-        let (q, r) = DivRem::<u256>::div_rem(
-          sale_price,
-          u256_try_as_non_zero(Into::<u16, felt252>::into(HUNDRED_PERCENT / royalties_percentage_).into()).unwrap()
+        let (q, r) = DivRem::<u128>::div_rem(
+          sale_price.low,
+          u128_try_as_non_zero(
+            Into::<u16, felt252>::into(HUNDRED_PERCENT / royalties_percentage_).try_into().unwrap()
+          ).unwrap()
         );
-        royalty_amount = q + r;
+        royalty_amount = u256 { low: q + r, high: 0 };
       }
 
       (royalties_receiver_, royalty_amount)
