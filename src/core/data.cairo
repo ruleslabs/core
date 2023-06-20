@@ -2,7 +2,7 @@ use zeroable::Zeroable;
 use traits::Into;
 
 // locals
-use rules_tokens::utils::zeroable::{ U128Zeroable, U256Zeroable };
+use rules_utils::utils::zeroable::{ U128Zeroable, U256Zeroable };
 use super::interface::{ Scarcity, CardModel, Metadata, METADATA_MULTIHASH_IDENTIFIER };
 
 const COMMON_SCARCITY_MAX_SUPPLY: u128 = 0xffffffffffffffffffffffffffffffff;

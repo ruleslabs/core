@@ -1,6 +1,6 @@
 use array::SpanTrait;
 use zeroable::Zeroable;
-use rules_erc1155::utils::serde::SpanSerde;
+use rules_utils::utils::serde::SpanSerde;
 use messages::typed_data::typed_data::Domain;
 
 // locals
@@ -32,8 +32,8 @@ mod RulesMessages {
 
   // locals
   use super::DOMAIN;
-  use rules_erc1155::utils::serde::SpanSerde;
-  use rules_tokens::utils::zeroable::{ U64Zeroable };
+  use rules_utils::utils::serde::SpanSerde;
+  use rules_utils::utils::zeroable::U64Zeroable;
   use super::super::interface::{ IRulesMessages, Voucher };
 
   // dispatchers

@@ -3,9 +3,9 @@ use array::ArrayTrait;
 use zeroable::Zeroable;
 use option::OptionTrait;
 
-use rules_tokens::utils::zeroable::U128Zeroable;
+use rules_utils::utils::zeroable::U128Zeroable;
 use super::voucher::Voucher;
-use rules_tokens::utils::serde::SpanSerde;
+use rules_utils::utils::serde::SpanSerde;
 
 const METADATA_MULTIHASH_IDENTIFIER: u16 = 0x1220;
 

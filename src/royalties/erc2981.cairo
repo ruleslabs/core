@@ -19,7 +19,7 @@ mod ERC2981 {
 
   use super::HUNDRED_PERCENT;
   use rules_tokens::royalties::erc2981;
-  use rules_tokens::utils::zeroable::{ U16Zeroable, U128Zeroable };
+  use rules_utils::utils::zeroable::{ U16Zeroable, U128Zeroable };
 
   //
   // Storage

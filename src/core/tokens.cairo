@@ -1,10 +1,10 @@
 use array::SpanTrait;
 use zeroable::Zeroable;
-use rules_erc1155::utils::serde::SpanSerde;
+use rules_utils::utils::serde::SpanSerde;
 
 // locals
 use rules_tokens::constants;
-use rules_tokens::utils::zeroable::{ U128Zeroable };
+use rules_utils::utils::zeroable::U128Zeroable;
 use super::interface::{ Token, TokenId, CardToken, PackToken, CardModel, Scarcity, Metadata, Voucher };
 
 #[abi]
@@ -63,7 +63,8 @@ mod RulesTokens {
   // locals
   use rules_tokens::royalties::erc2981::ERC2981;
   use rules_tokens::access::ownable::Ownable;
-  use rules_tokens::utils::zeroable::{ CardModelZeroable, U128Zeroable };
+  use rules_tokens::utils::zeroable::{ CardModelZeroable };
+  use rules_utils::utils::zeroable::U128Zeroable;
   use super::super::interface::{
     IRulesTokens,
     Scarcity,
