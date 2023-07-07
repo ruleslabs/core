@@ -13,11 +13,13 @@ use rules_tokens::core::data::CardModelTrait;
 use rules_tokens::core::tokens::TokenIdTrait;
 use rules_tokens::core::voucher::Voucher;
 use rules_utils::utils::zeroable::U256Zeroable;
+use rules_utils::utils::partial_eq::SpanPartialEq;
 use super::mocks::signer::Signer;
 use super::mocks::receiver::Receiver;
 use super::utils;
 use super::constants::{
   URI,
+  CONTRACT_URI,
   CHAIN_ID,
   VOUCHER_1,
   VOUCHER_2,
@@ -56,6 +58,7 @@ fn setup() {
     uri_: URI().span(),
     owner_: OWNER(),
     voucher_signer_: voucher_signer.contract_address,
+    contract_uri_: CONTRACT_URI().span(),
     marketplace_: MARKETPLACE(),
     royalties_receiver_: ROYALTIES_RECEIVER(),
     royalties_percentage_: ROYALTIES_PERCENTAGE()
@@ -690,4 +693,57 @@ fn test_safe_transfer_from_unauthorized() {
     amount: 1,
     data: ArrayTrait::<felt252>::new().span()
   );
+}
+
+// Contract URI
+
+#[test]
+#[available_gas(20000000)]
+fn test_contract_uri() {
+  setup();
+
+  let contract_uri = CONTRACT_URI().span();
+
+  assert(RulesTokens::contract_uri() == contract_uri, 'Invalid contract URI address');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_set_contract_uri() {
+  setup();
+
+  let contract_uri = CONTRACT_URI().span();
+  let new_contract_uri = URI().span();
+
+  assert(RulesTokens::contract_uri() == contract_uri, 'Invalid contract URI address');
+
+  RulesTokens::set_contract_uri(contract_uri_: new_contract_uri);
+
+  assert(RulesTokens::contract_uri() == new_contract_uri, 'Invalid contract URI address');
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is the zero address',))]
+fn test_set_contract_uri_from_zero() {
+  setup();
+
+  let contract_uri = CONTRACT_URI().span();
+  let new_contract_uri = URI().span();
+
+  testing::set_caller_address(ZERO());
+  RulesTokens::set_contract_uri(contract_uri_: new_contract_uri);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is not the owner',))]
+fn test_set_contract_uri_unauthorized() {
+  setup();
+
+  let contract_uri = CONTRACT_URI().span();
+  let new_contract_uri = URI().span();
+
+  testing::set_caller_address(OTHER());
+  RulesTokens::set_contract_uri(contract_uri_: new_contract_uri);
 }

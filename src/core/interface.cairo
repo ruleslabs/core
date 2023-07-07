@@ -66,6 +66,10 @@ enum Token {
 
 #[abi]
 trait IRulesTokens {
+  fn contract_uri() -> Span<felt252>;
+
+  fn set_contract_uri(contract_uri_: Span<felt252>);
+
   fn marketplace() -> starknet::ContractAddress;
 
   fn set_marketplace(marketplace_: starknet::ContractAddress);

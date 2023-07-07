@@ -13,6 +13,9 @@ trait RulesTokensABI {
   fn voucher_signer() -> starknet::ContractAddress;
 
   #[view]
+  fn contract_uri() -> Span<felt252>;
+
+  #[view]
   fn marketplace() -> starknet::ContractAddress;
 
   #[view]
@@ -29,6 +32,9 @@ trait RulesTokensABI {
 
   #[view]
   fn royalty_info(token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256);
+
+  #[external]
+  fn set_contract_uri(contract_uri_: Span<felt252>);
 
   #[external]
   fn set_royalties_receiver(new_receiver: starknet::ContractAddress);
@@ -93,6 +99,9 @@ mod RulesTokens {
 
     // Marketplace address
     _marketplace: starknet::ContractAddress,
+
+    // Contract uri
+    _contract_uri: Span<felt252>,
   }
 
   //
@@ -104,13 +113,14 @@ mod RulesTokens {
     uri_: Span<felt252>,
     owner_: starknet::ContractAddress,
     voucher_signer_: starknet::ContractAddress,
+    contract_uri_: Span<felt252>,
     marketplace_: starknet::ContractAddress,
     royalties_receiver_: starknet::ContractAddress,
     royalties_percentage_: u16
   ) {
     ERC1155::initializer(:uri_,);
     RulesMessages::initializer(:voucher_signer_);
-    initializer(:owner_, :marketplace_, :royalties_receiver_, :royalties_percentage_);
+    initializer(:owner_, :contract_uri_, :marketplace_, :royalties_receiver_, :royalties_percentage_);
   }
 
   //
@@ -118,6 +128,14 @@ mod RulesTokens {
   //
 
   impl RulesTokens of IRulesTokens {
+    fn contract_uri() -> Span<felt252> {
+      _contract_uri::read()
+    }
+
+    fn set_contract_uri(contract_uri_: Span<felt252>) {
+      _contract_uri::write(contract_uri_);
+    }
+
     fn marketplace() -> starknet::ContractAddress {
       _marketplace::read()
     }
@@ -181,6 +199,16 @@ mod RulesTokens {
   // Getters
 
   #[view]
+  fn contract_uri() -> Span<felt252> {
+    RulesTokens::contract_uri()
+  }
+
+  #[view]
+  fn contractURI() -> Span<felt252> {
+    RulesTokens::contract_uri()
+  }
+
+  #[view]
   fn uri(tokenId: u256) -> Span<felt252> {
     ERC1155::uri(:tokenId)
   }
@@ -220,6 +248,15 @@ mod RulesTokens {
   }
 
   // Setters
+
+  #[external]
+  fn set_contract_uri(contract_uri_: Span<felt252>) {
+    // Modifiers
+    Ownable::assert_only_owner();
+
+    // Body
+    RulesTokens::set_contract_uri(:contract_uri_)
+  }
 
   #[external]
   fn set_marketplace(marketplace_: starknet::ContractAddress) {
@@ -383,16 +420,19 @@ mod RulesTokens {
   #[internal]
   fn initializer(
     owner_: starknet::ContractAddress,
+    contract_uri_: Span<felt252>,
     marketplace_: starknet::ContractAddress,
     royalties_receiver_: starknet::ContractAddress,
     royalties_percentage_: u16
   ) {
     Ownable::_transfer_ownership(new_owner: owner_);
 
-    ERC2981::_set_royalty_receiver(new_receiver: royalties_receiver_);
-    ERC2981::_set_royalty_percentage(new_percentage: royalties_percentage_);
+    _contract_uri::write(contract_uri_);
 
     _marketplace::write(marketplace_);
+
+    ERC2981::_set_royalty_receiver(new_receiver: royalties_receiver_);
+    ERC2981::_set_royalty_percentage(new_percentage: royalties_percentage_);
   }
 
   // Marketplace

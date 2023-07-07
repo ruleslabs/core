@@ -73,6 +73,16 @@ fn URI() -> Array<felt252> {
   uri
 }
 
+fn CONTRACT_URI() -> Array<felt252> {
+  let mut uri = ArrayTrait::new();
+
+  uri.append(333);
+  uri.append(222);
+  uri.append(111);
+
+  uri
+}
+
 fn CHAIN_ID() -> felt252 {
   'SN_MAIN'
 }
