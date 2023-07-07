@@ -205,7 +205,7 @@ mod RulesTokens {
 
   #[view]
   fn contractURI() -> Span<felt252> {
-    RulesTokens::contract_uri()
+    contract_uri()
   }
 
   #[view]
@@ -240,11 +240,21 @@ mod RulesTokens {
     ERC1155::supports_interface(:interface_id) | ERC2981::supports_interface(:interface_id)
   }
 
+  #[view]
+  fn supportsInterface(interface_id: u32) -> bool {
+    supports_interface(:interface_id)
+  }
+
   // ERC2981
 
   #[view]
   fn royalty_info(token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256) {
     ERC2981::royalty_info(:token_id, :sale_price)
+  }
+
+  #[view]
+  fn royaltyInfo(token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256) {
+    royalty_info(:token_id, :sale_price)
   }
 
   // Setters
@@ -308,12 +318,17 @@ mod RulesTokens {
 
   #[view]
   fn balanceOf(account: starknet::ContractAddress, id: u256) -> u256 {
-    ERC1155::balance_of(:account, :id)
+    balance_of(:account, :id)
   }
 
   #[view]
   fn balance_of_batch(accounts: Span<starknet::ContractAddress>, ids: Span<u256>) -> Array<u256> {
     ERC1155::balance_of_batch(:accounts, :ids)
+  }
+
+  #[view]
+  fn balanceOfBatch(accounts: Span<starknet::ContractAddress>, ids: Span<u256>) -> Array<u256> {
+    balance_of_batch(:accounts, :ids)
   }
 
   // Approval
@@ -323,9 +338,19 @@ mod RulesTokens {
     ERC1155::set_approval_for_all(:operator, :approved)
   }
 
+  #[external]
+  fn setApprovalForAll(operator: starknet::ContractAddress, approved: bool) {
+    set_approval_for_all(:operator, :approved)
+  }
+
   #[view]
   fn is_approved_for_all(account: starknet::ContractAddress, operator: starknet::ContractAddress) -> bool {
     ERC1155::is_approved_for_all(:account, :operator)
+  }
+
+  #[view]
+  fn isApprovedForAll(account: starknet::ContractAddress, operator: starknet::ContractAddress) -> bool {
+    is_approved_for_all(:account, :operator)
   }
 
   // Transfer
@@ -342,6 +367,17 @@ mod RulesTokens {
   }
 
   #[external]
+  fn safeTransferFrom(
+    from: starknet::ContractAddress,
+    to: starknet::ContractAddress,
+    id: u256,
+    amount: u256,
+    data: Span<felt252>
+  ) {
+    safe_transfer_from(:from, :to, :id, :amount, :data);
+  }
+
+  #[external]
   fn safe_batch_transfer_from(
     from: starknet::ContractAddress,
     to: starknet::ContractAddress,
@@ -350,6 +386,17 @@ mod RulesTokens {
     data: Span<felt252>
   ) {
     ERC1155::safe_batch_transfer_from(:from, :to, :ids, :amounts, :data);
+  }
+
+  #[external]
+  fn safeBatchTransferFrom(
+    from: starknet::ContractAddress,
+    to: starknet::ContractAddress,
+    ids: Span<u256>,
+    amounts: Span<u256>,
+    data: Span<felt252>
+  ) {
+    safe_batch_transfer_from(:from, :to, :ids, :amounts, :data);
   }
 
   // Card models
