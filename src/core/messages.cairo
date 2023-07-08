@@ -1,6 +1,5 @@
-use array::SpanTrait;
+use array::{ SpanTrait, SpanSerde };
 use zeroable::Zeroable;
-use rules_utils::utils::serde::SpanSerde;
 use messages::typed_data::typed_data::Domain;
 
 // locals
@@ -13,18 +12,16 @@ fn DOMAIN() -> Domain {
   }
 }
 
-#[abi]
-trait RulesMessagesABI {
-  #[view]
-  fn voucher_signer() -> starknet::ContractAddress;
+#[starknet::interface]
+trait RulesMessagesABI<TContractState> {
+  fn voucher_signer(self: @TContractState) -> starknet::ContractAddress;
 
-  #[external]
-  fn consume_valid_voucher(voucher: Voucher, signature: Span<felt252>);
+  fn consume_valid_voucher(ref self: TContractState, voucher: Voucher, signature: Span<felt252>);
 }
 
-#[contract]
+#[starknet::contract]
 mod RulesMessages {
-  use array::{ ArrayTrait, SpanTrait };
+  use array::{ ArrayTrait, SpanTrait, SpanSerde };
   use zeroable::Zeroable;
   use rules_account::account;
   use messages::messages::Messages;
@@ -32,9 +29,9 @@ mod RulesMessages {
 
   // locals
   use super::DOMAIN;
-  use rules_utils::utils::serde::SpanSerde;
   use rules_utils::utils::zeroable::U64Zeroable;
-  use super::super::interface::{ IRulesMessages, Voucher };
+  use rules_tokens::core;
+  use super::super::interface::{ Voucher, IRulesMessages };
 
   // dispatchers
   use rules_account::account::{ AccountABIDispatcher, AccountABIDispatcherTrait };
@@ -43,6 +40,7 @@ mod RulesMessages {
   // Storage
   //
 
+  #[storage]
   struct Storage {
     _voucher_signer: starknet::ContractAddress,
   }
@@ -52,59 +50,55 @@ mod RulesMessages {
   //
 
   #[constructor]
-  fn constructor(voucher_signer_: starknet::ContractAddress) {
-    initializer(:voucher_signer_);
+  fn constructor(ref self: ContractState, voucher_signer_: starknet::ContractAddress) {
+    self.initializer(:voucher_signer_);
   }
 
   //
   // impls
   //
 
-  impl RulesMessages of IRulesMessages {
-    fn voucher_signer() -> starknet::ContractAddress {
-      _voucher_signer::read()
+  #[external(v0)]
+  impl IRulesMessagesImpl of core::interface::IRulesMessages<ContractState> {
+    fn voucher_signer(self: @ContractState) -> starknet::ContractAddress {
+      self._voucher_signer.read()
     }
 
-    fn consume_valid_voucher(voucher: Voucher, signature: Span<felt252>) {
-      let voucher_signer_ = voucher_signer();
+    fn consume_valid_voucher(ref self: ContractState, voucher: Voucher, signature: Span<felt252>) {
+      let mut messages_self = Messages::unsafe_new_contract_state();
+
+      let voucher_signer_ = self.voucher_signer();
 
       // compute voucher message hash
       let hash = voucher.compute_hash_from(from: voucher_signer_, domain: DOMAIN());
 
       // assert voucher has not been already consumed and consume it
-      assert(!Messages::_is_message_consumed(:hash), 'Voucher already consumed');
-      Messages::_consume_message(:hash);
+      assert(!Messages::HelperImpl::_is_message_consumed(self: @messages_self, :hash), 'Voucher already consumed');
+      Messages::HelperImpl::_consume_message(ref self: messages_self, :hash);
 
       // assert voucher signature is valid
       assert(
-        Messages::_is_message_signature_valid(:hash, :signature, signer: voucher_signer_),
+        Messages::HelperImpl::_is_message_signature_valid(
+          self: @messages_self,
+          :hash,
+          :signature,
+          signer: voucher_signer_
+        ),
         'Invalid voucher signature'
       );
     }
   }
 
-  // Getters
-
-  #[view]
-  fn voucher_signer() -> starknet::ContractAddress {
-    RulesMessages::voucher_signer()
-  }
-
-  // Voucher
-
-  #[external]
-  fn consume_valid_voucher(voucher: Voucher, signature: Span<felt252>) {
-    RulesMessages::consume_valid_voucher(:voucher, :signature);
-  }
-
   //
-  // Internals
+  // Helpers
   //
 
-  // Init
+  #[generate_trait]
+  impl HelperImpl of HelperTrait {
+    // Init
 
-  #[internal]
-  fn initializer(voucher_signer_: starknet::ContractAddress) {
-    _voucher_signer::write(voucher_signer_);
+    fn initializer(ref self: ContractState, voucher_signer_: starknet::ContractAddress) {
+      self._voucher_signer.write(voucher_signer_);
+    }
   }
 }

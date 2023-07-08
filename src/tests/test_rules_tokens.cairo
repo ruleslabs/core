@@ -4,15 +4,19 @@ use option::OptionTrait;
 use starknet::testing;
 use zeroable::Zeroable;
 use starknet::class_hash::Felt252TryIntoClassHash;
-use rules_erc1155::erc1155::interface::IERC1155_ID;
+use integer::U256Zeroable;
+use rules_erc1155::erc1155::interface::{ IERC1155_ID, IERC1155 };
 
 // locals
-use rules_tokens::royalties::erc2981::IERC2981_ID;
 use rules_tokens::core::RulesTokens;
+use rules_tokens::core::interface::{ IRulesMessages, IRulesData, IRulesTokens };
+use rules_tokens::core::tokens::RulesTokens::{ ContractState as RulesTokensContractState, HelperTrait, UpgradeTrait };
+
+use rules_tokens::introspection::erc165::IERC165;
+use rules_tokens::royalties::erc2981::{ IERC2981_ID, IERC2981 };
 use rules_tokens::core::data::CardModelTrait;
 use rules_tokens::core::tokens::TokenIdTrait;
 use rules_tokens::core::voucher::Voucher;
-use rules_utils::utils::zeroable::U256Zeroable;
 use rules_utils::utils::partial_eq::SpanPartialEq;
 use super::mocks::signer::Signer;
 use super::mocks::receiver::Receiver;
@@ -47,14 +51,16 @@ use super::constants::{
 use rules_account::account::{ AccountABIDispatcher, AccountABIDispatcherTrait };
 use rules_tokens::core::{ RulesTokensABIDispatcher, RulesTokensABIDispatcherTrait };
 
-fn setup() {
+fn setup() -> RulesTokensContractState {
   // setup chain id to compute vouchers hashes
   testing::set_chain_id(CHAIN_ID());
 
   // setup voucher signer - 0x1
   let voucher_signer = setup_voucher_signer();
 
-  RulesTokens::constructor(
+  let mut rules_tokens = RulesTokens::unsafe_new_contract_state();
+
+  rules_tokens.initializer(
     uri_: URI().span(),
     owner_: OWNER(),
     voucher_signer_: voucher_signer.contract_address,
@@ -71,9 +77,11 @@ fn setup() {
   let scarcity = SCARCITY();
 
   testing::set_caller_address(OWNER());
-  RulesTokens::add_scarcity(season: card_model_3.season, :scarcity);
-  RulesTokens::add_card_model(new_card_model: card_model_2, :metadata);
-  RulesTokens::add_card_model(new_card_model: card_model_3, :metadata);
+  rules_tokens.add_scarcity(season: card_model_3.season, :scarcity);
+  rules_tokens.add_card_model(new_card_model: card_model_2, :metadata);
+  rules_tokens.add_card_model(new_card_model: card_model_3, :metadata);
+
+  rules_tokens
 }
 
 fn setup_voucher_signer() -> AccountABIDispatcher {
@@ -108,30 +116,30 @@ fn setup_other_receiver() -> AccountABIDispatcher {
 #[test]
 #[available_gas(20000000)]
 fn test_supports_interface() {
-  setup();
+  let mut rules_tokens = setup();
 
-  assert(RulesTokens::supports_interface(interface_id: IERC1155_ID), 'Does not support IERC1155');
-  assert(RulesTokens::supports_interface(interface_id: IERC2981_ID), 'Does not support IERC2981');
+  assert(rules_tokens.supports_interface(interface_id: IERC1155_ID), 'Does not support IERC1155');
+  assert(rules_tokens.supports_interface(interface_id: IERC2981_ID), 'Does not support IERC2981');
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Invalid voucher signature',))]
 fn test_redeem_voucher_invalid_signature() {
-  setup();
+  let mut rules_tokens = setup();
 
   let mut voucher = VOUCHER_1();
   voucher.salt += 1;
   let signature = VOUCHER_SIGNATURE_1();
 
-  RulesTokens::redeem_voucher(:voucher, :signature);
+  rules_tokens.redeem_voucher(:voucher, :signature);
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Voucher already consumed',))]
 fn test_redeem_voucher_already_consumed() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
   let voucher = VOUCHER_2();
@@ -140,8 +148,8 @@ fn test_redeem_voucher_already_consumed() {
   let card_model = CARD_MODEL_2();
   let metadata = METADATA();
 
-  RulesTokens::redeem_voucher(:voucher, :signature);
-  RulesTokens::redeem_voucher(:voucher, :signature);
+  rules_tokens.redeem_voucher(:voucher, :signature);
+  rules_tokens.redeem_voucher(:voucher, :signature);
 }
 
 // Card
@@ -149,7 +157,7 @@ fn test_redeem_voucher_already_consumed() {
 #[test]
 #[available_gas(20000000)]
 fn test_balance_of_after_redeem_voucher() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
   let voucher = VOUCHER_2();
@@ -161,14 +169,14 @@ fn test_balance_of_after_redeem_voucher() {
   let card_token_id = CARD_TOKEN_ID_2();
 
   assert(
-    RulesTokens::balance_of(account: receiver.contract_address, id: card_token_id).is_zero(),
+    rules_tokens.balance_of(account: receiver.contract_address, id: card_token_id).is_zero(),
     'balance of before'
   );
 
-  RulesTokens::redeem_voucher(:voucher, :signature);
+  rules_tokens.redeem_voucher(:voucher, :signature);
 
   assert(
-    RulesTokens::balance_of(account: receiver.contract_address, id: card_token_id) == voucher.amount,
+    rules_tokens.balance_of(account: receiver.contract_address, id: card_token_id) == voucher.amount,
     'balance of after'
   );
 }
@@ -176,95 +184,95 @@ fn test_balance_of_after_redeem_voucher() {
 #[test]
 #[available_gas(20000000)]
 fn test_card_exists() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
   let card_token_id = CARD_TOKEN_ID_2();
 
-  assert(!RulesTokens::card_exists(:card_token_id), 'card exists before');
+  assert(!rules_tokens.card_exists(:card_token_id), 'card exists before');
 
-  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+  rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
 
-  assert(RulesTokens::card_exists(:card_token_id), 'card exists after');
+  assert(rules_tokens.card_exists(:card_token_id), 'card exists after');
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Card already minted',))]
 fn test__mint_card_already_minted() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
   let card_token_id = CARD_TOKEN_ID_2();
 
-  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
-  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+  rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+  rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Card model does not exists',))]
 fn test__mint_card_unknown_card_model() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
   let card_token_id = CARD_TOKEN_ID_2();
 
-  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id + 1), amount: 1);
+  rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id + 1), amount: 1);
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Serial number is out of range',))]
 fn test__mint_card_out_of_range_serial_number() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
   let scarcity = SCARCITY();
   let card_token_id = u256 { low: CARD_MODEL_3().id(), high: scarcity.max_supply + 1 };
 
-  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+  rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test__mint_card_in_range_serial_number() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
   let scarcity = SCARCITY();
   let card_token_id = u256 { low: CARD_MODEL_3().id(), high: scarcity.max_supply };
 
-  assert(!RulesTokens::card_exists(:card_token_id), 'card exists before');
+  assert(!rules_tokens.card_exists(:card_token_id), 'card exists before');
 
-  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+  rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
 
-  assert(RulesTokens::card_exists(:card_token_id), 'card exists after');
+  assert(rules_tokens.card_exists(:card_token_id), 'card exists after');
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Card amount cannot exceed 1',))]
 fn test__mint_card_invalid_amount() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
   let card_token_id = CARD_TOKEN_ID_2();
 
-  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 2);
+  rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 2);
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Packs tokens not supported yet',))]
 fn test__mint_pack() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
   let card_token_id = CARD_TOKEN_ID_2();
   let pack_token_id = u256 { low: card_token_id.low, high: 0 };
 
-  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: pack_token_id), amount: 2);
+  rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: pack_token_id), amount: 2);
 }
 
 // Upgrade
@@ -273,20 +281,20 @@ fn test__mint_pack() {
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is not the owner',))]
 fn test_upgrade_unauthorized() {
-  setup();
+  let mut rules_tokens = setup();
 
   testing::set_caller_address(OTHER());
-  RulesTokens::upgrade(new_implementation: 'new implementation'.try_into().unwrap());
+  rules_tokens.upgrade(new_implementation: 'new implementation'.try_into().unwrap());
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is the zero address',))]
 fn test_upgrade_from_zero() {
-  setup();
+  let mut rules_tokens = setup();
 
   testing::set_caller_address(ZERO());
-  RulesTokens::upgrade(new_implementation: 'new implementation'.try_into().unwrap());
+  rules_tokens.upgrade(new_implementation: 'new implementation'.try_into().unwrap());
 }
 
 // Add scarcity
@@ -295,50 +303,50 @@ fn test_upgrade_from_zero() {
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is the zero address',))]
 fn test_add_scarcity_from_zero() {
-  setup();
+  let mut rules_tokens = setup();
 
   let season = SEASON();
 
   testing::set_caller_address(ZERO());
-  RulesTokens::add_scarcity(:season, scarcity: SCARCITY());
+  rules_tokens.add_scarcity(:season, scarcity: SCARCITY());
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is not the owner',))]
 fn test_add_scarcity_unauthorized() {
-  setup();
+  let mut rules_tokens = setup();
 
   let season = SEASON();
 
   testing::set_caller_address(OTHER());
-  RulesTokens::add_scarcity(:season, scarcity: SCARCITY());
+  rules_tokens.add_scarcity(:season, scarcity: SCARCITY());
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is the zero address',))]
 fn test_add_card_model_from_zero() {
-  setup();
+  let mut rules_tokens = setup();
 
   let card_model_2 = CARD_MODEL_2();
   let metadata = METADATA();
 
   testing::set_caller_address(ZERO());
-  RulesTokens::add_card_model(new_card_model: card_model_2, :metadata);
+  rules_tokens.add_card_model(new_card_model: card_model_2, :metadata);
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is not the owner',))]
 fn test_add_card_model_unauthorized() {
-  setup();
+  let mut rules_tokens = setup();
 
   let card_model_2 = CARD_MODEL_2();
   let metadata = METADATA();
 
   testing::set_caller_address(OTHER());
-  RulesTokens::add_card_model(new_card_model: card_model_2, :metadata);
+  rules_tokens.add_card_model(new_card_model: card_model_2, :metadata);
 }
 
 // Marketplace
@@ -346,52 +354,52 @@ fn test_add_card_model_unauthorized() {
 #[test]
 #[available_gas(20000000)]
 fn test_marketplace() {
-  setup();
+  let mut rules_tokens = setup();
 
   let marketplace = MARKETPLACE();
 
-  assert(RulesTokens::marketplace() == marketplace, 'Invalid marketplace address');
+  assert(rules_tokens.marketplace() == marketplace, 'Invalid marketplace address');
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test_set_marketplace() {
-  setup();
+  let mut rules_tokens = setup();
 
   let marketplace = MARKETPLACE();
   let new_marketplace = OTHER();
 
-  assert(RulesTokens::marketplace() == marketplace, 'Invalid marketplace address');
+  assert(rules_tokens.marketplace() == marketplace, 'Invalid marketplace address');
 
-  RulesTokens::set_marketplace(marketplace_: new_marketplace);
+  rules_tokens.set_marketplace(marketplace_: new_marketplace);
 
-  assert(RulesTokens::marketplace() == new_marketplace, 'Invalid marketplace address');
+  assert(rules_tokens.marketplace() == new_marketplace, 'Invalid marketplace address');
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is the zero address',))]
 fn test_set_marketplace_from_zero() {
-  setup();
+  let mut rules_tokens = setup();
 
   let marketplace = MARKETPLACE();
   let new_marketplace = OTHER();
 
   testing::set_caller_address(ZERO());
-  RulesTokens::set_marketplace(marketplace_: new_marketplace);
+  rules_tokens.set_marketplace(marketplace_: new_marketplace);
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is not the owner',))]
 fn test_set_marketplace_unauthorized() {
-  setup();
+  let mut rules_tokens = setup();
 
   let marketplace = MARKETPLACE();
   let new_marketplace = OTHER();
 
   testing::set_caller_address(OTHER());
-  RulesTokens::set_marketplace(marketplace_: new_marketplace);
+  rules_tokens.set_marketplace(marketplace_: new_marketplace);
 }
 
 // Reedem voucher to
@@ -400,7 +408,7 @@ fn test_set_marketplace_unauthorized() {
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is not the marketplace',))]
 fn test_redeem_voucher_to_unauthorized() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
   let voucher = VOUCHER_2();
@@ -410,14 +418,14 @@ fn test_redeem_voucher_to_unauthorized() {
   let metadata = METADATA();
 
   testing::set_caller_address(OWNER());
-  RulesTokens::redeem_voucher_to(to: OTHER(), :voucher, :signature);
+  rules_tokens.redeem_voucher_to(to: OTHER(), :voucher, :signature);
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is the zero address',))]
 fn test_redeem_voucher_to_from_zero() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
   let voucher = VOUCHER_2();
@@ -427,13 +435,13 @@ fn test_redeem_voucher_to_from_zero() {
   let metadata = METADATA();
 
   testing::set_caller_address(ZERO());
-  RulesTokens::redeem_voucher_to(to: OTHER(), :voucher, :signature);
+  rules_tokens.redeem_voucher_to(to: OTHER(), :voucher, :signature);
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test_balance_of_after_redeem_voucher_to_() {
-  setup();
+  let mut rules_tokens = setup();
   setup_receiver();
 
   let receiver = setup_other_receiver();
@@ -447,15 +455,15 @@ fn test_balance_of_after_redeem_voucher_to_() {
   let card_token_id = CARD_TOKEN_ID_2();
 
   assert(
-    RulesTokens::balance_of(account: receiver.contract_address, id: card_token_id).is_zero(),
+    rules_tokens.balance_of(account: receiver.contract_address, id: card_token_id).is_zero(),
     'balance of before'
   );
 
   testing::set_caller_address(MARKETPLACE());
-  RulesTokens::redeem_voucher_to(to: receiver.contract_address, :voucher, :signature);
+  rules_tokens.redeem_voucher_to(to: receiver.contract_address, :voucher, :signature);
 
   assert(
-    RulesTokens::balance_of(account: receiver.contract_address, id: card_token_id) == voucher.amount,
+    rules_tokens.balance_of(account: receiver.contract_address, id: card_token_id) == voucher.amount,
     'balance of after'
   );
 }
@@ -464,7 +472,7 @@ fn test_balance_of_after_redeem_voucher_to_() {
 #[available_gas(20000000)]
 #[should_panic(expected: ('Invalid voucher signature',))]
 fn test_redeem_voucher_to_invalid_signature() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
   let mut voucher = VOUCHER_2();
@@ -475,14 +483,14 @@ fn test_redeem_voucher_to_invalid_signature() {
   let metadata = METADATA();
 
   testing::set_caller_address(MARKETPLACE());
-  RulesTokens::redeem_voucher_to(to: OTHER(), :voucher, :signature);
+  rules_tokens.redeem_voucher_to(to: OTHER(), :voucher, :signature);
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Voucher already consumed',))]
 fn test_redeem_voucher_to_already_consumed() {
-  setup();
+  let mut rules_tokens = setup();
   setup_receiver();
 
   let receiver = setup_other_receiver();
@@ -494,8 +502,8 @@ fn test_redeem_voucher_to_already_consumed() {
   let metadata = METADATA();
 
   testing::set_caller_address(MARKETPLACE());
-  RulesTokens::redeem_voucher_to(to: receiver.contract_address, :voucher, :signature);
-  RulesTokens::redeem_voucher_to(to: receiver.contract_address, :voucher, :signature);
+  rules_tokens.redeem_voucher_to(to: receiver.contract_address, :voucher, :signature);
+  rules_tokens.redeem_voucher_to(to: receiver.contract_address, :voucher, :signature);
 }
 
 // ERC2981 - Royalties
@@ -503,68 +511,68 @@ fn test_redeem_voucher_to_already_consumed() {
 #[test]
 #[available_gas(20000000)]
 fn test_royalty_info_amount_without_reminder() {
-  setup();
+  let mut rules_tokens = setup();
 
-  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 100);
+  let (_, royalty_amount) = rules_tokens.royalty_info(token_id: 0, sale_price: 100);
   assert(royalty_amount == 5, 'Invalid royalty amount');
 
-  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 20);
+  let (_, royalty_amount) = rules_tokens.royalty_info(token_id: 0, sale_price: 20);
   assert(royalty_amount == 1, 'Invalid royalty amount');
 
-  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 0xfffffff0);
+  let (_, royalty_amount) = rules_tokens.royalty_info(token_id: 0, sale_price: 0xfffffff0);
   assert(royalty_amount == 0xccccccc, 'Invalid royalty amount');
 
-  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 0);
+  let (_, royalty_amount) = rules_tokens.royalty_info(token_id: 0, sale_price: 0);
   assert(royalty_amount == 0, 'Invalid royalty amount');
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test_royalty_info_amount_with_reminder() {
-  setup();
+  let mut rules_tokens = setup();
 
   let  royalties_receiver = ROYALTIES_RECEIVER();
 
-  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 101);
+  let (_, royalty_amount) = rules_tokens.royalty_info(token_id: 0, sale_price: 101);
   assert(royalty_amount == 6, 'Invalid royalty amount');
 
-  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 119);
+  let (_, royalty_amount) = rules_tokens.royalty_info(token_id: 0, sale_price: 119);
   assert(royalty_amount == 6, 'Invalid royalty amount');
 
-  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 19);
+  let (_, royalty_amount) = rules_tokens.royalty_info(token_id: 0, sale_price: 19);
   assert(royalty_amount == 1, 'Invalid royalty amount');
 
-  let (_, royalty_amount) = RulesTokens::royalty_info(token_id: 0, sale_price: 1);
+  let (_, royalty_amount) = rules_tokens.royalty_info(token_id: 0, sale_price: 1);
   assert(royalty_amount == 1, 'Invalid royalty amount');
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test_royalty_info_receiver() {
-  setup();
+  let mut rules_tokens = setup();
 
   let  royalties_receiver = ROYALTIES_RECEIVER();
 
-  let (receiver, _) = RulesTokens::royalty_info(token_id: 100, sale_price: 100);
+  let (receiver, _) = rules_tokens.royalty_info(token_id: 100, sale_price: 100);
   assert(receiver == royalties_receiver, 'Invalid royalty receiver');
 
-  let (receiver, _) = RulesTokens::royalty_info(token_id: 20, sale_price: 20);
+  let (receiver, _) = rules_tokens.royalty_info(token_id: 20, sale_price: 20);
   assert(receiver == royalties_receiver, 'Invalid royalty receiver');
 
-  let (receiver, _) = RulesTokens::royalty_info(token_id: 0x42, sale_price: 0x42);
+  let (receiver, _) = rules_tokens.royalty_info(token_id: 0x42, sale_price: 0x42);
   assert(receiver == royalties_receiver, 'Invalid royalty receiver');
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test_set_royalty_receiver() {
-  setup();
+  let mut rules_tokens = setup();
 
   let new_royalties_receiver = OTHER();
 
-  RulesTokens::set_royalties_receiver(new_receiver: new_royalties_receiver);
+  rules_tokens.set_royalties_receiver(new_receiver: new_royalties_receiver);
 
-  let (receiver, _) = RulesTokens::royalty_info(token_id: 0x42, sale_price: 0x42);
+  let (receiver, _) = rules_tokens.royalty_info(token_id: 0x42, sale_price: 0x42);
   assert(receiver == new_royalties_receiver, 'Invalid royalty receiver');
 }
 
@@ -572,52 +580,52 @@ fn test_set_royalty_receiver() {
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is not the owner',))]
 fn test_set_royalty_receiver_unauthorized() {
-  setup();
+  let mut rules_tokens = setup();
 
   testing::set_caller_address(OTHER());
-  RulesTokens::set_royalties_receiver(new_receiver: OTHER());
+  rules_tokens.set_royalties_receiver(new_receiver: OTHER());
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is the zero address',))]
 fn test_set_royalty_receiver_from_zero() {
-  setup();
+  let mut rules_tokens = setup();
 
   testing::set_caller_address(ZERO());
-  RulesTokens::set_royalties_receiver(new_receiver: OTHER());
+  rules_tokens.set_royalties_receiver(new_receiver: OTHER());
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test_set_royalty_percentage_50() {
-  setup();
+  let mut rules_tokens = setup();
 
-  RulesTokens::set_royalties_percentage(new_percentage: 5000); // 50%
+  rules_tokens.set_royalties_percentage(new_percentage: 5000); // 50%
 
-  let (_, royalties_amount) = RulesTokens::royalty_info(token_id: 0x42, sale_price: 0x42);
+  let (_, royalties_amount) = rules_tokens.royalty_info(token_id: 0x42, sale_price: 0x42);
   assert(royalties_amount == 0x21, 'Invalid royalty amount');
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test_set_royalty_percentage_100() {
-  setup();
+  let mut rules_tokens = setup();
 
-  RulesTokens::set_royalties_percentage(new_percentage: 10000); // 100%
+  rules_tokens.set_royalties_percentage(new_percentage: 10000); // 100%
 
-  let (_, royalties_amount) = RulesTokens::royalty_info(token_id: 0x42, sale_price: 0x42);
+  let (_, royalties_amount) = rules_tokens.royalty_info(token_id: 0x42, sale_price: 0x42);
   assert(royalties_amount == 0x42, 'Invalid royalty amount');
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test_set_royalty_percentage_zero() {
-  setup();
+  let mut rules_tokens = setup();
 
-  RulesTokens::set_royalties_percentage(new_percentage: 0); // 0%
+  rules_tokens.set_royalties_percentage(new_percentage: 0); // 0%
 
-  let (_, royalties_amount) = RulesTokens::royalty_info(token_id: 0x42, sale_price: 0x42);
+  let (_, royalties_amount) = rules_tokens.royalty_info(token_id: 0x42, sale_price: 0x42);
   assert(royalties_amount == 0, 'Invalid royalty amount');
 }
 
@@ -625,29 +633,29 @@ fn test_set_royalty_percentage_zero() {
 #[available_gas(20000000)]
 #[should_panic(expected: ('Invalid percentage',))]
 fn test_set_royalty_percentage_above_100() {
-  setup();
+  let mut rules_tokens = setup();
 
-  RulesTokens::set_royalties_percentage(new_percentage: 10001); // 100.01%
+  rules_tokens.set_royalties_percentage(new_percentage: 10001); // 100.01%
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is not the owner',))]
 fn test_set_royalty_percentage_unauthorized() {
-  setup();
+  let mut rules_tokens = setup();
 
   testing::set_caller_address(OTHER());
-  RulesTokens::set_royalties_percentage(new_percentage: 1);
+  rules_tokens.set_royalties_percentage(new_percentage: 1);
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is the zero address',))]
 fn test_set_royalty_percentage_from_zero() {
-  setup();
+  let mut rules_tokens = setup();
 
   testing::set_caller_address(ZERO());
-  RulesTokens::set_royalties_percentage(new_percentage: 1);
+  rules_tokens.set_royalties_percentage(new_percentage: 1);
 }
 
 // Tranfer from marketplace
@@ -655,16 +663,16 @@ fn test_set_royalty_percentage_from_zero() {
 #[test]
 #[available_gas(20000000)]
 fn test_safe_transfer_from_marketplace() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
   let other_receiver = setup_other_receiver();
 
   let card_token_id = CARD_TOKEN_ID_2();
 
-  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+  rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
 
   testing::set_caller_address(MARKETPLACE());
-  RulesTokens::safe_transfer_from(
+  rules_tokens.safe_transfer_from(
     from: receiver.contract_address,
     to: other_receiver.contract_address,
     id: card_token_id,
@@ -677,16 +685,16 @@ fn test_safe_transfer_from_marketplace() {
 #[available_gas(20000000)]
 #[should_panic(expected: ('ERC1155: caller not allowed',))]
 fn test_safe_transfer_from_unauthorized() {
-  setup();
+  let mut rules_tokens = setup();
   let receiver = setup_receiver();
   let other_receiver = setup_other_receiver();
 
   let card_token_id = CARD_TOKEN_ID_2();
 
-  RulesTokens::_mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
+  rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 1);
 
   testing::set_caller_address(OTHER());
-  RulesTokens::safe_transfer_from(
+  rules_tokens.safe_transfer_from(
     from: receiver.contract_address,
     to: other_receiver.contract_address,
     id: card_token_id,
@@ -700,50 +708,50 @@ fn test_safe_transfer_from_unauthorized() {
 #[test]
 #[available_gas(20000000)]
 fn test_contract_uri() {
-  setup();
+  let mut rules_tokens = setup();
 
   let contract_uri = CONTRACT_URI().span();
 
-  assert(RulesTokens::contract_uri() == contract_uri, 'Invalid contract URI address');
+  assert(rules_tokens.contract_uri() == contract_uri, 'Invalid contract URI address');
 }
 
 #[test]
 #[available_gas(20000000)]
 fn test_set_contract_uri() {
-  setup();
+  let mut rules_tokens = setup();
 
   let contract_uri = CONTRACT_URI().span();
   let new_contract_uri = URI().span();
 
-  assert(RulesTokens::contract_uri() == contract_uri, 'Invalid contract URI address');
+  assert(rules_tokens.contract_uri() == contract_uri, 'Invalid contract URI address');
 
-  RulesTokens::set_contract_uri(contract_uri_: new_contract_uri);
+  rules_tokens.set_contract_uri(contract_uri_: new_contract_uri);
 
-  assert(RulesTokens::contract_uri() == new_contract_uri, 'Invalid contract URI address');
+  assert(rules_tokens.contract_uri() == new_contract_uri, 'Invalid contract URI address');
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is the zero address',))]
 fn test_set_contract_uri_from_zero() {
-  setup();
+  let mut rules_tokens = setup();
 
   let contract_uri = CONTRACT_URI().span();
   let new_contract_uri = URI().span();
 
   testing::set_caller_address(ZERO());
-  RulesTokens::set_contract_uri(contract_uri_: new_contract_uri);
+  rules_tokens.set_contract_uri(contract_uri_: new_contract_uri);
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is not the owner',))]
 fn test_set_contract_uri_unauthorized() {
-  setup();
+  let mut rules_tokens = setup();
 
   let contract_uri = CONTRACT_URI().span();
   let new_contract_uri = URI().span();
 
   testing::set_caller_address(OTHER());
-  RulesTokens::set_contract_uri(contract_uri_: new_contract_uri);
+  rules_tokens.set_contract_uri(contract_uri_: new_contract_uri);
 }

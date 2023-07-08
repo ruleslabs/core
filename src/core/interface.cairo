@@ -1,11 +1,9 @@
 use traits::{ Into, TryInto };
-use array::ArrayTrait;
+use array::{ ArrayTrait, SpanSerde };
 use zeroable::Zeroable;
 use option::OptionTrait;
 
-use rules_utils::utils::zeroable::U128Zeroable;
 use super::voucher::Voucher;
-use rules_utils::utils::serde::SpanSerde;
 
 const METADATA_MULTIHASH_IDENTIFIER: u16 = 0x1220;
 
@@ -64,49 +62,55 @@ enum Token {
 // Interfaces
 //
 
-#[abi]
-trait IRulesTokens {
-  fn contract_uri() -> Span<felt252>;
+#[starknet::interface]
+trait IRulesTokens<TContractState> {
+  fn contract_uri(self: @TContractState) -> Span<felt252>;
 
-  fn set_contract_uri(contract_uri_: Span<felt252>);
+  fn marketplace(self: @TContractState) -> starknet::ContractAddress;
 
-  fn marketplace() -> starknet::ContractAddress;
+  fn card_exists(self: @TContractState, card_token_id: u256) -> bool;
 
-  fn set_marketplace(marketplace_: starknet::ContractAddress);
+  fn set_contract_uri(ref self: TContractState, contract_uri_: Span<felt252>);
 
-  fn card_exists(card_token_id: u256) -> bool;
+  fn set_marketplace(ref self: TContractState, marketplace_: starknet::ContractAddress);
 
-  fn redeem_voucher(voucher: Voucher, signature: Span<felt252>);
+  fn redeem_voucher(ref self: TContractState, voucher: Voucher, signature: Span<felt252>);
 
-  fn redeem_voucher_to(to: starknet::ContractAddress, voucher: Voucher, signature: Span<felt252>);
-
-  fn safe_transfer_from(
-    from: starknet::ContractAddress,
+  fn redeem_voucher_to(
+    ref self: TContractState,
     to: starknet::ContractAddress,
-    id: u256,
-    amount: u256,
-    data: Span<felt252>
+    voucher: Voucher,
+    signature: Span<felt252>
   );
+
+  fn set_royalties_receiver(ref self: TContractState, new_receiver: starknet::ContractAddress);
+
+  fn set_royalties_percentage(ref self: TContractState, new_percentage: u16);
 }
 
-#[abi]
-trait IRulesData {
-  fn card_model(card_model_id: u128) -> CardModel;
-
-  fn card_model_metadata(card_model_id: u128) -> Metadata;
-
-  fn scarcity(season: felt252, scarcity_id: felt252) -> Scarcity;
-
-  fn uncommon_scarcities_count(season: felt252) -> felt252;
-
-  fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128;
-
-  fn add_scarcity(season: felt252, scarcity: Scarcity);
+#[starknet::interface]
+trait IRulesTokensCamelCase<TContractState> {
+  fn contractURI(self: @TContractState) -> Span<felt252>;
 }
 
-#[abi]
-trait IRulesMessages {
-  fn voucher_signer() -> starknet::ContractAddress;
+#[starknet::interface]
+trait IRulesData<TContractState> {
+  fn card_model(self: @TContractState, card_model_id: u128) -> CardModel;
 
-  fn consume_valid_voucher(voucher: Voucher, signature: Span<felt252>);
+  fn card_model_metadata(self: @TContractState, card_model_id: u128) -> Metadata;
+
+  fn scarcity(self: @TContractState, season: felt252, scarcity_id: felt252) -> Scarcity;
+
+  fn uncommon_scarcities_count(self: @TContractState, season: felt252) -> felt252;
+
+  fn add_card_model(ref self: TContractState, new_card_model: CardModel, metadata: Metadata) -> u128;
+
+  fn add_scarcity(ref self: TContractState, season: felt252, scarcity: Scarcity);
+}
+
+#[starknet::interface]
+trait IRulesMessages<TContractState> {
+  fn voucher_signer(self: @TContractState) -> starknet::ContractAddress;
+
+  fn consume_valid_voucher(ref self: TContractState, voucher: Voucher, signature: Span<felt252>);
 }

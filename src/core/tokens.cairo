@@ -1,78 +1,69 @@
-use array::SpanTrait;
+use array::{ SpanTrait, SpanSerde };
 use zeroable::Zeroable;
-use rules_utils::utils::serde::SpanSerde;
 
 // locals
 use rules_tokens::constants;
-use rules_utils::utils::zeroable::U128Zeroable;
 use super::interface::{ Token, TokenId, CardToken, PackToken, CardModel, Scarcity, Metadata, Voucher };
 
-#[abi]
-trait RulesTokensABI {
-  #[view]
-  fn voucher_signer() -> starknet::ContractAddress;
+#[starknet::interface]
+trait RulesTokensABI<TContractState> {
+  fn voucher_signer(self: @TContractState) -> starknet::ContractAddress;
 
-  #[view]
-  fn contract_uri() -> Span<felt252>;
+  fn contract_uri(self: @TContractState) -> Span<felt252>;
 
-  #[view]
-  fn marketplace() -> starknet::ContractAddress;
+  fn marketplace(self: @TContractState) -> starknet::ContractAddress;
 
-  #[view]
-  fn card_model(card_model_id: u128) -> CardModel;
+  fn card_model(self: @TContractState, card_model_id: u128) -> CardModel;
 
-  #[view]
-  fn card_model_metadata(card_model_id: u128) -> Metadata;
+  fn card_model_metadata(self: @TContractState, card_model_id: u128) -> Metadata;
 
-  #[view]
-  fn scarcity(season: felt252, scarcity_id: felt252) -> Scarcity;
+  fn scarcity(self: @TContractState, season: felt252, scarcity_id: felt252) -> Scarcity;
 
-  #[view]
-  fn uncommon_scarcities_count(season: felt252) -> felt252;
+  fn uncommon_scarcities_count(self: @TContractState, season: felt252) -> felt252;
 
-  #[view]
-  fn royalty_info(token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256);
+  fn royalty_info(self: @TContractState, token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256);
 
-  #[external]
-  fn set_contract_uri(contract_uri_: Span<felt252>);
+  fn set_contract_uri(ref self: TContractState, contract_uri_: Span<felt252>);
 
-  #[external]
-  fn set_royalties_receiver(new_receiver: starknet::ContractAddress);
+  fn set_royalties_receiver(ref self: TContractState, new_receiver: starknet::ContractAddress);
 
-  #[external]
-  fn set_royalties_percentage(new_percentage: u16);
+  fn set_royalties_percentage(ref self: TContractState, new_percentage: u16);
 
-  #[external]
-  fn upgrade(new_implementation: starknet::ClassHash);
+  fn upgrade(ref self: TContractState, new_implementation: starknet::ClassHash);
 
-  #[external]
-  fn set_marketplace(marketplace_: starknet::ContractAddress);
+  fn set_marketplace(ref self: TContractState, marketplace_: starknet::ContractAddress);
 
-  #[external]
-  fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128;
+  fn add_card_model(ref self: TContractState, new_card_model: CardModel, metadata: Metadata) -> u128;
 
-  #[external]
-  fn add_scarcity(season: felt252, scarcity: Scarcity);
+  fn add_scarcity(ref self: TContractState, season: felt252, scarcity: Scarcity);
 
-  #[external]
-  fn redeem_voucher(voucher: Voucher, signature: Span<felt252>);
+  fn redeem_voucher(ref self: TContractState, voucher: Voucher, signature: Span<felt252>);
+
+  fn owner(self: @TContractState) -> starknet::ContractAddress;
+
+  fn transfer_ownership(ref self: TContractState, new_owner: starknet::ContractAddress);
+
+  fn renounce_ownership(ref self: TContractState);
 }
 
-#[contract]
+#[starknet::contract]
 mod RulesTokens {
   use array::{ ArrayTrait, SpanTrait };
   use zeroable::Zeroable;
+  use rules_erc1155::erc1155;
   use rules_erc1155::erc1155::ERC1155;
   use rules_account::account;
   use messages::typed_data::TypedDataTrait;
+  use integer::U128Zeroable;
+  use rules_utils::utils::storage::Felt252SpanStorageAccess;
 
   // locals
-  use rules_tokens::royalties::erc2981::ERC2981;
-  use rules_tokens::access::ownable::Ownable;
-  use rules_tokens::utils::zeroable::{ CardModelZeroable };
-  use rules_utils::utils::zeroable::U128Zeroable;
-  use super::super::interface::{
+  use rules_tokens::core;
+  use rules_tokens::core::interface::{
+    IRulesMessages,
+    IRulesData,
     IRulesTokens,
+    IRulesTokensCamelCase,
     Scarcity,
     CardModel,
     Metadata,
@@ -82,9 +73,20 @@ mod RulesTokens {
     TokenId,
     Token,
   };
-  use super::super::data::RulesData;
-  use super::super::messages::RulesMessages;
-  use super::{ TokenIdTrait };
+  use rules_tokens::core::data::RulesData;
+  use rules_tokens::core::messages::RulesMessages;
+
+  use rules_tokens::access::ownable;
+  use rules_tokens::access::ownable::Ownable;
+
+  use rules_tokens::introspection::erc165;
+  use rules_tokens::introspection::erc165::ERC165;
+
+  use rules_tokens::royalties::erc2981;
+  use rules_tokens::royalties::erc2981::ERC2981;
+
+  use rules_tokens::utils::zeroable::{ CardModelZeroable };
+  use super::TokenIdTrait;
 
   // dispatchers
   use rules_account::account::{ AccountABIDispatcher, AccountABIDispatcherTrait };
@@ -93,6 +95,7 @@ mod RulesTokens {
   // Storage
   //
 
+  #[storage]
   struct Storage {
     // card_token_id -> minted
     _minted_cards: LegacyMap<u256, bool>,
@@ -105,11 +108,34 @@ mod RulesTokens {
   }
 
   //
+  // Modifiers
+  //
+
+  #[generate_trait]
+  impl ModifierImpl of ModifierTrait {
+    // TODO: access control
+    fn _only_marketplace(self: @ContractState) {
+      let caller = starknet::get_caller_address();
+      let marketplace_ = self.marketplace();
+
+      assert(caller.is_non_zero(), 'Caller is the zero address');
+      assert(marketplace_ == caller, 'Caller is not the marketplace');
+    }
+
+    fn _only_owner(self: @ContractState) {
+      let ownable_self = Ownable::unsafe_new_contract_state();
+
+      Ownable::ModifierImpl::assert_only_owner(self: @ownable_self);
+    }
+  }
+
+  //
   // Constructor
   //
 
   #[constructor]
   fn constructor(
+    ref self: ContractState,
     uri_: Span<felt252>,
     owner_: starknet::ContractAddress,
     voucher_signer_: starknet::ContractAddress,
@@ -118,66 +144,15 @@ mod RulesTokens {
     royalties_receiver_: starknet::ContractAddress,
     royalties_percentage_: u16
   ) {
-    ERC1155::initializer(:uri_,);
-    RulesMessages::initializer(:voucher_signer_);
-    initializer(:owner_, :contract_uri_, :marketplace_, :royalties_receiver_, :royalties_percentage_);
-  }
-
-  //
-  // impls
-  //
-
-  impl RulesTokens of IRulesTokens {
-    fn contract_uri() -> Span<felt252> {
-      _contract_uri::read()
-    }
-
-    fn set_contract_uri(contract_uri_: Span<felt252>) {
-      _contract_uri::write(contract_uri_);
-    }
-
-    fn marketplace() -> starknet::ContractAddress {
-      _marketplace::read()
-    }
-
-    fn set_marketplace(marketplace_: starknet::ContractAddress) {
-      _marketplace::write(marketplace_);
-    }
-
-    fn card_exists(card_token_id: u256) -> bool {
-      _minted_cards::read(card_token_id)
-    }
-
-    fn redeem_voucher(voucher: Voucher, signature: Span<felt252>) {
-      RulesMessages::consume_valid_voucher(:voucher, :signature);
-
-      // mint token id
-      _mint(to: voucher.receiver, token_id: TokenIdTrait::new(id: voucher.token_id), amount: voucher.amount);
-    }
-
-    fn redeem_voucher_to(to: starknet::ContractAddress, voucher: Voucher, signature: Span<felt252>) {
-      RulesMessages::consume_valid_voucher(:voucher, :signature);
-
-      // mint token id
-      _mint(:to, token_id: TokenIdTrait::new(id: voucher.token_id), amount: voucher.amount);
-    }
-
-    fn safe_transfer_from(
-      from: starknet::ContractAddress,
-      to: starknet::ContractAddress,
-      id: u256,
-      amount: u256,
-      data: Span<felt252>
-    ) {
-      let caller = starknet::get_caller_address();
-      let marketplace = marketplace();
-
-      if (caller == marketplace) {
-        ERC1155::_safe_transfer_from(:from, :to, :id, :amount, :data);
-      } else {
-        ERC1155::safe_transfer_from(:from, :to, :id, :amount, :data);
-      }
-    }
+    self.initializer(
+      :uri_,
+      :owner_,
+      :voucher_signer_,
+      :contract_uri_,
+      :marketplace_,
+      :royalties_receiver_,
+      :royalties_percentage_
+    );
   }
 
   //
@@ -185,365 +160,406 @@ mod RulesTokens {
   //
 
   // TODO: use Upgradeable impl with more custom call after upgrade
-  #[external]
-  fn upgrade(new_implementation: starknet::ClassHash) {
-    // Modifiers
-    Ownable::assert_only_owner();
 
-    // Body
+  #[generate_trait]
+  #[external(v0)]
+  impl UpgradeImpl of UpgradeTrait {
+    fn upgrade(ref self: ContractState, new_implementation: starknet::ClassHash) {
+      // Modifiers
+      self._only_owner();
 
-    // set new impl
-    starknet::replace_class_syscall(new_implementation);
-  }
+      // Body
 
-  // Getters
-
-  #[view]
-  fn contract_uri() -> Span<felt252> {
-    RulesTokens::contract_uri()
-  }
-
-  #[view]
-  fn contractURI() -> Span<felt252> {
-    contract_uri()
-  }
-
-  #[view]
-  fn uri(tokenId: u256) -> Span<felt252> {
-    ERC1155::uri(:tokenId)
-  }
-
-  #[view]
-  fn owner() -> starknet::ContractAddress {
-    Ownable::owner()
-  }
-
-  #[view]
-  fn voucher_signer() -> starknet::ContractAddress {
-    RulesMessages::voucher_signer()
-  }
-
-  #[view]
-  fn marketplace() -> starknet::ContractAddress {
-    RulesTokens::marketplace()
-  }
-
-  #[view]
-  fn card_exists(card_token_id: u256) -> bool {
-    RulesTokens::card_exists(:card_token_id)
-  }
-
-  // ERC165
-
-  #[view]
-  fn supports_interface(interface_id: u32) -> bool {
-    ERC1155::supports_interface(:interface_id) | ERC2981::supports_interface(:interface_id)
-  }
-
-  #[view]
-  fn supportsInterface(interface_id: u32) -> bool {
-    supports_interface(:interface_id)
-  }
-
-  // ERC2981
-
-  #[view]
-  fn royalty_info(token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256) {
-    ERC2981::royalty_info(:token_id, :sale_price)
-  }
-
-  #[view]
-  fn royaltyInfo(token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256) {
-    royalty_info(:token_id, :sale_price)
-  }
-
-  // Setters
-
-  #[external]
-  fn set_contract_uri(contract_uri_: Span<felt252>) {
-    // Modifiers
-    Ownable::assert_only_owner();
-
-    // Body
-    RulesTokens::set_contract_uri(:contract_uri_)
-  }
-
-  #[external]
-  fn set_marketplace(marketplace_: starknet::ContractAddress) {
-    // Modifiers
-    Ownable::assert_only_owner();
-
-    // Body
-    RulesTokens::set_marketplace(:marketplace_)
-  }
-
-  // ERC2981
-
-  #[external]
-  fn set_royalties_receiver(new_receiver: starknet::ContractAddress) {
-    // Modifiers
-    Ownable::assert_only_owner();
-
-    // Body
-    ERC2981::_set_royalty_receiver(:new_receiver);
-  }
-
-  #[external]
-  fn set_royalties_percentage(new_percentage: u16) {
-    // Modifiers
-    Ownable::assert_only_owner();
-
-    // Body
-    ERC2981::_set_royalty_percentage(:new_percentage);
-  }
-
-  // Ownable
-
-  #[external]
-  fn transfer_ownership(new_owner: starknet::ContractAddress) {
-    Ownable::transfer_ownership(:new_owner);
-  }
-
-  #[external]
-  fn renounce_ownership() {
-    Ownable::renounce_ownership();
-  }
-
-  // Balance
-
-  #[view]
-  fn balance_of(account: starknet::ContractAddress, id: u256) -> u256 {
-    ERC1155::balance_of(:account, :id)
-  }
-
-  #[view]
-  fn balanceOf(account: starknet::ContractAddress, id: u256) -> u256 {
-    balance_of(:account, :id)
-  }
-
-  #[view]
-  fn balance_of_batch(accounts: Span<starknet::ContractAddress>, ids: Span<u256>) -> Array<u256> {
-    ERC1155::balance_of_batch(:accounts, :ids)
-  }
-
-  #[view]
-  fn balanceOfBatch(accounts: Span<starknet::ContractAddress>, ids: Span<u256>) -> Array<u256> {
-    balance_of_batch(:accounts, :ids)
-  }
-
-  // Approval
-
-  #[external]
-  fn set_approval_for_all(operator: starknet::ContractAddress, approved: bool) {
-    ERC1155::set_approval_for_all(:operator, :approved)
-  }
-
-  #[external]
-  fn setApprovalForAll(operator: starknet::ContractAddress, approved: bool) {
-    set_approval_for_all(:operator, :approved)
-  }
-
-  #[view]
-  fn is_approved_for_all(account: starknet::ContractAddress, operator: starknet::ContractAddress) -> bool {
-    ERC1155::is_approved_for_all(:account, :operator)
-  }
-
-  #[view]
-  fn isApprovedForAll(account: starknet::ContractAddress, operator: starknet::ContractAddress) -> bool {
-    is_approved_for_all(:account, :operator)
-  }
-
-  // Transfer
-
-  #[external]
-  fn safe_transfer_from(
-    from: starknet::ContractAddress,
-    to: starknet::ContractAddress,
-    id: u256,
-    amount: u256,
-    data: Span<felt252>
-  ) {
-    RulesTokens::safe_transfer_from(:from, :to, :id, :amount, :data);
-  }
-
-  #[external]
-  fn safeTransferFrom(
-    from: starknet::ContractAddress,
-    to: starknet::ContractAddress,
-    id: u256,
-    amount: u256,
-    data: Span<felt252>
-  ) {
-    safe_transfer_from(:from, :to, :id, :amount, :data);
-  }
-
-  #[external]
-  fn safe_batch_transfer_from(
-    from: starknet::ContractAddress,
-    to: starknet::ContractAddress,
-    ids: Span<u256>,
-    amounts: Span<u256>,
-    data: Span<felt252>
-  ) {
-    ERC1155::safe_batch_transfer_from(:from, :to, :ids, :amounts, :data);
-  }
-
-  #[external]
-  fn safeBatchTransferFrom(
-    from: starknet::ContractAddress,
-    to: starknet::ContractAddress,
-    ids: Span<u256>,
-    amounts: Span<u256>,
-    data: Span<felt252>
-  ) {
-    safe_batch_transfer_from(:from, :to, :ids, :amounts, :data);
-  }
-
-  // Card models
-
-  #[view]
-  fn card_model(card_model_id: u128) -> CardModel {
-    RulesData::card_model(:card_model_id)
-  }
-
-  #[view]
-  fn card_model_metadata(card_model_id: u128) -> Metadata {
-    RulesData::card_model_metadata(:card_model_id)
-  }
-
-  #[external]
-  fn add_card_model(new_card_model: CardModel, metadata: Metadata) -> u128 {
-    // Modifiers
-    Ownable::assert_only_owner();
-
-    // Body
-    RulesData::add_card_model(:new_card_model, :metadata)
-  }
-
-  // Scarcity
-
-  #[view]
-  fn scarcity(season: felt252, scarcity_id: felt252) -> Scarcity {
-    RulesData::scarcity(:season, :scarcity_id)
-  }
-
-  #[view]
-  fn uncommon_scarcities_count(season: felt252) -> felt252 {
-    RulesData::uncommon_scarcities_count(:season)
-  }
-
-  #[external]
-  fn add_scarcity(season: felt252, scarcity: Scarcity) {
-    // Modifiers
-    Ownable::assert_only_owner();
-
-    // Body
-    RulesData::add_scarcity(:season, :scarcity)
-  }
-
-  // Voucher
-
-  #[external]
-  fn redeem_voucher(voucher: Voucher, signature: Span<felt252>) {
-    RulesTokens::redeem_voucher(:voucher, :signature);
-  }
-
-  #[external]
-  fn redeem_voucher_to(to: starknet::ContractAddress, voucher: Voucher, signature: Span<felt252>) {
-    // TODO: access control
-    // Modifiers
-    _only_marketplace();
-
-    // Body
-    RulesTokens::redeem_voucher_to(:to, :voucher, :signature);
-  }
-
-  //
-  // Internals
-  //
-
-  // Init
-
-  #[internal]
-  fn initializer(
-    owner_: starknet::ContractAddress,
-    contract_uri_: Span<felt252>,
-    marketplace_: starknet::ContractAddress,
-    royalties_receiver_: starknet::ContractAddress,
-    royalties_percentage_: u16
-  ) {
-    Ownable::_transfer_ownership(new_owner: owner_);
-
-    _contract_uri::write(contract_uri_);
-
-    _marketplace::write(marketplace_);
-
-    ERC2981::_set_royalty_receiver(new_receiver: royalties_receiver_);
-    ERC2981::_set_royalty_percentage(new_percentage: royalties_percentage_);
-  }
-
-  // Marketplace
-
-  #[internal]
-  fn _only_marketplace() {
-    let caller = starknet::get_caller_address();
-    let marketplace_ = marketplace();
-
-    assert(caller.is_non_zero(), 'Caller is the zero address');
-    assert(marketplace_ == caller, 'Caller is not the marketplace');
-  }
-
-  // Mint
-
-  #[internal]
-  fn _mint(to: starknet::ContractAddress, token_id: TokenId, amount: u256) {
-    match (token_id.parse()) {
-      Token::card(card_token) => {
-        _mint_card(:to, :card_token, :amount);
-      },
-      Token::pack(pack_token) => {
-        _mint_pack(:to, :pack_token, :amount);
-      },
+      // set new impl
+      starknet::replace_class_syscall(new_implementation);
     }
   }
 
-  #[internal]
-  fn _mint_card(to: starknet::ContractAddress, card_token: CardToken, amount: u256) {
-    // assert amount is valid
-    assert(amount == 1, 'Card amount cannot exceed 1');
+  //
+  // Rules Tokens impl
+  //
 
-    // assert card model exists
-    let card_model_ = card_model(card_model_id: card_token.card_model_id);
-    assert(card_model_.is_non_zero(), 'Card model does not exists');
+  #[external(v0)]
+  impl IRulesTokensImpl of core::interface::IRulesTokens<ContractState> {
+    fn contract_uri(self: @ContractState) -> Span<felt252> {
+      self._contract_uri.read()
+    }
 
-    // assert serial number is in a valid range: [1, scarcity max supply]
-    let scarcity_ = scarcity(season: card_model_.season, scarcity_id: card_model_.scarcity_id);
-    assert(
-      card_token.serial_number.is_non_zero() & card_token.serial_number <= scarcity_.max_supply,
-      'Serial number is out of range'
-    );
+    fn marketplace(self: @ContractState) -> starknet::ContractAddress {
+      self._marketplace.read()
+    }
 
-    // assert card does not already exists
-    assert(!card_exists(card_token_id: card_token.id), 'Card already minted');
+    fn card_exists(self: @ContractState, card_token_id: u256) -> bool {
+      self._minted_cards.read(card_token_id)
+    }
 
-    // save card as minted
-    _minted_cards::write(card_token.id, true);
+    fn set_contract_uri(ref self: ContractState, contract_uri_: Span<felt252>) {
+      // Modifiers
+      self._only_owner();
 
-    // mint token
-    ERC1155::_mint(:to, id: card_token.id, :amount, data: ArrayTrait::<felt252>::new().span());
+      // Body
+      self._contract_uri.write(contract_uri_);
+    }
+
+    fn set_marketplace(ref self: ContractState, marketplace_: starknet::ContractAddress) {
+      // Modifiers
+      self._only_owner();
+
+      // Body
+      self._marketplace.write(marketplace_);
+    }
+
+    fn redeem_voucher(ref self: ContractState, voucher: Voucher, signature: Span<felt252>) {
+      let mut rules_messages_self = RulesMessages::unsafe_new_contract_state();
+
+      RulesMessages::IRulesMessages::consume_valid_voucher(ref self: rules_messages_self, :voucher, :signature);
+
+      // mint token id
+      self._mint(to: voucher.receiver, token_id: TokenIdTrait::new(id: voucher.token_id), amount: voucher.amount);
+    }
+
+    fn redeem_voucher_to(
+      ref self: ContractState,
+      to: starknet::ContractAddress,
+      voucher: Voucher,
+      signature: Span<felt252>
+    ) {
+      // Modifiers
+      self._only_marketplace();
+
+      // Body
+      let mut rules_messages_self = RulesMessages::unsafe_new_contract_state();
+
+      RulesMessages::IRulesMessages::consume_valid_voucher(ref self: rules_messages_self, :voucher, :signature);
+
+      // mint token id
+      self._mint(:to, token_id: TokenIdTrait::new(id: voucher.token_id), amount: voucher.amount);
+    }
+
+    // ERC2981
+
+    fn set_royalties_receiver(ref self: ContractState, new_receiver: starknet::ContractAddress) {
+      // Modifiers
+      self._only_owner();
+
+      // Body
+      let mut erc2981_self = ERC2981::unsafe_new_contract_state();
+
+      ERC2981::HelperImpl::_set_royalty_receiver(ref self: erc2981_self, :new_receiver);
+    }
+
+    fn set_royalties_percentage(ref self: ContractState, new_percentage: u16) {
+      // Modifiers
+      self._only_owner();
+
+      // Body
+      let mut erc2981_self = ERC2981::unsafe_new_contract_state();
+
+      ERC2981::HelperImpl::_set_royalty_percentage(ref self: erc2981_self, :new_percentage);
+    }
   }
 
-  #[internal]
-  fn _mint_pack(to: starknet::ContractAddress, pack_token: PackToken, amount: u256) {
-    panic_with_felt252('Packs tokens not supported yet');
+  //
+  // Rules Messages impl
+  //
+
+  #[external(v0)]
+  impl IRulesMessagesImpl of core::interface::IRulesMessages<ContractState> {
+    fn voucher_signer(self: @ContractState) -> starknet::ContractAddress {
+      let rules_messages_self = RulesMessages::unsafe_new_contract_state();
+
+      RulesMessages::IRulesMessagesImpl::voucher_signer(self: @rules_messages_self)
+    }
+
+    fn consume_valid_voucher(ref self: ContractState, voucher: Voucher, signature: Span<felt252>) {
+      let mut rules_messages_self = RulesMessages::unsafe_new_contract_state();
+
+      RulesMessages::IRulesMessagesImpl::consume_valid_voucher(ref self: rules_messages_self, :voucher, :signature);
+    }
+  }
+
+  //
+  // IRulesData impl
+  //
+
+  #[external(v0)]
+  impl IRulesDataImpl of core::interface::IRulesData<ContractState> {
+    fn card_model(self: @ContractState, card_model_id: u128) -> CardModel {
+      let rules_data_self = RulesData::unsafe_new_contract_state();
+
+      RulesData::IRulesDataImpl::card_model(self: @rules_data_self, :card_model_id)
+    }
+
+    fn card_model_metadata(self: @ContractState, card_model_id: u128) -> Metadata {
+      let rules_data_self = RulesData::unsafe_new_contract_state();
+
+      RulesData::IRulesDataImpl::card_model_metadata(self: @rules_data_self, :card_model_id)
+    }
+
+    fn scarcity(self: @ContractState, season: felt252, scarcity_id: felt252) -> Scarcity {
+      let rules_data_self = RulesData::unsafe_new_contract_state();
+
+      RulesData::IRulesDataImpl::scarcity(self: @rules_data_self, :season, :scarcity_id)
+    }
+
+    fn uncommon_scarcities_count(self: @ContractState, season: felt252) -> felt252 {
+      let rules_data_self = RulesData::unsafe_new_contract_state();
+
+      RulesData::IRulesDataImpl::uncommon_scarcities_count(self: @rules_data_self, :season)
+    }
+
+    fn add_card_model(ref self: ContractState, new_card_model: CardModel, metadata: Metadata) -> u128 {
+      // Modifiers
+      self._only_owner();
+
+      // Body
+      let mut rules_data_self = RulesData::unsafe_new_contract_state();
+
+      RulesData::IRulesDataImpl::add_card_model(ref self: rules_data_self, :new_card_model, :metadata)
+    }
+
+    fn add_scarcity(ref self: ContractState, season: felt252, scarcity: Scarcity) {
+      // Modifiers
+      self._only_owner();
+
+      // Body
+      let mut rules_data_self = RulesData::unsafe_new_contract_state();
+
+      RulesData::IRulesDataImpl::add_scarcity(ref self: rules_data_self, :season, :scarcity)
+    }
+  }
+
+  //
+  // Rules Tokens Camel case impl
+  //
+
+  #[external(v0)]
+  impl RulesTokensCamelCase of core::interface::IRulesTokensCamelCase<ContractState> {
+    fn contractURI(self: @ContractState) -> Span<felt252> {
+      self.contract_uri()
+    }
+  }
+
+  //
+  // ERC1155 impl
+  //
+
+  #[external(v0)]
+  impl IERC1155Impl of erc1155::interface::IERC1155<ContractState> {
+    fn uri(self: @ContractState, token_id: u256) -> Span<felt252> {
+      let erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      ERC1155::IERC1155Impl::uri(self: @erc1155_self, :token_id)
+    }
+
+    fn balance_of(self: @ContractState, account: starknet::ContractAddress, id: u256) -> u256 {
+      let erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      ERC1155::IERC1155Impl::balance_of(self: @erc1155_self, :account, :id)
+    }
+
+    fn balance_of_batch(
+      self: @ContractState,
+      accounts: Span<starknet::ContractAddress>,
+      ids: Span<u256>
+    ) -> Array<u256> {
+      let erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      ERC1155::IERC1155Impl::balance_of_batch(self: @erc1155_self, :accounts, :ids)
+    }
+
+    fn is_approved_for_all(self: @ContractState,
+      account: starknet::ContractAddress,
+      operator: starknet::ContractAddress
+    ) -> bool {
+      let erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      ERC1155::IERC1155Impl::is_approved_for_all(self: @erc1155_self, :account, :operator)
+    }
+
+    fn set_approval_for_all(ref self: ContractState, operator: starknet::ContractAddress, approved: bool) {
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      ERC1155::IERC1155Impl::set_approval_for_all(ref self: erc1155_self, :operator, :approved);
+    }
+
+    fn safe_transfer_from(
+      ref self: ContractState,
+      from: starknet::ContractAddress,
+      to: starknet::ContractAddress,
+      id: u256,
+      amount: u256,
+      data: Span<felt252>
+    ) {
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      let caller = starknet::get_caller_address();
+      let marketplace = self.marketplace();
+
+      if (caller == marketplace) {
+        ERC1155::HelperImpl::_safe_transfer_from(ref self: erc1155_self, :from, :to, :id, :amount, :data);
+      } else {
+        ERC1155::IERC1155Impl::safe_transfer_from(ref self: erc1155_self, :from, :to, :id, :amount, :data);
+      }
+    }
+
+    fn safe_batch_transfer_from(
+      ref self: ContractState,
+      from: starknet::ContractAddress,
+      to: starknet::ContractAddress,
+      ids: Span<u256>,
+      amounts: Span<u256>,
+      data: Span<felt252>
+    ) {
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      ERC1155::IERC1155Impl::safe_batch_transfer_from(ref self: erc1155_self, :from, :to, :ids, :amounts, :data);
+    }
+  }
+
+  //
+  // IERC165 impl
+  //
+
+  #[external(v0)]
+  impl IERC165Impl of erc165::IERC165<ContractState> {
+    fn supports_interface(self: @ContractState, interface_id: u32) -> bool {
+      let erc1155_self = ERC1155::unsafe_new_contract_state();
+      let erc2981_self = ERC2981::unsafe_new_contract_state();
+
+      ERC1155::IERC165Impl::supports_interface(self: @erc1155_self, :interface_id) |
+      ERC2981::IERC165Impl::supports_interface(self: @erc2981_self, :interface_id)
+    }
+  }
+
+  //
+  // IERC2981 impl
+  //
+
+  #[external(v0)]
+  impl IERC2981Impl of erc2981::IERC2981<ContractState> {
+    fn royalty_info(self: @ContractState, token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256) {
+      let erc2981_self = ERC2981::unsafe_new_contract_state();
+
+      ERC2981::IERC2981Impl::royalty_info(self: @erc2981_self, :token_id, :sale_price)
+    }
+  }
+
+  //
+  // Ownable impl
+  //
+
+  #[external(v0)]
+  impl IOwnableImpl of ownable::IOwnable<ContractState> {
+    fn owner(self: @ContractState) -> starknet::ContractAddress {
+      let ownable_self = Ownable::unsafe_new_contract_state();
+
+      Ownable::IOwnableImpl::owner(self: @ownable_self)
+    }
+
+    fn transfer_ownership(ref self: ContractState, new_owner: starknet::ContractAddress) {
+      let mut ownable_self = Ownable::unsafe_new_contract_state();
+
+      Ownable::IOwnableImpl::transfer_ownership(ref self: ownable_self, :new_owner);
+    }
+
+    fn renounce_ownership(ref self: ContractState) {
+      let mut ownable_self = Ownable::unsafe_new_contract_state();
+
+      Ownable::IOwnableImpl::renounce_ownership(ref self: ownable_self);
+    }
+  }
+
+  //
+  // Helpers
+  //
+
+  #[generate_trait]
+  impl HelperImpl of HelperTrait {
+
+    // Init
+
+    fn initializer(
+      ref self: ContractState,
+      uri_: Span<felt252>,
+      owner_: starknet::ContractAddress,
+      voucher_signer_: starknet::ContractAddress,
+      contract_uri_: Span<felt252>,
+      marketplace_: starknet::ContractAddress,
+      royalties_receiver_: starknet::ContractAddress,
+      royalties_percentage_: u16
+    ) {
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+      let mut rules_messages_self = RulesMessages::unsafe_new_contract_state();
+      let mut ownable_self = Ownable::unsafe_new_contract_state();
+      let mut erc2981_self = ERC2981::unsafe_new_contract_state();
+
+      ERC1155::HelperImpl::initializer(ref self: erc1155_self, :uri_,);
+      RulesMessages::HelperImpl::initializer(ref self: rules_messages_self, :voucher_signer_);
+
+      Ownable::HelperImpl::_transfer_ownership(ref self: ownable_self, new_owner: owner_);
+
+      self._contract_uri.write(contract_uri_);
+
+      self._marketplace.write(marketplace_);
+
+      ERC2981::HelperImpl::_set_royalty_receiver(ref self: erc2981_self, new_receiver: royalties_receiver_);
+      ERC2981::HelperImpl::_set_royalty_percentage(ref self: erc2981_self, new_percentage: royalties_percentage_);
+    }
+
+    // Mint
+
+    fn _mint(ref self: ContractState, to: starknet::ContractAddress, token_id: TokenId, amount: u256) {
+      match (token_id.parse()) {
+        Token::card(card_token) => {
+          self._mint_card(:to, :card_token, :amount);
+        },
+        Token::pack(pack_token) => {
+          self._mint_pack(:to, :pack_token, :amount);
+        },
+      }
+    }
+
+    fn _mint_card(ref self: ContractState, to: starknet::ContractAddress, card_token: CardToken, amount: u256) {
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      // assert amount is valid
+      assert(amount == 1, 'Card amount cannot exceed 1');
+
+      // assert card model exists
+      let card_model_ = self.card_model(card_model_id: card_token.card_model_id);
+      assert(card_model_.is_non_zero(), 'Card model does not exists');
+
+      // assert serial number is in a valid range: [1, scarcity max supply]
+      let scarcity_ = self.scarcity(season: card_model_.season, scarcity_id: card_model_.scarcity_id);
+      assert(
+        card_token.serial_number.is_non_zero() & (card_token.serial_number <= scarcity_.max_supply),
+        'Serial number is out of range'
+      );
+
+      // assert card does not already exists
+      assert(!self.card_exists(card_token_id: card_token.id), 'Card already minted');
+
+      // save card as minted
+      self._minted_cards.write(card_token.id, true);
+
+      // mint token
+      ERC1155::HelperImpl::_mint(
+        ref self: erc1155_self,
+        :to,
+        id: card_token.id,
+        :amount,
+        data: ArrayTrait::<felt252>::new().span()
+      );
+    }
+
+    fn _mint_pack(ref self: ContractState, to: starknet::ContractAddress, pack_token: PackToken, amount: u256) {
+      panic_with_felt252('Packs tokens not supported yet');
+    }
   }
 }
 
-trait TokenIdTrait {
-  fn new(id: u256) -> TokenId;
-  fn parse(self: TokenId) -> Token;
-}
-
+#[generate_trait]
 impl TokenIdImpl of TokenIdTrait {
   fn new(id: u256) -> TokenId {
     TokenId { id }

@@ -1,10 +1,26 @@
-#[account_contract]
+#[starknet::contract]
 mod Receiver {
-  #[constructor]
-  fn constructor() {}
 
-  #[view]
-  fn supports_interface(interface_id: u32) -> bool {
+  //
+  // Storage
+  //
+
+  #[storage]
+  struct Storage { }
+
+  //
+  // Constructor
+  //
+
+  #[constructor]
+  fn constructor(ref self: ContractState) { }
+
+  //
+  // impls
+  //
+
+  #[external(v0)]
+  fn supports_interface(self: @ContractState, interface_id: u32) -> bool {
     if (interface_id == rules_account::account::interface::IACCOUNT_ID) {
       true
     } else {

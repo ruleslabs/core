@@ -3,51 +3,45 @@ const IERC2981_ID: u32 = 0x2a55205a;
 
 const HUNDRED_PERCENT: u16 = 10000;
 
-#[abi]
-trait IERC2981 {
-  fn supports_interface(interface_id: u32) -> bool;
-
-  fn royalty_info(token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256);
+#[starknet::interface]
+trait IERC2981<TContractState> {
+  fn royalty_info(self: @TContractState, token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256);
 }
 
-#[contract]
+#[starknet::contract]
 mod ERC2981 {
   use traits::{ Into, TryInto, DivRem };
   use zeroable::Zeroable;
-  use integer::{ U128DivRem, u128_try_as_non_zero };
+  use integer::{ U128DivRem, u128_try_as_non_zero, U16Zeroable, U128Zeroable };
   use option::OptionTrait;
 
+  // locals
   use super::HUNDRED_PERCENT;
   use rules_tokens::royalties::erc2981;
-  use rules_utils::utils::zeroable::{ U16Zeroable, U128Zeroable };
+  use rules_tokens::introspection::erc165;
+  use rules_tokens::introspection::erc165::ERC165;
 
   //
   // Storage
   //
 
+  #[storage]
   struct Storage {
     _royalties_receiver: starknet::ContractAddress,
     _royalties_percentage: u16,
   }
 
   //
-  // Impl
+  // IERC2981 impl
   //
 
-  impl ERC2981 of erc2981::IERC2981 {
-    fn supports_interface(interface_id: u32) -> bool {
-      if interface_id == erc2981::IERC2981_ID {
-        true
-      } else {
-        false
-      }
-    }
-
-    fn royalty_info(token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256) {
+  #[external(v0)]
+  impl IERC2981Impl of erc2981::IERC2981<ContractState> {
+    fn royalty_info(self: @ContractState, token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256) {
       assert(sale_price.high.is_zero(), 'Unsupported sale price');
 
-      let royalties_receiver_ = _royalties_receiver::read();
-      let royalties_percentage_ = _royalties_percentage::read();
+      let royalties_receiver_ = self._royalties_receiver.read();
+      let royalties_percentage_ = self._royalties_percentage.read();
 
       let mut royalty_amount = 0_u256;
 
@@ -70,28 +64,32 @@ mod ERC2981 {
     }
   }
 
-  #[view]
-  fn supports_interface(interface_id: u32) -> bool {
-    ERC2981::supports_interface(interface_id)
-  }
+  #[external(v0)]
+  impl IERC165Impl of erc165::IERC165<ContractState> {
+    fn supports_interface(self: @ContractState, interface_id: u32) -> bool {
+      let erc165_self = ERC165::unsafe_new_contract_state();
 
-  #[view]
-  fn royalty_info(token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256) {
-    ERC2981::royalty_info(:token_id, :sale_price)
+      if (interface_id == erc2981::IERC2981_ID) {
+        true
+      } else {
+        ERC165::ERC165Impl::supports_interface(self: @erc165_self, :interface_id)
+      }
+    }
   }
 
   //
-  // Internals
+  // Helpers
   //
 
-  #[internal]
-  fn _set_royalty_receiver(new_receiver: starknet::ContractAddress) {
-    _royalties_receiver::write(new_receiver);
-  }
+  #[generate_trait]
+  impl HelperImpl of HelperTrait {
+    fn _set_royalty_receiver(ref self: ContractState, new_receiver: starknet::ContractAddress) {
+      self._royalties_receiver.write(new_receiver);
+    }
 
-  #[internal]
-  fn _set_royalty_percentage(new_percentage: u16) {
-    assert(new_percentage <= HUNDRED_PERCENT, 'Invalid percentage');
-    _royalties_percentage::write(new_percentage);
+    fn _set_royalty_percentage(ref self: ContractState, new_percentage: u16) {
+      assert(new_percentage <= HUNDRED_PERCENT, 'Invalid percentage');
+      self._royalties_percentage.write(new_percentage);
+    }
   }
 }
