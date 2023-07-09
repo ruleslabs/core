@@ -52,6 +52,9 @@ mod RulesTokens {
   use zeroable::Zeroable;
   use rules_erc1155::erc1155;
   use rules_erc1155::erc1155::ERC1155;
+  use rules_erc1155::erc1155::ERC1155::{ HelperTrait as ERC1155HelperTrait };
+  use rules_erc1155::erc1155::interface::IERC1155;
+  use rules_erc1155::introspection::erc165::{ IERC165 as rules_erc1155_IERC165 };
   use rules_account::account;
   use messages::typed_data::TypedDataTrait;
   use integer::U128Zeroable;
@@ -75,15 +78,21 @@ mod RulesTokens {
   };
   use rules_tokens::core::data::RulesData;
   use rules_tokens::core::messages::RulesMessages;
+  use rules_tokens::core::messages::RulesMessages::{ HelperTrait as RulesMessagesHelperTrait };
 
   use rules_tokens::access::ownable;
-  use rules_tokens::access::ownable::Ownable;
+  use rules_tokens::access::ownable::{ Ownable, IOwnable };
+  use rules_tokens::access::ownable::Ownable::{
+    ModifierTrait as OwnableModifierTrait,
+    HelperTrait as OwnableHelperTrait,
+  };
 
   use rules_tokens::introspection::erc165;
-  use rules_tokens::introspection::erc165::ERC165;
+  use rules_tokens::introspection::erc165::{ ERC165, IERC165 };
 
   use rules_tokens::royalties::erc2981;
-  use rules_tokens::royalties::erc2981::ERC2981;
+  use rules_tokens::royalties::erc2981::{ ERC2981, IERC2981 };
+  use rules_tokens::royalties::erc2981::ERC2981::HelperTrait as ERC2981HelperTrait;
 
   use rules_tokens::utils::zeroable::{ CardModelZeroable };
   use super::TokenIdTrait;
@@ -108,6 +117,50 @@ mod RulesTokens {
   }
 
   //
+  // Events
+  //
+
+  #[event]
+  #[derive(Drop, starknet::Event)]
+  enum Event {
+    TransferSingle: TransferSingle,
+    TransferBatch: TransferBatch,
+    ApprovalForAll: ApprovalForAll,
+    URI: URI,
+  }
+
+  #[derive(Drop, starknet::Event)]
+  struct TransferSingle {
+    operator: starknet::ContractAddress,
+    from: starknet::ContractAddress,
+    to: starknet::ContractAddress,
+    id: u256,
+    value: u256,
+  }
+
+  #[derive(Drop, starknet::Event)]
+  struct TransferBatch {
+    operator: starknet::ContractAddress,
+    from: starknet::ContractAddress,
+    to: starknet::ContractAddress,
+    ids: Span<u256>,
+    values: Span<u256>,
+  }
+
+  #[derive(Drop, starknet::Event)]
+  struct ApprovalForAll {
+    account: starknet::ContractAddress,
+    operator: starknet::ContractAddress,
+    approved: bool,
+  }
+
+  #[derive(Drop, starknet::Event)]
+  struct URI {
+    value: Span<felt252>,
+    id: u256,
+  }
+
+  //
   // Modifiers
   //
 
@@ -123,9 +176,9 @@ mod RulesTokens {
     }
 
     fn _only_owner(self: @ContractState) {
-      let ownable_self = Ownable::unsafe_new_contract_state();
+      let mut ownable_self = Ownable::unsafe_new_contract_state();
 
-      Ownable::ModifierImpl::assert_only_owner(self: @ownable_self);
+      ownable_self.assert_only_owner();
     }
   }
 
@@ -212,7 +265,7 @@ mod RulesTokens {
     fn redeem_voucher(ref self: ContractState, voucher: Voucher, signature: Span<felt252>) {
       let mut rules_messages_self = RulesMessages::unsafe_new_contract_state();
 
-      RulesMessages::IRulesMessages::consume_valid_voucher(ref self: rules_messages_self, :voucher, :signature);
+      rules_messages_self.consume_valid_voucher(:voucher, :signature);
 
       // mint token id
       self._mint(to: voucher.receiver, token_id: TokenIdTrait::new(id: voucher.token_id), amount: voucher.amount);
@@ -230,7 +283,7 @@ mod RulesTokens {
       // Body
       let mut rules_messages_self = RulesMessages::unsafe_new_contract_state();
 
-      RulesMessages::IRulesMessages::consume_valid_voucher(ref self: rules_messages_self, :voucher, :signature);
+      rules_messages_self.consume_valid_voucher(:voucher, :signature);
 
       // mint token id
       self._mint(:to, token_id: TokenIdTrait::new(id: voucher.token_id), amount: voucher.amount);
@@ -245,7 +298,7 @@ mod RulesTokens {
       // Body
       let mut erc2981_self = ERC2981::unsafe_new_contract_state();
 
-      ERC2981::HelperImpl::_set_royalty_receiver(ref self: erc2981_self, :new_receiver);
+      erc2981_self._set_royalty_receiver(:new_receiver);
     }
 
     fn set_royalties_percentage(ref self: ContractState, new_percentage: u16) {
@@ -255,7 +308,7 @@ mod RulesTokens {
       // Body
       let mut erc2981_self = ERC2981::unsafe_new_contract_state();
 
-      ERC2981::HelperImpl::_set_royalty_percentage(ref self: erc2981_self, :new_percentage);
+      erc2981_self._set_royalty_percentage(:new_percentage);
     }
   }
 
@@ -268,13 +321,13 @@ mod RulesTokens {
     fn voucher_signer(self: @ContractState) -> starknet::ContractAddress {
       let rules_messages_self = RulesMessages::unsafe_new_contract_state();
 
-      RulesMessages::IRulesMessagesImpl::voucher_signer(self: @rules_messages_self)
+      rules_messages_self.voucher_signer()
     }
 
     fn consume_valid_voucher(ref self: ContractState, voucher: Voucher, signature: Span<felt252>) {
       let mut rules_messages_self = RulesMessages::unsafe_new_contract_state();
 
-      RulesMessages::IRulesMessagesImpl::consume_valid_voucher(ref self: rules_messages_self, :voucher, :signature);
+      rules_messages_self.consume_valid_voucher(:voucher, :signature);
     }
   }
 
@@ -287,25 +340,25 @@ mod RulesTokens {
     fn card_model(self: @ContractState, card_model_id: u128) -> CardModel {
       let rules_data_self = RulesData::unsafe_new_contract_state();
 
-      RulesData::IRulesDataImpl::card_model(self: @rules_data_self, :card_model_id)
+      rules_data_self.card_model(:card_model_id)
     }
 
     fn card_model_metadata(self: @ContractState, card_model_id: u128) -> Metadata {
       let rules_data_self = RulesData::unsafe_new_contract_state();
 
-      RulesData::IRulesDataImpl::card_model_metadata(self: @rules_data_self, :card_model_id)
+      rules_data_self.card_model_metadata(:card_model_id)
     }
 
     fn scarcity(self: @ContractState, season: felt252, scarcity_id: felt252) -> Scarcity {
       let rules_data_self = RulesData::unsafe_new_contract_state();
 
-      RulesData::IRulesDataImpl::scarcity(self: @rules_data_self, :season, :scarcity_id)
+      rules_data_self.scarcity(:season, :scarcity_id)
     }
 
     fn uncommon_scarcities_count(self: @ContractState, season: felt252) -> felt252 {
       let rules_data_self = RulesData::unsafe_new_contract_state();
 
-      RulesData::IRulesDataImpl::uncommon_scarcities_count(self: @rules_data_self, :season)
+      rules_data_self.uncommon_scarcities_count(:season)
     }
 
     fn add_card_model(ref self: ContractState, new_card_model: CardModel, metadata: Metadata) -> u128 {
@@ -315,7 +368,7 @@ mod RulesTokens {
       // Body
       let mut rules_data_self = RulesData::unsafe_new_contract_state();
 
-      RulesData::IRulesDataImpl::add_card_model(ref self: rules_data_self, :new_card_model, :metadata)
+      rules_data_self.add_card_model(:new_card_model, :metadata)
     }
 
     fn add_scarcity(ref self: ContractState, season: felt252, scarcity: Scarcity) {
@@ -325,7 +378,7 @@ mod RulesTokens {
       // Body
       let mut rules_data_self = RulesData::unsafe_new_contract_state();
 
-      RulesData::IRulesDataImpl::add_scarcity(ref self: rules_data_self, :season, :scarcity)
+      rules_data_self.add_scarcity(:season, :scarcity)
     }
   }
 
@@ -349,13 +402,13 @@ mod RulesTokens {
     fn uri(self: @ContractState, token_id: u256) -> Span<felt252> {
       let erc1155_self = ERC1155::unsafe_new_contract_state();
 
-      ERC1155::IERC1155Impl::uri(self: @erc1155_self, :token_id)
+      erc1155_self.uri(:token_id)
     }
 
     fn balance_of(self: @ContractState, account: starknet::ContractAddress, id: u256) -> u256 {
       let erc1155_self = ERC1155::unsafe_new_contract_state();
 
-      ERC1155::IERC1155Impl::balance_of(self: @erc1155_self, :account, :id)
+      erc1155_self.balance_of(:account, :id)
     }
 
     fn balance_of_batch(
@@ -365,7 +418,7 @@ mod RulesTokens {
     ) -> Array<u256> {
       let erc1155_self = ERC1155::unsafe_new_contract_state();
 
-      ERC1155::IERC1155Impl::balance_of_batch(self: @erc1155_self, :accounts, :ids)
+      erc1155_self.balance_of_batch(:accounts, :ids)
     }
 
     fn is_approved_for_all(self: @ContractState,
@@ -374,13 +427,13 @@ mod RulesTokens {
     ) -> bool {
       let erc1155_self = ERC1155::unsafe_new_contract_state();
 
-      ERC1155::IERC1155Impl::is_approved_for_all(self: @erc1155_self, :account, :operator)
+      erc1155_self.is_approved_for_all(:account, :operator)
     }
 
     fn set_approval_for_all(ref self: ContractState, operator: starknet::ContractAddress, approved: bool) {
       let mut erc1155_self = ERC1155::unsafe_new_contract_state();
 
-      ERC1155::IERC1155Impl::set_approval_for_all(ref self: erc1155_self, :operator, :approved);
+      erc1155_self.set_approval_for_all(:operator, :approved);
     }
 
     fn safe_transfer_from(
@@ -397,9 +450,9 @@ mod RulesTokens {
       let marketplace = self.marketplace();
 
       if (caller == marketplace) {
-        ERC1155::HelperImpl::_safe_transfer_from(ref self: erc1155_self, :from, :to, :id, :amount, :data);
+        erc1155_self._safe_transfer_from(:from, :to, :id, :amount, :data);
       } else {
-        ERC1155::IERC1155Impl::safe_transfer_from(ref self: erc1155_self, :from, :to, :id, :amount, :data);
+        erc1155_self.safe_transfer_from(:from, :to, :id, :amount, :data);
       }
     }
 
@@ -413,7 +466,7 @@ mod RulesTokens {
     ) {
       let mut erc1155_self = ERC1155::unsafe_new_contract_state();
 
-      ERC1155::IERC1155Impl::safe_batch_transfer_from(ref self: erc1155_self, :from, :to, :ids, :amounts, :data);
+      erc1155_self.safe_batch_transfer_from(:from, :to, :ids, :amounts, :data);
     }
   }
 
@@ -427,8 +480,8 @@ mod RulesTokens {
       let erc1155_self = ERC1155::unsafe_new_contract_state();
       let erc2981_self = ERC2981::unsafe_new_contract_state();
 
-      ERC1155::IERC165Impl::supports_interface(self: @erc1155_self, :interface_id) |
-      ERC2981::IERC165Impl::supports_interface(self: @erc2981_self, :interface_id)
+      erc1155_self.supports_interface(:interface_id) |
+      erc2981_self.supports_interface(:interface_id)
     }
   }
 
@@ -441,7 +494,7 @@ mod RulesTokens {
     fn royalty_info(self: @ContractState, token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256) {
       let erc2981_self = ERC2981::unsafe_new_contract_state();
 
-      ERC2981::IERC2981Impl::royalty_info(self: @erc2981_self, :token_id, :sale_price)
+      erc2981_self.royalty_info(:token_id, :sale_price)
     }
   }
 
@@ -454,19 +507,19 @@ mod RulesTokens {
     fn owner(self: @ContractState) -> starknet::ContractAddress {
       let ownable_self = Ownable::unsafe_new_contract_state();
 
-      Ownable::IOwnableImpl::owner(self: @ownable_self)
+      ownable_self.owner()
     }
 
     fn transfer_ownership(ref self: ContractState, new_owner: starknet::ContractAddress) {
       let mut ownable_self = Ownable::unsafe_new_contract_state();
 
-      Ownable::IOwnableImpl::transfer_ownership(ref self: ownable_self, :new_owner);
+      ownable_self.transfer_ownership(:new_owner);
     }
 
     fn renounce_ownership(ref self: ContractState) {
       let mut ownable_self = Ownable::unsafe_new_contract_state();
 
-      Ownable::IOwnableImpl::renounce_ownership(ref self: ownable_self);
+      ownable_self.renounce_ownership();
     }
   }
 
@@ -494,17 +547,17 @@ mod RulesTokens {
       let mut ownable_self = Ownable::unsafe_new_contract_state();
       let mut erc2981_self = ERC2981::unsafe_new_contract_state();
 
-      ERC1155::HelperImpl::initializer(ref self: erc1155_self, :uri_,);
-      RulesMessages::HelperImpl::initializer(ref self: rules_messages_self, :voucher_signer_);
+      erc1155_self.initializer(:uri_,);
+      rules_messages_self.initializer(:voucher_signer_);
 
-      Ownable::HelperImpl::_transfer_ownership(ref self: ownable_self, new_owner: owner_);
+      ownable_self._transfer_ownership(new_owner: owner_);
 
       self._contract_uri.write(contract_uri_);
 
       self._marketplace.write(marketplace_);
 
-      ERC2981::HelperImpl::_set_royalty_receiver(ref self: erc2981_self, new_receiver: royalties_receiver_);
-      ERC2981::HelperImpl::_set_royalty_percentage(ref self: erc2981_self, new_percentage: royalties_percentage_);
+      erc2981_self._set_royalty_receiver(new_receiver: royalties_receiver_);
+      erc2981_self._set_royalty_percentage(new_percentage: royalties_percentage_);
     }
 
     // Mint
@@ -544,13 +597,7 @@ mod RulesTokens {
       self._minted_cards.write(card_token.id, true);
 
       // mint token
-      ERC1155::HelperImpl::_mint(
-        ref self: erc1155_self,
-        :to,
-        id: card_token.id,
-        :amount,
-        data: ArrayTrait::<felt252>::new().span()
-      );
+      erc1155_self._mint(:to, id: card_token.id, :amount, data: ArrayTrait::<felt252>::new().span());
     }
 
     fn _mint_pack(ref self: ContractState, to: starknet::ContractAddress, pack_token: PackToken, amount: u256) {

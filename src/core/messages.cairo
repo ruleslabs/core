@@ -25,6 +25,7 @@ mod RulesMessages {
   use zeroable::Zeroable;
   use rules_account::account;
   use messages::messages::Messages;
+  use messages::messages::Messages::{ HelperTrait as MessagesHelperTrait };
   use messages::typed_data::TypedDataTrait;
 
   // locals
@@ -73,17 +74,12 @@ mod RulesMessages {
       let hash = voucher.compute_hash_from(from: voucher_signer_, domain: DOMAIN());
 
       // assert voucher has not been already consumed and consume it
-      assert(!Messages::HelperImpl::_is_message_consumed(self: @messages_self, :hash), 'Voucher already consumed');
-      Messages::HelperImpl::_consume_message(ref self: messages_self, :hash);
+      assert(!messages_self._is_message_consumed(:hash), 'Voucher already consumed');
+      messages_self._consume_message(:hash);
 
       // assert voucher signature is valid
       assert(
-        Messages::HelperImpl::_is_message_signature_valid(
-          self: @messages_self,
-          :hash,
-          :signature,
-          signer: voucher_signer_
-        ),
+        messages_self._is_message_signature_valid(:hash, :signature, signer: voucher_signer_),
         'Invalid voucher signature'
       );
     }

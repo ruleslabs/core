@@ -19,7 +19,7 @@ mod ERC2981 {
   use super::HUNDRED_PERCENT;
   use rules_tokens::royalties::erc2981;
   use rules_tokens::introspection::erc165;
-  use rules_tokens::introspection::erc165::ERC165;
+  use rules_tokens::introspection::erc165::{ ERC165, IERC165 };
 
   //
   // Storage
@@ -67,12 +67,12 @@ mod ERC2981 {
   #[external(v0)]
   impl IERC165Impl of erc165::IERC165<ContractState> {
     fn supports_interface(self: @ContractState, interface_id: u32) -> bool {
-      let erc165_self = ERC165::unsafe_new_contract_state();
-
       if (interface_id == erc2981::IERC2981_ID) {
         true
       } else {
-        ERC165::ERC165Impl::supports_interface(self: @erc165_self, :interface_id)
+        let erc165_self = ERC165::unsafe_new_contract_state();
+
+        erc165_self.supports_interface(:interface_id)
       }
     }
   }

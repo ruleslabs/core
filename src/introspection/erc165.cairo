@@ -9,7 +9,7 @@ trait IERC165<TContractState> {
 #[starknet::contract]
 mod ERC165 {
   // locals
-  use rules_account::introspection::erc165;
+  use rules_tokens::introspection::erc165;
 
   //
   // Storage
@@ -25,7 +25,7 @@ mod ERC165 {
   //
 
   #[external(v0)]
-  impl ERC165Impl of erc165::IERC165<ContractState> {
+  impl IERC165Impl of erc165::IERC165<ContractState> {
     fn supports_interface(self: @ContractState, interface_id: u32) -> bool {
       if interface_id == erc165::IERC165_ID {
         return true;
@@ -40,12 +40,12 @@ mod ERC165 {
 
   #[generate_trait]
   impl HelperImpl of HelperTrait {
-    fn register_interface(ref self: ContractState, interface_id: u32) {
+    fn _register_interface(ref self: ContractState, interface_id: u32) {
       assert(interface_id != erc165::INVALID_ID, 'Invalid id');
       self.supported_interfaces.write(interface_id, true);
     }
 
-    fn deregister_interface(ref self: ContractState, interface_id: u32) {
+    fn _deregister_interface(ref self: ContractState, interface_id: u32) {
       assert(interface_id != erc165::IERC165_ID, 'Invalid id');
       self.supported_interfaces.write(interface_id, false);
     }
