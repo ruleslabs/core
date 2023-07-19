@@ -54,7 +54,8 @@ mod RulesTokens {
   use rules_erc1155::erc1155::ERC1155;
   use rules_erc1155::erc1155::ERC1155::{ HelperTrait as ERC1155HelperTrait };
   use rules_erc1155::erc1155::interface::IERC1155;
-  use rules_erc1155::introspection::erc165::{ IERC165 as rules_erc1155_IERC165 };
+  use rules_utils::introspection::erc165;
+  use rules_utils::introspection::erc165::{ ERC165, IERC165 };
   use rules_account::account;
   use messages::typed_data::TypedDataTrait;
   use integer::U128Zeroable;
@@ -86,9 +87,6 @@ mod RulesTokens {
     ModifierTrait as OwnableModifierTrait,
     HelperTrait as OwnableHelperTrait,
   };
-
-  use rules_tokens::introspection::erc165;
-  use rules_tokens::introspection::erc165::{ ERC165, IERC165 };
 
   use rules_tokens::royalties::erc2981;
   use rules_tokens::royalties::erc2981::{ ERC2981, IERC2981 };

@@ -14,12 +14,12 @@ mod ERC2981 {
   use zeroable::Zeroable;
   use integer::{ U128DivRem, u128_try_as_non_zero, U16Zeroable, U128Zeroable };
   use option::OptionTrait;
+  use rules_utils::introspection::erc165;
+  use rules_utils::introspection::erc165::{ ERC165, IERC165 };
 
   // locals
   use super::HUNDRED_PERCENT;
   use rules_tokens::royalties::erc2981;
-  use rules_tokens::introspection::erc165;
-  use rules_tokens::introspection::erc165::{ ERC165, IERC165 };
 
   //
   // Storage
