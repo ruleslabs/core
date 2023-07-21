@@ -5,15 +5,17 @@ use starknet::testing;
 use zeroable::Zeroable;
 use starknet::class_hash::Felt252TryIntoClassHash;
 use integer::U256Zeroable;
+
 use rules_erc1155::erc1155::interface::{ IERC1155_ID, IERC1155 };
-use rules_utils::introspection::erc165::IERC165;
+
+use rules_utils::introspection::interface::ISRC5;
+use rules_utils::royalties::interface::{ IERC2981_ID, IERC2981 };
 
 // locals
 use rules_tokens::core::RulesTokens;
 use rules_tokens::core::interface::{ IRulesMessages, IRulesData, IRulesTokens };
-use rules_tokens::core::tokens::RulesTokens::{ ContractState as RulesTokensContractState, HelperTrait, UpgradeTrait };
+use rules_tokens::core::tokens::RulesTokens::{ ContractState as RulesTokensContractState, InternalTrait, UpgradeTrait };
 
-use rules_tokens::royalties::erc2981::{ IERC2981_ID, IERC2981 };
 use rules_tokens::core::data::CardModelTrait;
 use rules_tokens::core::tokens::TokenIdTrait;
 use rules_tokens::core::voucher::Voucher;

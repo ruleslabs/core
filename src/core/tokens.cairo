@@ -50,19 +50,25 @@ trait RulesTokensABI<TContractState> {
 mod RulesTokens {
   use array::{ ArrayTrait, SpanTrait };
   use zeroable::Zeroable;
+  use integer::U128Zeroable;
+
   use rules_erc1155::erc1155;
   use rules_erc1155::erc1155::ERC1155;
-  use rules_erc1155::erc1155::ERC1155::{ HelperTrait as ERC1155HelperTrait };
+  use rules_erc1155::erc1155::ERC1155::InternalTrait as ERC1155InternalTrait;
   use rules_erc1155::erc1155::interface::IERC1155;
-  use rules_utils::introspection::erc165;
-  use rules_utils::introspection::erc165::{ ERC165, IERC165 };
-  use rules_account::account;
-  use messages::typed_data::TypedDataTrait;
-  use integer::U128Zeroable;
+
+  use rules_utils::introspection::src5::SRC5;
+  use rules_utils::introspection::interface::ISRC5;
   use rules_utils::utils::storage::Felt252SpanStorageAccess;
 
+  use rules_utils::royalties::erc2981::ERC2981;
+  use rules_utils::royalties::erc2981::ERC2981::InternalTrait as ERC2981InternalTrait;
+  use rules_utils::royalties::interface::IERC2981;
+
+  use messages::typed_data::TypedDataTrait;
+
   // locals
-  use rules_tokens::core;
+  use rules_tokens::core::interface;
   use rules_tokens::core::interface::{
     IRulesMessages,
     IRulesData,
@@ -79,18 +85,13 @@ mod RulesTokens {
   };
   use rules_tokens::core::data::RulesData;
   use rules_tokens::core::messages::RulesMessages;
-  use rules_tokens::core::messages::RulesMessages::{ HelperTrait as RulesMessagesHelperTrait };
+  use rules_tokens::core::messages::RulesMessages::{ InternalTrait as RulesMessagesInternalTrait };
 
-  use rules_tokens::access::ownable;
   use rules_tokens::access::ownable::{ Ownable, IOwnable };
   use rules_tokens::access::ownable::Ownable::{
     ModifierTrait as OwnableModifierTrait,
-    HelperTrait as OwnableHelperTrait,
+    InternalTrait as OwnableInternalTrait,
   };
-
-  use rules_tokens::royalties::erc2981;
-  use rules_tokens::royalties::erc2981::{ ERC2981, IERC2981 };
-  use rules_tokens::royalties::erc2981::ERC2981::HelperTrait as ERC2981HelperTrait;
 
   use rules_tokens::utils::zeroable::{ CardModelZeroable };
   use super::TokenIdTrait;
@@ -231,7 +232,7 @@ mod RulesTokens {
   //
 
   #[external(v0)]
-  impl IRulesTokensImpl of core::interface::IRulesTokens<ContractState> {
+  impl IRulesTokensImpl of interface::IRulesTokens<ContractState> {
     fn contract_uri(self: @ContractState) -> Span<felt252> {
       self._contract_uri.read()
     }
@@ -315,7 +316,7 @@ mod RulesTokens {
   //
 
   #[external(v0)]
-  impl IRulesMessagesImpl of core::interface::IRulesMessages<ContractState> {
+  impl IRulesMessagesImpl of interface::IRulesMessages<ContractState> {
     fn voucher_signer(self: @ContractState) -> starknet::ContractAddress {
       let rules_messages_self = RulesMessages::unsafe_new_contract_state();
 
@@ -334,7 +335,7 @@ mod RulesTokens {
   //
 
   #[external(v0)]
-  impl IRulesDataImpl of core::interface::IRulesData<ContractState> {
+  impl IRulesDataImpl of interface::IRulesData<ContractState> {
     fn card_model(self: @ContractState, card_model_id: u128) -> CardModel {
       let rules_data_self = RulesData::unsafe_new_contract_state();
 
@@ -385,7 +386,7 @@ mod RulesTokens {
   //
 
   #[external(v0)]
-  impl RulesTokensCamelCase of core::interface::IRulesTokensCamelCase<ContractState> {
+  impl RulesTokensCamelCase of interface::IRulesTokensCamelCase<ContractState> {
     fn contractURI(self: @ContractState) -> Span<felt252> {
       self.contract_uri()
     }
@@ -396,7 +397,7 @@ mod RulesTokens {
   //
 
   #[external(v0)]
-  impl IERC1155Impl of erc1155::interface::IERC1155<ContractState> {
+  impl IERC1155Impl of IERC1155<ContractState> {
     fn uri(self: @ContractState, token_id: u256) -> Span<felt252> {
       let erc1155_self = ERC1155::unsafe_new_contract_state();
 
@@ -473,8 +474,8 @@ mod RulesTokens {
   //
 
   #[external(v0)]
-  impl IERC165Impl of erc165::IERC165<ContractState> {
-    fn supports_interface(self: @ContractState, interface_id: u32) -> bool {
+  impl ISRC5Impl of ISRC5<ContractState> {
+    fn supports_interface(self: @ContractState, interface_id: felt252) -> bool {
       let erc1155_self = ERC1155::unsafe_new_contract_state();
       let erc2981_self = ERC2981::unsafe_new_contract_state();
 
@@ -488,7 +489,7 @@ mod RulesTokens {
   //
 
   #[external(v0)]
-  impl IERC2981Impl of erc2981::IERC2981<ContractState> {
+  impl IERC2981Impl of IERC2981<ContractState> {
     fn royalty_info(self: @ContractState, token_id: u256, sale_price: u256) -> (starknet::ContractAddress, u256) {
       let erc2981_self = ERC2981::unsafe_new_contract_state();
 
@@ -501,7 +502,7 @@ mod RulesTokens {
   //
 
   #[external(v0)]
-  impl IOwnableImpl of ownable::IOwnable<ContractState> {
+  impl IOwnableImpl of IOwnable<ContractState> {
     fn owner(self: @ContractState) -> starknet::ContractAddress {
       let ownable_self = Ownable::unsafe_new_contract_state();
 
@@ -522,11 +523,11 @@ mod RulesTokens {
   }
 
   //
-  // Helpers
+  // Internals
   //
 
   #[generate_trait]
-  impl HelperImpl of HelperTrait {
+  impl InternalImpl of InternalTrait {
 
     // Init
 

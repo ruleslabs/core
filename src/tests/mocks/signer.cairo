@@ -5,7 +5,7 @@ mod Signer {
   // locals
   use rules_account::account;
   use rules_account::account::Account;
-  use rules_account::account::Account::{ HelperTrait as AccountHelperTrait };
+  use rules_account::account::Account::{ InternalTrait as AccountInternalTrait };
 
   //
   // Storage
@@ -30,13 +30,15 @@ mod Signer {
   //
 
   #[external(v0)]
-  fn is_valid_signature(self: @ContractState, message: felt252, signature: Array<felt252>) -> u32 {
+  fn is_valid_signature(self: @ContractState, message: felt252, signature: Array<felt252>) -> felt252 {
     let account_self = Account::unsafe_new_contract_state();
 
-    if (account_self._is_valid_signature(:message, signature: signature.span(), public_key: self._public_key.read())) {
-      account::interface::ERC1271_VALIDATED
+    if (
+      account_self._is_valid_signature(hash: message, signature: signature.span(), public_key: self._public_key.read())
+    ) {
+      starknet::VALIDATED
     } else {
-      0_u32
+      0
     }
   }
 }

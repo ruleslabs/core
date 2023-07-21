@@ -5,7 +5,7 @@ use starknet::testing;
 // locals
 use rules_tokens::core::messages::RulesMessages;
 use rules_tokens::core::interface::IRulesMessages;
-use rules_tokens::core::messages::RulesMessages::{ ContractState as RulesMessagesContractState, HelperTrait };
+use rules_tokens::core::messages::RulesMessages::{ ContractState as RulesMessagesContractState, InternalTrait };
 
 use super::constants::{
   CHAIN_ID,

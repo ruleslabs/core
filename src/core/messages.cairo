@@ -25,7 +25,7 @@ mod RulesMessages {
   use zeroable::Zeroable;
   use rules_account::account;
   use messages::messages::Messages;
-  use messages::messages::Messages::{ HelperTrait as MessagesHelperTrait };
+  use messages::messages::Messages::{ InternalTrait as MessagesInternalTrait };
   use messages::typed_data::TypedDataTrait;
 
   // locals
@@ -86,11 +86,11 @@ mod RulesMessages {
   }
 
   //
-  // Helpers
+  // Internals
   //
 
   #[generate_trait]
-  impl HelperImpl of HelperTrait {
+  impl InternalImpl of InternalTrait {
     // Init
 
     fn initializer(ref self: ContractState, voucher_signer_: starknet::ContractAddress) {

@@ -1,5 +1,6 @@
 #[starknet::contract]
 mod Receiver {
+  use rules_account::account::interface::ISRC6_ID;
 
   //
   // Storage
@@ -20,11 +21,7 @@ mod Receiver {
   //
 
   #[external(v0)]
-  fn supports_interface(self: @ContractState, interface_id: u32) -> bool {
-    if (interface_id == rules_account::account::interface::IACCOUNT_ID) {
-      true
-    } else {
-      false
-    }
+  fn supports_interface(self: @ContractState, interface_id: felt252) -> bool {
+    interface_id == ISRC6_ID
   }
 }
