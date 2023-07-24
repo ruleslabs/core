@@ -52,10 +52,9 @@ mod RulesTokens {
   use zeroable::Zeroable;
   use integer::U128Zeroable;
 
-  use rules_erc1155::erc1155;
   use rules_erc1155::erc1155::ERC1155;
   use rules_erc1155::erc1155::ERC1155::InternalTrait as ERC1155InternalTrait;
-  use rules_erc1155::erc1155::interface::IERC1155;
+  use rules_erc1155::erc1155::interface::{ IERC1155, IERC1155Metadata };
 
   use rules_utils::introspection::src5::SRC5;
   use rules_utils::introspection::interface::ISRC5;
@@ -398,12 +397,6 @@ mod RulesTokens {
 
   #[external(v0)]
   impl IERC1155Impl of IERC1155<ContractState> {
-    fn uri(self: @ContractState, token_id: u256) -> Span<felt252> {
-      let erc1155_self = ERC1155::unsafe_new_contract_state();
-
-      erc1155_self.uri(:token_id)
-    }
-
     fn balance_of(self: @ContractState, account: starknet::ContractAddress, id: u256) -> u256 {
       let erc1155_self = ERC1155::unsafe_new_contract_state();
 
@@ -470,7 +463,20 @@ mod RulesTokens {
   }
 
   //
-  // IERC165 impl
+  // IERC1155 Metadata impl
+  //
+
+  #[external(v0)]
+  impl IERC1155MetadataImpl of IERC1155Metadata<ContractState> {
+    fn uri(self: @ContractState, token_id: u256) -> Span<felt252> {
+      let erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.uri(:token_id)
+    }
+  }
+
+  //
+  // ISRC5 impl
   //
 
   #[external(v0)]
