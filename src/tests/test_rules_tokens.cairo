@@ -87,7 +87,7 @@ fn setup() -> RulesTokensContractState {
 }
 
 fn setup_voucher_signer() -> AccountABIDispatcher {
-  let mut calldata = array![VOUCHER_SIGNER_PUBLIC_KEY()];
+  let calldata = array![VOUCHER_SIGNER_PUBLIC_KEY()];
 
   let signer_address = utils::deploy(Signer::TEST_CLASS_HASH, calldata);
   AccountABIDispatcher { contract_address: signer_address }
