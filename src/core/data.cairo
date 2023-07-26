@@ -28,11 +28,13 @@ mod RulesData {
   use zeroable::Zeroable;
 
   // locals
-  use super::{ Scarcity, ScarcityTrait, CardModel, CardModelTrait, Metadata, MetadataTrait };
+  use rules_tokens::core::interface;
+  use rules_tokens::core::interface::{ IRulesData };
+
+  use rules_tokens::utils::storage::{ StoreScarcity, StoreCardModel, StoreMetadata };
   use rules_tokens::utils::zeroable::{ CardModelZeroable, ScarcityZeroable };
-  use super::super::interface::{ IRulesData };
-  use rules_tokens::core;
-  use rules_tokens::utils::storage::{ ScarcityStorageAccess, CardModelStorageAccess, MetadataStorageAccess };
+
+  use super::{ Scarcity, ScarcityTrait, CardModel, CardModelTrait, Metadata, MetadataTrait };
 
   //
   // Storage
@@ -61,7 +63,7 @@ mod RulesData {
   // IRulesData impl
   //
 
-  impl IRulesDataImpl of core::interface::IRulesData<ContractState> {
+  impl IRulesDataImpl of interface::IRulesData<ContractState> {
     fn card_model(self: @ContractState, card_model_id: u128) -> CardModel {
       self._card_models.read(card_model_id)
     }

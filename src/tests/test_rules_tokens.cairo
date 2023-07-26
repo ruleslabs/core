@@ -87,8 +87,7 @@ fn setup() -> RulesTokensContractState {
 }
 
 fn setup_voucher_signer() -> AccountABIDispatcher {
-  let mut calldata = ArrayTrait::new();
-  calldata.append(VOUCHER_SIGNER_PUBLIC_KEY());
+  let mut calldata = array![VOUCHER_SIGNER_PUBLIC_KEY()];
 
   let signer_address = utils::deploy(Signer::TEST_CLASS_HASH, calldata);
   AccountABIDispatcher { contract_address: signer_address }
@@ -96,7 +95,7 @@ fn setup_voucher_signer() -> AccountABIDispatcher {
 
 // Always run it after `setup()`
 fn setup_receiver() -> AccountABIDispatcher {
-  let receiver_address = utils::deploy(Receiver::TEST_CLASS_HASH, ArrayTrait::new());
+  let receiver_address = utils::deploy(Receiver::TEST_CLASS_HASH, array![]);
 
   assert(receiver_address == RECEIVER_DEPLOYED_ADDRESS(), 'receiver setup failed');
 
@@ -104,7 +103,7 @@ fn setup_receiver() -> AccountABIDispatcher {
 }
 
 fn setup_other_receiver() -> AccountABIDispatcher {
-  let receiver_address = utils::deploy(Receiver::TEST_CLASS_HASH, ArrayTrait::new());
+  let receiver_address = utils::deploy(Receiver::TEST_CLASS_HASH, array![]);
 
   assert(receiver_address == OTHER_RECEIVER_DEPLOYED_ADDRESS(), 'receiver setup failed');
 
@@ -679,7 +678,7 @@ fn test_safe_transfer_from_marketplace() {
     to: other_receiver.contract_address,
     id: card_token_id,
     amount: 1,
-    data: ArrayTrait::<felt252>::new().span()
+    data: array![].span()
   );
 }
 
@@ -701,7 +700,7 @@ fn test_safe_transfer_from_unauthorized() {
     to: other_receiver.contract_address,
     id: card_token_id,
     amount: 1,
-    data: ArrayTrait::<felt252>::new().span()
+    data: array![].span()
   );
 }
 

@@ -58,7 +58,7 @@ mod RulesTokens {
 
   use rules_utils::introspection::src5::SRC5;
   use rules_utils::introspection::interface::ISRC5;
-  use rules_utils::utils::storage::Felt252SpanStorageAccess;
+  use rules_utils::utils::storage::StoreSpanFelt252;
 
   use rules_utils::royalties::erc2981::ERC2981;
   use rules_utils::royalties::erc2981::ERC2981::InternalTrait as ERC2981InternalTrait;
@@ -407,7 +407,7 @@ mod RulesTokens {
       self: @ContractState,
       accounts: Span<starknet::ContractAddress>,
       ids: Span<u256>
-    ) -> Array<u256> {
+    ) -> Span<u256> {
       let erc1155_self = ERC1155::unsafe_new_contract_state();
 
       erc1155_self.balance_of_batch(:accounts, :ids)
@@ -602,7 +602,7 @@ mod RulesTokens {
       self._minted_cards.write(card_token.id, true);
 
       // mint token
-      erc1155_self._mint(:to, id: card_token.id, :amount, data: ArrayTrait::<felt252>::new().span());
+      erc1155_self._mint(:to, id: card_token.id, :amount, data: array![].span());
     }
 
     fn _mint_pack(ref self: ContractState, to: starknet::ContractAddress, pack_token: PackToken, amount: u256) {

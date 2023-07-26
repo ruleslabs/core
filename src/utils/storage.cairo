@@ -2,7 +2,7 @@ use array::{ ArrayTrait, SpanTrait };
 use traits::{ Into, TryInto };
 use option::OptionTrait;
 use starknet::{
-  StorageAccess,
+  Store,
   storage_address_from_base_and_offset,
   storage_read_syscall,
   storage_write_syscall,
@@ -15,16 +15,16 @@ use rules_tokens::core::interface::{ Scarcity, CardModel, Metadata };
 
 // Scarcity
 
-impl ScarcityStorageAccess of StorageAccess::<Scarcity> {
+impl StoreScarcity of Store::<Scarcity> {
   fn read(address_domain: u32, base: StorageBaseAddress) -> SyscallResult::<Scarcity> {
-    ScarcityStorageAccess::read_at_offset_internal(:address_domain, :base, offset: 0)
+    StoreScarcity::read_at_offset(:address_domain, :base, offset: 0)
   }
 
   fn write(address_domain: u32, base: StorageBaseAddress, value: Scarcity) -> SyscallResult::<()> {
-    ScarcityStorageAccess::write_at_offset_internal(:address_domain, :base, offset: 0, :value)
+    StoreScarcity::write_at_offset(:address_domain, :base, offset: 0, :value)
   }
 
-  fn read_at_offset_internal(address_domain: u32, base: StorageBaseAddress, offset: u8) -> SyscallResult::<Scarcity> {
+  fn read_at_offset(address_domain: u32, base: StorageBaseAddress, offset: u8) -> SyscallResult::<Scarcity> {
     Result::Ok(
       Scarcity {
         max_supply: storage_read_syscall(
@@ -37,7 +37,7 @@ impl ScarcityStorageAccess of StorageAccess::<Scarcity> {
     )
   }
 
-  fn write_at_offset_internal(
+  fn write_at_offset(
     address_domain: u32,
     base: StorageBaseAddress,
     offset: u8,
@@ -52,23 +52,23 @@ impl ScarcityStorageAccess of StorageAccess::<Scarcity> {
     storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, offset + 1), value.name)
   }
 
-  fn size_internal(value: Scarcity) -> u8 {
+  fn size() -> u8 {
     2
   }
 }
 
 // Card Model
 
-impl CardModelStorageAccess of StorageAccess::<CardModel> {
+impl StoreCardModel of Store::<CardModel> {
   fn read(address_domain: u32, base: StorageBaseAddress) -> SyscallResult::<CardModel> {
-    CardModelStorageAccess::read_at_offset_internal(:address_domain, :base, offset: 0)
+    StoreCardModel::read_at_offset(:address_domain, :base, offset: 0)
   }
 
   fn write(address_domain: u32, base: StorageBaseAddress, value: CardModel) -> SyscallResult::<()> {
-    CardModelStorageAccess::write_at_offset_internal(:address_domain, :base, offset: 0, :value)
+    StoreCardModel::write_at_offset(:address_domain, :base, offset: 0, :value)
   }
 
-  fn read_at_offset_internal(address_domain: u32, base: StorageBaseAddress, offset: u8) -> SyscallResult<CardModel> {
+  fn read_at_offset(address_domain: u32, base: StorageBaseAddress, offset: u8) -> SyscallResult<CardModel> {
     Result::Ok(
       CardModel {
         artist_name: storage_read_syscall(
@@ -84,7 +84,7 @@ impl CardModelStorageAccess of StorageAccess::<CardModel> {
     )
   }
 
-  fn write_at_offset_internal(
+  fn write_at_offset(
     address_domain: u32,
     base: StorageBaseAddress,
     offset: u8,
@@ -97,23 +97,23 @@ impl CardModelStorageAccess of StorageAccess::<CardModel> {
     storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, offset + 2), value.scarcity_id)
   }
 
-  fn size_internal(value: CardModel) -> u8 {
+  fn size() -> u8 {
     3
   }
 }
 
 // Metadata
 
-impl MetadataStorageAccess of StorageAccess::<Metadata> {
+impl StoreMetadata of Store::<Metadata> {
   fn read(address_domain: u32, base: StorageBaseAddress) -> SyscallResult::<Metadata> {
-    MetadataStorageAccess::read_at_offset_internal(:address_domain, :base, offset: 0)
+    StoreMetadata::read_at_offset(:address_domain, :base, offset: 0)
   }
 
   fn write(address_domain: u32, base: StorageBaseAddress, value: Metadata) -> SyscallResult::<()> {
-    MetadataStorageAccess::write_at_offset_internal(:address_domain, :base, offset: 0, :value)
+    StoreMetadata::write_at_offset(:address_domain, :base, offset: 0, :value)
   }
 
-  fn read_at_offset_internal(address_domain: u32, base: StorageBaseAddress, offset: u8) -> SyscallResult<Metadata> {
+  fn read_at_offset(address_domain: u32, base: StorageBaseAddress, offset: u8) -> SyscallResult<Metadata> {
     Result::Ok(
       Metadata {
         multihash_identifier: storage_read_syscall(
@@ -131,7 +131,7 @@ impl MetadataStorageAccess of StorageAccess::<Metadata> {
     )
   }
 
-  fn write_at_offset_internal(
+  fn write_at_offset(
     address_domain: u32,
     base: StorageBaseAddress,
     offset: u8,
@@ -156,7 +156,7 @@ impl MetadataStorageAccess of StorageAccess::<Metadata> {
     )
   }
 
-  fn size_internal(value: Metadata) -> u8 {
+  fn size() -> u8 {
     3
   }
 }

@@ -11,7 +11,7 @@ name = "rules_tokens"
 rules_erc1155 = { git = "https://github.com/ruleslabs/starknet-erc-1155.git" }
 messages = { git = "https://github.com/ruleslabs/starknet-messages.git" }
 rules_utils = { git = "https://github.com/ruleslabs/starknet-utils.git" }
-starknet = "2.0.0-rc3"
+starknet = "2.1.0-rc2"
 
 [[target.starknet-contract]]
 # Enable Sierra codegen.
