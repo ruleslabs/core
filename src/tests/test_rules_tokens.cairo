@@ -264,7 +264,6 @@ fn test__mint_card_invalid_amount() {
 
 #[test]
 #[available_gas(20000000)]
-#[should_panic(expected: ('Packs tokens not supported yet',))]
 fn test__mint_pack() {
   let mut rules_tokens = setup();
   let receiver = setup_receiver();
@@ -273,6 +272,8 @@ fn test__mint_pack() {
   let pack_token_id = u256 { low: card_token_id.low, high: 0 };
 
   rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: pack_token_id), amount: 2);
+
+  assert(rules_tokens.balance_of(account: receiver.contract_address, id: pack_token_id) == 2, 'pack balance after');
 }
 
 // Upgrade

@@ -684,7 +684,10 @@ mod RulesTokens {
     }
 
     fn _mint_pack(ref self: ContractState, to: starknet::ContractAddress, pack_token: PackToken, amount: u256) {
-      panic_with_felt252('Packs tokens not supported yet');
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      // mint token
+      erc1155_self._mint(:to, id: pack_token.id, :amount, data: array![].span());
     }
   }
 }
