@@ -169,10 +169,10 @@ impl CardModelImpl of CardModelTrait {
   }
 
   fn id(self: CardModel) -> u128 {
-    let mut hash = pedersen(0, self.artist_name);
-    hash = pedersen(hash, self.season);
-    hash = pedersen(hash, self.scarcity_id);
-    hash = pedersen(hash, 3);
+    let mut hash = pedersen::pedersen(0, self.artist_name);
+    hash = pedersen::pedersen(hash, self.season);
+    hash = pedersen::pedersen(hash, self.scarcity_id);
+    hash = pedersen::pedersen(hash, 3);
 
     Into::<felt252, u256>::into(hash).low
   }

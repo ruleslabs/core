@@ -17,12 +17,12 @@ struct Voucher {
 impl VoucherMessage of Message<Voucher> {
   #[inline(always)]
   fn compute_hash(self: @Voucher) -> felt252 {
-    let mut hash = pedersen(0, VOUCHER_TYPE_HASH);
-    hash = pedersen(hash, (*self.receiver).into());
-    hash = pedersen(hash, hash_u256(*self.token_id));
-    hash = pedersen(hash, hash_u256(*self.amount));
-    hash = pedersen(hash, *self.salt);
+    let mut hash = pedersen::pedersen(0, VOUCHER_TYPE_HASH);
+    hash = pedersen::pedersen(hash, (*self.receiver).into());
+    hash = pedersen::pedersen(hash, hash_u256(*self.token_id));
+    hash = pedersen::pedersen(hash, hash_u256(*self.amount));
+    hash = pedersen::pedersen(hash, *self.salt);
 
-    pedersen(hash, 5)
+    pedersen::pedersen(hash, 5)
   }
 }
