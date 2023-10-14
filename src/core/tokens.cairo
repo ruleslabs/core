@@ -460,6 +460,33 @@ mod RulesTokens {
 
       erc1155_self.safe_batch_transfer_from(:from, :to, :ids, :amounts, :data);
     }
+
+    fn transfer_from(
+      ref self: ContractState,
+      from: starknet::ContractAddress,
+      to: starknet::ContractAddress,
+      id: u256,
+      amount: u256,
+    ) {
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      let caller = starknet::get_caller_address();
+      let marketplace = self.marketplace();
+
+      erc1155_self.transfer_from(:from, :to, :id, :amount);
+    }
+
+    fn batch_transfer_from(
+      ref self: ContractState,
+      from: starknet::ContractAddress,
+      to: starknet::ContractAddress,
+      ids: Span<u256>,
+      amounts: Span<u256>,
+    ) {
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.batch_transfer_from(:from, :to, :ids, :amounts);
+    }
   }
 
   //
@@ -523,6 +550,30 @@ mod RulesTokens {
       let mut erc1155_self = ERC1155::unsafe_new_contract_state();
 
       erc1155_self.safeBatchTransferFrom(:from, :to, :ids, :amounts, :data);
+    }
+
+    fn transferFrom(
+      ref self: ContractState,
+      from: starknet::ContractAddress,
+      to: starknet::ContractAddress,
+      id: u256,
+      amount: u256,
+    ) {
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.transferFrom(:from, :to, :id, :amount);
+    }
+
+    fn batchTransferFrom(
+      ref self: ContractState,
+      from: starknet::ContractAddress,
+      to: starknet::ContractAddress,
+      ids: Span<u256>,
+      amounts: Span<u256>,
+    ) {
+      let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      erc1155_self.batchTransferFrom(:from, :to, :ids, :amounts);
     }
   }
 
@@ -680,14 +731,14 @@ mod RulesTokens {
       self._minted_cards.write(card_token.id, true);
 
       // mint token
-      erc1155_self._mint(:to, id: card_token.id, :amount, data: array![].span());
+      erc1155_self._unsafe_mint(:to, id: card_token.id, :amount);
     }
 
     fn _mint_pack(ref self: ContractState, to: starknet::ContractAddress, pack_token: PackToken, amount: u256) {
       let mut erc1155_self = ERC1155::unsafe_new_contract_state();
 
       // mint token
-      erc1155_self._mint(:to, id: pack_token.id, :amount, data: array![].span());
+      erc1155_self._unsafe_mint(:to, id: pack_token.id, :amount);
     }
   }
 }
