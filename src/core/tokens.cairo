@@ -461,7 +461,11 @@ mod RulesTokens {
       let caller = starknet::get_caller_address();
       let marketplace = self.marketplace();
 
-      erc1155_self.transfer_from(:from, :to, :id, :amount);
+      if (caller == marketplace) {
+        erc1155_self._transfer_from(:from, :to, :id, :amount);
+      } else {
+        erc1155_self.transfer_from(:from, :to, :id, :amount);
+      }
     }
 
     fn batch_transfer_from(
