@@ -407,40 +407,6 @@ fn test_set_marketplace_unauthorized() {
 
 #[test]
 #[available_gas(20000000)]
-#[should_panic(expected: ('Caller is not the marketplace',))]
-fn test_redeem_voucher_to_unauthorized() {
-  let mut rules_tokens = setup();
-  let receiver = setup_receiver();
-
-  let voucher = VOUCHER_2();
-  let signature = VOUCHER_SIGNATURE_2();
-
-  let card_model = CARD_MODEL_2();
-  let metadata = METADATA();
-
-  testing::set_caller_address(OWNER());
-  rules_tokens.redeem_voucher_to(to: OTHER(), :voucher, :signature);
-}
-
-#[test]
-#[available_gas(20000000)]
-#[should_panic(expected: ('Caller is the zero address',))]
-fn test_redeem_voucher_to_from_zero() {
-  let mut rules_tokens = setup();
-  let receiver = setup_receiver();
-
-  let voucher = VOUCHER_2();
-  let signature = VOUCHER_SIGNATURE_2();
-
-  let card_model = CARD_MODEL_2();
-  let metadata = METADATA();
-
-  testing::set_caller_address(ZERO());
-  rules_tokens.redeem_voucher_to(to: OTHER(), :voucher, :signature);
-}
-
-#[test]
-#[available_gas(20000000)]
 fn test_balance_of_after_redeem_voucher_to_() {
   let mut rules_tokens = setup();
   setup_receiver();

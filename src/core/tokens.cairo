@@ -164,15 +164,6 @@ mod RulesTokens {
 
   #[generate_trait]
   impl ModifierImpl of ModifierTrait {
-    // TODO: access control
-    fn _only_marketplace(self: @ContractState) {
-      let caller = starknet::get_caller_address();
-      let marketplace_ = self.marketplace();
-
-      assert(caller.is_non_zero(), 'Caller is the zero address');
-      assert(marketplace_ == caller, 'Caller is not the marketplace');
-    }
-
     fn _only_owner(self: @ContractState) {
       let mut ownable_self = Ownable::unsafe_new_contract_state();
 
@@ -275,9 +266,6 @@ mod RulesTokens {
       voucher: Voucher,
       signature: Span<felt252>
     ) {
-      // Modifiers
-      self._only_marketplace();
-
       // Body
       let mut rules_messages_self = RulesMessages::unsafe_new_contract_state();
 
