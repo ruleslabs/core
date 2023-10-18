@@ -10,7 +10,7 @@ use rules_tokens::utils::zeroable::{ CardModelZeroable, ScarcityZeroable };
 use super::utils;
 use super::utils::partial_eq::MetadataEq;
 use super::utils::zeroable::MetadataZeroable;
-use super::constants::{ METADATA, CARD_MODEL_1, CARD_MODEL_ID, COMMON_SCARCITY, SCARCITY, SEASON };
+use super::constants::{ METADATA, METADATA_2, CARD_MODEL_1, CARD_MODEL_ID, PACK_ID, COMMON_SCARCITY, SCARCITY, SEASON };
 
 // dispatchers
 use rules_tokens::core::data::{ RulesDataABIDispatcher, RulesDataABIDispatcherTrait };
@@ -304,6 +304,46 @@ fn test_add_scarcity_invalid_name() {
   scarcity.name = 0;
 
   rules_data.add_scarcity(:season, :scarcity);
+}
+
+// Set metadata
+
+#[test]
+#[available_gas(20000000)]
+fn test_set_card_model_metadata() {
+  let mut rules_data = setup();
+
+  let card_model = CARD_MODEL_1();
+  let card_model_id = card_model.id();
+  let metadata = METADATA_2();
+
+  rules_data.set_card_model_metadata(:card_model_id, :metadata);
+
+  assert_state_after_add_card_model(ref :rules_data, :card_model, :metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Card model does not exists',))]
+fn test_set_card_model_metadata_does_not_exists() {
+  let mut rules_data = setup();
+
+  let card_model = CARD_MODEL_1();
+  let card_model_id = card_model.id() + 1;
+  let metadata = METADATA_2();
+
+  rules_data.set_card_model_metadata(:card_model_id, :metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_set_pack_metadata() {
+  let mut rules_data = setup();
+
+  let pack_id = PACK_ID();
+  let metadata = METADATA_2();
+
+  rules_data.set_pack_metadata(:pack_id, :metadata);
 }
 
 //

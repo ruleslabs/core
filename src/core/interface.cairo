@@ -106,6 +106,10 @@ trait IRulesData<TContractState> {
   fn add_card_model(ref self: TContractState, new_card_model: CardModel, metadata: Metadata) -> u128;
 
   fn add_scarcity(ref self: TContractState, season: felt252, scarcity: Scarcity);
+
+  fn set_card_model_metadata(ref self: TContractState, card_model_id: u128, metadata: Metadata);
+
+  fn set_pack_metadata(ref self: TContractState, pack_id: u128, metadata: Metadata);
 }
 
 #[starknet::interface]

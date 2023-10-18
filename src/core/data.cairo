@@ -114,6 +114,19 @@ mod RulesData {
       self._uncommon_scarcities_count.write(season, new_uncommon_scarcities_count);
       self._scarcities.write((season, new_uncommon_scarcities_count), scarcity);
     }
+
+    fn set_card_model_metadata(ref self: ContractState, card_model_id: u128, metadata: Metadata) {
+      // assert card model already exists
+      assert(self.card_model(:card_model_id).is_non_zero(), 'Card model does not exists');
+
+      // save metadata
+      self._card_models_metadata.write(card_model_id, metadata);
+    }
+
+    fn set_pack_metadata(ref self: ContractState, pack_id: u128, metadata: Metadata) {
+      // save metadata
+      self._card_models_metadata.write(pack_id, metadata);
+    }
   }
 }
 

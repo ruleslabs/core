@@ -15,6 +15,16 @@ fn METADATA() -> Metadata {
   }
 }
 
+fn METADATA_2() -> Metadata {
+  Metadata {
+    multihash_identifier: METADATA_MULTIHASH_IDENTIFIER + 1,
+    hash: u256 {
+      low: 'hash low 2',
+      high: 'hash high 2',
+    },
+  }
+}
+
 fn CARD_MODEL_1() -> CardModel {
   CardModel {
     artist_name: 'ju',
@@ -42,6 +52,10 @@ fn CARD_MODEL_3() -> CardModel {
 
 fn CARD_MODEL_ID() -> u128 {
   0xf0579640f29841cc5a94e67ec97ed9e2
+}
+
+fn PACK_ID() -> u128 {
+  0xb00b135
 }
 
 fn CARD_TOKEN_ID_2() -> u256 {

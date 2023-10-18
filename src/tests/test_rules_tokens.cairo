@@ -324,6 +324,8 @@ fn test_add_scarcity_unauthorized() {
   rules_tokens.add_scarcity(:season, scarcity: SCARCITY());
 }
 
+// Add card model
+
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Caller is the zero address',))]
@@ -348,6 +350,36 @@ fn test_add_card_model_unauthorized() {
 
   testing::set_caller_address(OTHER());
   rules_tokens.add_card_model(new_card_model: card_model_2, :metadata);
+}
+
+// Set card model metadata
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is the zero address',))]
+fn test_set_card_model_metadata_from_zero() {
+  let mut rules_tokens = setup();
+
+  let card_model = CARD_MODEL_2();
+  let card_model_id = card_model.id();
+  let metadata = METADATA();
+
+  testing::set_caller_address(ZERO());
+  rules_tokens.set_card_model_metadata(:card_model_id, :metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is not the owner',))]
+fn test_set_card_model_metadata_unauthorized() {
+  let mut rules_tokens = setup();
+
+  let card_model = CARD_MODEL_2();
+  let card_model_id = card_model.id();
+  let metadata = METADATA();
+
+  testing::set_caller_address(OTHER());
+  rules_tokens.set_card_model_metadata(:card_model_id, :metadata);
 }
 
 // Marketplace

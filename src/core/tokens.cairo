@@ -366,6 +366,26 @@ mod RulesTokens {
 
       rules_data_self.add_scarcity(:season, :scarcity)
     }
+
+    fn set_card_model_metadata(ref self: ContractState, card_model_id: u128, metadata: Metadata) {
+      // Modifiers
+      self._only_owner();
+
+      // Body
+      let mut rules_data_self = RulesData::unsafe_new_contract_state();
+
+      rules_data_self.set_card_model_metadata(:card_model_id, :metadata)
+    }
+
+    fn set_pack_metadata(ref self: ContractState, pack_id: u128, metadata: Metadata) {
+      // Modifiers
+      self._only_owner();
+
+      // Body
+      let mut rules_data_self = RulesData::unsafe_new_contract_state();
+
+      rules_data_self.set_pack_metadata(:pack_id, :metadata)
+    }
   }
 
   //
