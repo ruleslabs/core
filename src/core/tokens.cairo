@@ -50,8 +50,8 @@ trait RulesTokensABI<TContractState> {
 
 #[starknet::contract]
 mod RulesTokens {
-  use core::traits::TryInto;
-use array::{ ArrayTrait, SpanTrait };
+  use traits::TryInto;
+  use array::{ ArrayTrait, SpanTrait };
   use zeroable::Zeroable;
   use integer::U128Zeroable;
 
@@ -343,6 +343,12 @@ use array::{ ArrayTrait, SpanTrait };
       let rules_data_self = RulesData::unsafe_new_contract_state();
 
       rules_data_self.card_model_metadata(:card_model_id)
+    }
+
+    fn pack_metadata(self: @ContractState, pack_id: u128) -> Metadata {
+      let rules_data_self = RulesData::unsafe_new_contract_state();
+
+      rules_data_self.pack_metadata(:pack_id)
     }
 
     fn scarcity(self: @ContractState, season: felt252, scarcity_id: felt252) -> Scarcity {

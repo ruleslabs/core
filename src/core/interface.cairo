@@ -107,6 +107,8 @@ trait IRulesData<TContractState> {
 
   fn card_model_metadata(self: @TContractState, card_model_id: u128) -> Metadata;
 
+  fn pack_metadata(self: @TContractState, pack_id: u128) -> Metadata;
+
   fn scarcity(self: @TContractState, season: felt252, scarcity_id: felt252) -> Scarcity;
 
   fn uncommon_scarcities_count(self: @TContractState, season: felt252) -> felt252;

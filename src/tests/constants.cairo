@@ -2,7 +2,7 @@ use array::ArrayTrait;
 
 // locals
 use rules_tokens::core::data::{ RulesData, CardModelTrait, ScarcityTrait };
-use rules_tokens::core::interface::{ CardModel, Scarcity, Metadata, METADATA_MULTIHASH_IDENTIFIER };
+use rules_tokens::core::interface::{ CardModel, Scarcity, Pack, Metadata, METADATA_MULTIHASH_IDENTIFIER };
 use rules_tokens::core::voucher::Voucher;
 
 fn METADATA() -> Metadata {
@@ -59,8 +59,14 @@ fn CARD_MODEL_ID() -> u128 {
   0xf0579640f29841cc5a94e67ec97ed9e2
 }
 
-fn PACK_ID() -> u128 {
-  0xb00b135
+fn PACK_1() -> Pack {
+  Pack {
+    name: 'Pack 1',
+  }
+}
+
+fn PACK_ID_1() -> u128 {
+  0x1
 }
 
 fn CARD_TOKEN_ID_2() -> u256 {

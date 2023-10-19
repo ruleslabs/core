@@ -2,11 +2,15 @@ use zeroable::Zeroable;
 
 // locals
 use rules_tokens::core::data::{ RulesData, CardModelTrait, ScarcityTrait };
-use rules_tokens::core::interface::{ IRulesData, CardModel, Scarcity, Metadata };
-use rules_tokens::core::data::RulesData::ContractState as RulesDataContractState;
+use rules_tokens::core::interface::{ IRulesData, CardModel, Pack, Scarcity, Metadata };
+use rules_tokens::core::data::RulesData::{
+  ContractState as RulesDataContractState,
+  _packs_count::InternalContractMemberStateTrait as RulesData_packs_countInternalContractMemberStateTrait,
+};
 
-use rules_tokens::utils::partial_eq::{ CardModelEq, ScarcityEq };
-use rules_tokens::utils::zeroable::{ CardModelZeroable, ScarcityZeroable };
+use rules_tokens::utils::partial_eq::{ CardModelEq, ScarcityEq, PackEq };
+use rules_tokens::utils::zeroable::{ CardModelZeroable, ScarcityZeroable, PackZeroable };
+
 use super::utils;
 use super::utils::partial_eq::MetadataEq;
 use super::utils::zeroable::MetadataZeroable;
@@ -15,11 +19,12 @@ use super::constants::{
   METADATA_2,
   CARD_MODEL_1,
   CARD_MODEL_ID,
-  PACK_ID,
   COMMON_SCARCITY,
   SCARCITY,
   SEASON,
   INVALID_METADATA,
+  PACK_1,
+  PACK_ID_1,
 };
 
 // dispatchers
@@ -30,6 +35,8 @@ fn setup() -> RulesDataContractState {
 
   rules_data.add_card_model(CARD_MODEL_1(), METADATA());
 
+  rules_data.add_pack(PACK_1(), METADATA());
+
   rules_data
 }
 
@@ -37,7 +44,7 @@ fn setup() -> RulesDataContractState {
 
 #[test]
 #[available_gas(20000000)]
-fn test_get_card_model() {
+fn test_card_model() {
   let mut rules_data = setup();
 
   let card_model = CARD_MODEL_1();
@@ -48,7 +55,7 @@ fn test_get_card_model() {
 
 #[test]
 #[available_gas(20000000)]
-fn test_get_card_model_metadata() {
+fn test_card_model_metadata() {
   let mut rules_data = setup();
 
   let metadata = METADATA();
@@ -300,6 +307,108 @@ fn test_add_scarcity_invalid_name() {
   rules_data.add_scarcity(:season, :scarcity);
 }
 
+// Pack
+
+#[test]
+#[available_gas(20000000)]
+fn test_pack() {
+  let mut rules_data = setup();
+
+  let pack = PACK_1();
+  let pack_id = PACK_ID_1();
+
+  assert(rules_data.pack(:pack_id) == pack, 'Invalid pack');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_pack_metadata() {
+  let mut rules_data = setup();
+
+  let metadata = METADATA();
+  let pack_id = PACK_ID_1();
+
+  assert(rules_data.pack_metadata(:pack_id) == metadata, 'Invalid metadata');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_add_pack_returns_valid_id() {
+  let mut rules_data = RulesData::unsafe_new_contract_state();
+
+  let pack = PACK_1();
+  let metadata = METADATA();
+
+  let pack_id = rules_data.add_pack(new_pack: pack, :metadata);
+
+  assert(pack_id == PACK_ID_1(), 'Invalid pack id');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_multiple_add_pack() {
+  let mut rules_data = setup();
+
+  let metadata = METADATA();
+
+  // add pack
+
+  let mut pack = PACK_1();
+  pack.name += 1;
+
+  assert_state_before_add_pack(ref :rules_data);
+
+  let card_model_id = rules_data.add_pack(new_pack: pack, :metadata);
+
+  assert_state_after_add_pack(ref :rules_data, :pack, :metadata);
+
+  // add pack
+
+  pack.name += 100;
+
+  assert_state_before_add_pack(ref :rules_data);
+
+  let card_model_id = rules_data.add_pack(new_pack: pack, :metadata);
+
+  assert_state_after_add_pack(ref :rules_data, :pack, :metadata);
+
+  // add pack
+
+  pack.name += '100';
+
+  assert_state_before_add_pack(ref :rules_data);
+
+  let card_model_id = rules_data.add_pack(new_pack: pack, :metadata);
+
+  assert_state_after_add_pack(ref :rules_data, :pack, :metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Invalid pack',))]
+fn test_add_card_model_invalid_name() {
+  let mut rules_data = RulesData::unsafe_new_contract_state();
+
+  let mut pack = PACK_1();
+  let metadata = METADATA();
+
+  pack.name = 0;
+
+  let card_model_id = rules_data.add_pack(new_pack: pack, :metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Invalid metadata',))]
+fn test_add_pack_invalid_metadata_hash() {
+  let mut rules_data = setup();
+
+  let pack = PACK_1();
+  let mut metadata = INVALID_METADATA();
+
+  rules_data.add_pack(new_pack: pack, :metadata);
+}
+
 // Set metadata
 
 #[test]
@@ -334,7 +443,7 @@ fn test_set_card_model_metadata_does_not_exists() {
 fn test_set_pack_metadata() {
   let mut rules_data = setup();
 
-  let pack_id = PACK_ID();
+  let pack_id = PACK_ID_1();
   let metadata = METADATA_2();
 
   rules_data.set_pack_metadata(:pack_id, :metadata);
@@ -344,11 +453,13 @@ fn test_set_pack_metadata() {
 // Utils
 //
 
+// Card model
+
 fn assert_state_before_add_card_model(ref rules_data: RulesDataContractState, card_model: CardModel) {
   let card_model_id = card_model.id();
 
-  assert(rules_data.card_model(:card_model_id) == CardModelZeroable::zero(), 'card model after');
-  assert(rules_data.card_model_metadata(:card_model_id) == MetadataZeroable::zero(), 'metadata after');
+  assert(rules_data.card_model(:card_model_id) == CardModelZeroable::zero(), 'card model before');
+  assert(rules_data.card_model_metadata(:card_model_id) == MetadataZeroable::zero(), 'metadata before');
 }
 
 fn assert_state_after_add_card_model(ref rules_data: RulesDataContractState, card_model: CardModel, metadata: Metadata) {
@@ -357,6 +468,8 @@ fn assert_state_after_add_card_model(ref rules_data: RulesDataContractState, car
   assert(rules_data.card_model(:card_model_id) == card_model, 'card model after');
   assert(rules_data.card_model_metadata(:card_model_id) == metadata, 'metadata after');
 }
+
+// Scarcity
 
 fn assert_state_before_add_scarcity(ref rules_data: RulesDataContractState, season: felt252) {
   let scarcity_id = rules_data.uncommon_scarcities_count(:season);
@@ -368,4 +481,20 @@ fn assert_state_after_add_scarcity(ref rules_data: RulesDataContractState, seaso
   let scarcity_id = rules_data.uncommon_scarcities_count(:season);
 
   assert(rules_data.scarcity(:season, scarcity_id: scarcity_id) == scarcity, 'scarcity after');
+}
+
+// Pack
+
+fn assert_state_before_add_pack(ref rules_data: RulesDataContractState) {
+  let pack_id = rules_data._packs_count.read() + 1;
+
+  assert(rules_data.pack(:pack_id) == PackZeroable::zero(), 'pack before');
+  assert(rules_data.pack_metadata(:pack_id) == MetadataZeroable::zero(), 'metadata before');
+}
+
+fn assert_state_after_add_pack(ref rules_data: RulesDataContractState, pack: Pack, metadata: Metadata) {
+  let pack_id = rules_data._packs_count.read();
+
+  assert(rules_data.pack(:pack_id) == pack, 'pack after');
+  assert(rules_data.pack_metadata(:pack_id) == metadata, 'metadata after');
 }

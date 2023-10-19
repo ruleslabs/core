@@ -54,6 +54,8 @@ mod RulesData {
     _packs: LegacyMap<u128, Pack>,
     // number of packs already created
     _packs_count: u128,
+    // pack_id -> Metadata
+    _packs_metadata: LegacyMap<u128, Metadata>,
   }
 
   //
@@ -78,6 +80,10 @@ mod RulesData {
 
     fn card_model_metadata(self: @ContractState, card_model_id: u128) -> Metadata {
       self._card_models_metadata.read(card_model_id)
+    }
+
+    fn pack_metadata(self: @ContractState, pack_id: u128) -> Metadata {
+      self._packs_metadata.read(pack_id)
     }
 
     fn scarcity(self: @ContractState, season: felt252, scarcity_id: felt252) -> Scarcity {
@@ -123,7 +129,7 @@ mod RulesData {
 
       // save card model and metadata
       self._packs.write(pack_id, new_pack);
-      self._card_models_metadata.write(pack_id, metadata);
+      self._packs_metadata.write(pack_id, metadata);
 
       // increase pack count
       self._packs_count.write(pack_id);
@@ -142,6 +148,8 @@ mod RulesData {
       self._scarcities.write((season, new_uncommon_scarcities_count), scarcity);
     }
 
+    // Set Metadata
+
     fn set_card_model_metadata(ref self: ContractState, card_model_id: u128, metadata: Metadata) {
       // assert card model already exists
       assert(self.card_model(:card_model_id).is_non_zero(), 'Card model does not exists');
@@ -151,8 +159,11 @@ mod RulesData {
     }
 
     fn set_pack_metadata(ref self: ContractState, pack_id: u128, metadata: Metadata) {
+      // assert card model already exists
+      assert(self.pack(:pack_id).is_non_zero(), 'Pack does not exists');
+
       // save metadata
-      self._card_models_metadata.write(pack_id, metadata);
+      self._packs_metadata.write(pack_id, metadata);
     }
   }
 }
