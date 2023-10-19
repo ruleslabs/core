@@ -65,6 +65,12 @@ fn PACK_1() -> Pack {
   }
 }
 
+fn PACK_2() -> Pack {
+  Pack {
+    name: 'Pack 2',
+  }
+}
+
 fn PACK_ID_1() -> u128 {
   0x1
 }

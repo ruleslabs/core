@@ -33,6 +33,9 @@ use super::constants::{
   VOUCHER_SIGNATURE_2,
   VOUCHER_SIGNER_PUBLIC_KEY,
   CARD_MODEL_2,
+  PACK_1,
+  PACK_2,
+  PACK_ID_1,
   METADATA,
   RECEIVER_DEPLOYED_ADDRESS,
   OTHER_RECEIVER_DEPLOYED_ADDRESS,
@@ -71,16 +74,25 @@ fn setup() -> RulesTokensContractState {
     royalties_percentage_: ROYALTIES_PERCENTAGE()
   );
 
-  // create some card models and scarcities
+  // create some card models, packs and scarcities
   let card_model_2 = CARD_MODEL_2();
   let card_model_3 = CARD_MODEL_3();
+  let pack_1 = PACK_1();
+  let pack_2 = PACK_2();
   let metadata = METADATA();
   let scarcity = SCARCITY();
 
+  // Create card models packs and scarcities
+
   testing::set_caller_address(OWNER());
+
   rules_tokens.add_scarcity(season: card_model_3.season, :scarcity);
+
   rules_tokens.add_card_model(new_card_model: card_model_2, :metadata);
   rules_tokens.add_card_model(new_card_model: card_model_3, :metadata);
+
+  rules_tokens.add_pack(new_pack: pack_1, :metadata);
+  rules_tokens.add_pack(new_pack: pack_2, :metadata);
 
   rules_tokens
 }
@@ -196,6 +208,8 @@ fn test_card_exists() {
   assert(rules_tokens.card_exists(:card_token_id), 'card exists after');
 }
 
+// Mint cards
+
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Card already minted',))]
@@ -262,18 +276,41 @@ fn test__mint_card_invalid_amount() {
   rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: card_token_id), amount: 2);
 }
 
+// Mint packs
+
 #[test]
 #[available_gas(20000000)]
 fn test__mint_pack() {
   let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
-  let card_token_id = CARD_TOKEN_ID_2();
-  let pack_token_id = u256 { low: card_token_id.low, high: 0 };
+  let pack_id = PACK_ID_1();
+  let pack_token_id = u256 { low: pack_id, high: 0 };
+  let amount = 2;
 
-  rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: pack_token_id), amount: 2);
+  assert(
+    rules_tokens.balance_of(account: receiver.contract_address, id: pack_token_id).is_zero(),
+    'pack balance before'
+  );
 
-  assert(rules_tokens.balance_of(account: receiver.contract_address, id: pack_token_id) == 2, 'pack balance after');
+  rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: pack_token_id), amount: amount);
+
+  assert(
+    rules_tokens.balance_of(account: receiver.contract_address, id: pack_token_id) == amount,
+    'pack balance after'
+  );
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Pack does not exists',))]
+fn test__mint_unknown_pack() {
+  let mut rules_tokens = setup();
+  let receiver = setup_receiver();
+
+  let pack_token_id = u256 { low: 100, high: 0 };
+
+  rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: pack_token_id), amount: 1);
 }
 
 // Upgrade
