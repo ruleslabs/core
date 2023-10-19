@@ -9,9 +9,10 @@ use starknet::{
   SyscallResult,
   StorageBaseAddress,
 };
+use rules_utils::utils::storage::StoreSpanFelt252;
 
 // locals
-use rules_tokens::core::interface::{ Scarcity, CardModel, Metadata };
+use rules_tokens::core::interface::{ Scarcity, CardModel, Pack, Metadata };
 
 // Scarcity
 
@@ -116,17 +117,7 @@ impl StoreMetadata of Store::<Metadata> {
   fn read_at_offset(address_domain: u32, base: StorageBaseAddress, offset: u8) -> SyscallResult<Metadata> {
     Result::Ok(
       Metadata {
-        multihash_identifier: storage_read_syscall(
-          address_domain, storage_address_from_base_and_offset(base, offset)
-        )?.try_into().unwrap(),
-        hash: u256 {
-          low: storage_read_syscall(
-            address_domain, storage_address_from_base_and_offset(base, offset + 1)
-          )?.try_into().unwrap(),
-          high: storage_read_syscall(
-            address_domain, storage_address_from_base_and_offset(base, offset + 2)
-          )?.try_into().unwrap(),
-        }
+        hash: StoreSpanFelt252::read_at_offset(:address_domain, :base, :offset)?,
       }
     )
   }
@@ -137,26 +128,43 @@ impl StoreMetadata of Store::<Metadata> {
     offset: u8,
     value: Metadata
   ) -> SyscallResult<()> {
-    storage_write_syscall(
-      address_domain,
-      storage_address_from_base_and_offset(base, offset),
-      value.multihash_identifier.into()
-    )?;
-
-    storage_write_syscall(
-      address_domain,
-      storage_address_from_base_and_offset(base, offset + 1),
-      value.hash.low.into()
-    )?;
-
-    storage_write_syscall(
-      address_domain,
-      storage_address_from_base_and_offset(base, offset + 2),
-      value.hash.high.into()
-    )
+    StoreSpanFelt252::write_at_offset(:address_domain, :base, :offset, value: value.hash)
   }
 
   fn size() -> u8 {
-    3
+    StoreSpanFelt252::size()
+  }
+}
+
+// Pack
+
+impl StorePack of Store::<Pack> {
+  fn read(address_domain: u32, base: StorageBaseAddress) -> SyscallResult::<Pack> {
+    StorePack::read_at_offset(:address_domain, :base, offset: 0)
+  }
+
+  fn write(address_domain: u32, base: StorageBaseAddress, value: Pack) -> SyscallResult::<()> {
+    StorePack::write_at_offset(:address_domain, :base, offset: 0, :value)
+  }
+
+  fn read_at_offset(address_domain: u32, base: StorageBaseAddress, offset: u8) -> SyscallResult<Pack> {
+    Result::Ok(
+      Pack {
+        name: storage_read_syscall(address_domain, storage_address_from_base_and_offset(base, offset))?,
+      }
+    )
+  }
+
+  fn write_at_offset(
+    address_domain: u32,
+    base: StorageBaseAddress,
+    offset: u8,
+    value: Pack
+  ) -> SyscallResult::<()> {
+    storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, offset), value.name)
+  }
+
+  fn size() -> u8 {
+    1
   }
 }

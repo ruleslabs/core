@@ -6,23 +6,28 @@ use rules_tokens::core::interface::{ CardModel, Scarcity, Metadata, METADATA_MUL
 use rules_tokens::core::voucher::Voucher;
 
 fn METADATA() -> Metadata {
-  Metadata {
-    multihash_identifier: METADATA_MULTIHASH_IDENTIFIER,
-    hash: u256 {
-      low: 'hash low',
-      high: 'hash high',
-    },
-  }
+  let mut hash = array![];
+  hash.append('hash 1');
+  hash.append('hash 2');
+
+  Metadata { hash: hash.span() }
 }
 
 fn METADATA_2() -> Metadata {
-  Metadata {
-    multihash_identifier: METADATA_MULTIHASH_IDENTIFIER + 1,
-    hash: u256 {
-      low: 'hash low 2',
-      high: 'hash high 2',
-    },
-  }
+  let mut hash = array![];
+  hash.append('hash 2');
+  hash.append('hash 1');
+
+  Metadata { hash: hash.span() }
+}
+
+fn INVALID_METADATA() -> Metadata {
+  let mut hash = array![];
+  hash.append(1);
+  hash.append(2);
+  hash.append(3);
+
+  Metadata { hash: hash.span() }
 }
 
 fn CARD_MODEL_1() -> CardModel {

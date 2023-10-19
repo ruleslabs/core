@@ -7,8 +7,7 @@ use super::partial_eq::{ MetadataEq };
 impl MetadataZeroable of Zeroable<Metadata> {
   fn zero() -> Metadata {
     Metadata {
-      multihash_identifier: 0,
-      hash: 0,
+      hash: array![].span(),
     }
   }
 

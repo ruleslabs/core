@@ -10,7 +10,17 @@ use rules_tokens::utils::zeroable::{ CardModelZeroable, ScarcityZeroable };
 use super::utils;
 use super::utils::partial_eq::MetadataEq;
 use super::utils::zeroable::MetadataZeroable;
-use super::constants::{ METADATA, METADATA_2, CARD_MODEL_1, CARD_MODEL_ID, PACK_ID, COMMON_SCARCITY, SCARCITY, SEASON };
+use super::constants::{
+  METADATA,
+  METADATA_2,
+  CARD_MODEL_1,
+  CARD_MODEL_ID,
+  PACK_ID,
+  COMMON_SCARCITY,
+  SCARCITY,
+  SEASON,
+  INVALID_METADATA,
+};
 
 // dispatchers
 use rules_tokens::core::data::{ RulesDataABIDispatcher, RulesDataABIDispatcherTrait };
@@ -159,27 +169,11 @@ fn test_add_card_model_invalid_scarcity() {
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Invalid metadata',))]
-fn test_add_card_model_invalid_metadata_multihash_id() {
-  let mut rules_data = setup();
-
-  let card_model = CARD_MODEL_1();
-  let mut metadata = METADATA();
-
-  metadata.multihash_identifier += 1;
-
-  rules_data.add_card_model(new_card_model: card_model, :metadata);
-}
-
-#[test]
-#[available_gas(20000000)]
-#[should_panic(expected: ('Invalid metadata',))]
 fn test_add_card_model_invalid_metadata_hash() {
   let mut rules_data = setup();
 
   let card_model = CARD_MODEL_1();
-  let mut metadata = METADATA();
-
-  metadata.hash = 0;
+  let mut metadata = INVALID_METADATA();
 
   rules_data.add_card_model(new_card_model: card_model, :metadata);
 }

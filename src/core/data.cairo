@@ -3,7 +3,7 @@ use traits::Into;
 use integer::{ U128Zeroable, U256Zeroable };
 
 // locals
-use super::interface::{ Scarcity, CardModel, Metadata, METADATA_MULTIHASH_IDENTIFIER };
+use super::interface::{ Scarcity, CardModel, Pack, Metadata, METADATA_MULTIHASH_IDENTIFIER };
 
 const COMMON_SCARCITY_MAX_SUPPLY: u128 = 0xffffffffffffffffffffffffffffffff;
 const COMMON_SCARCITY_NAME: felt252 = 'Common';
@@ -31,10 +31,10 @@ mod RulesData {
   use rules_tokens::core::interface;
   use rules_tokens::core::interface::{ IRulesData };
 
-  use rules_tokens::utils::storage::{ StoreScarcity, StoreCardModel, StoreMetadata };
-  use rules_tokens::utils::zeroable::{ CardModelZeroable, ScarcityZeroable };
+  use rules_tokens::utils::storage::{ StoreScarcity, StoreCardModel, StorePack, StoreMetadata };
+  use rules_tokens::utils::zeroable::{ CardModelZeroable, PackZeroable, ScarcityZeroable };
 
-  use super::{ Scarcity, ScarcityTrait, CardModel, CardModelTrait, Metadata, MetadataTrait };
+  use super::{ Scarcity, ScarcityTrait, CardModel, CardModelTrait, Pack, PackTrait, Metadata, MetadataTrait };
 
   //
   // Storage
@@ -50,6 +50,10 @@ mod RulesData {
     _card_models: LegacyMap<u128, CardModel>,
     // card_model_id -> Metadata
     _card_models_metadata: LegacyMap<u128, Metadata>,
+    // pack_id -> Pack
+    _packs: LegacyMap<u128, Pack>,
+    // number of packs already created
+    _packs_count: u128,
   }
 
   //
@@ -66,6 +70,10 @@ mod RulesData {
   impl IRulesDataImpl of interface::IRulesData<ContractState> {
     fn card_model(self: @ContractState, card_model_id: u128) -> CardModel {
       self._card_models.read(card_model_id)
+    }
+
+    fn pack(self: @ContractState, pack_id: u128) -> Pack {
+      self._packs.read(pack_id)
     }
 
     fn card_model_metadata(self: @ContractState, card_model_id: u128) -> Metadata {
@@ -105,6 +113,25 @@ mod RulesData {
       card_model_id
     }
 
+    fn add_pack(ref self: ContractState, new_pack: Pack, metadata: Metadata) -> u128 {
+      // assert pack name and metadata are valid
+      assert(new_pack.is_valid(), 'Invalid pack');
+      assert(metadata.is_valid(), 'Invalid metadata');
+
+      // get new pack id
+      let pack_id = self._packs_count.read() + 1;
+
+      // save card model and metadata
+      self._packs.write(pack_id, new_pack);
+      self._card_models_metadata.write(pack_id, metadata);
+
+      // increase pack count
+      self._packs_count.write(pack_id);
+
+      // return card model id
+      pack_id
+    }
+
     fn add_scarcity(ref self: ContractState, season: felt252, scarcity: Scarcity) {
       assert(scarcity.is_valid(), 'Invalid scarcity');
 
@@ -130,19 +157,19 @@ mod RulesData {
   }
 }
 
+// Metadata trait
+
 trait MetadataTrait {
   fn is_valid(self: Metadata) -> bool;
 }
 
 impl MetadataImpl of MetadataTrait {
   fn is_valid(self: Metadata) -> bool {
-    if ((self.multihash_identifier != METADATA_MULTIHASH_IDENTIFIER) | self.hash.is_zero()) {
-      false
-    } else {
-      true
-    }
+    self.hash.len() == 2
   }
 }
+
+// Scarcity trait
 
 trait ScarcityTrait {
   fn is_valid(self: Scarcity) -> bool;
@@ -167,9 +194,14 @@ impl ScarcityImpl of ScarcityTrait {
   }
 }
 
+// Card model trait
+
 trait CardModelTrait {
   fn is_valid(self: CardModel) -> bool;
+
   fn id(self: CardModel) -> u128;
+
+  fn json_metadata(self: CardModel) -> Array<felt252>;
 }
 
 impl CardModelImpl of CardModelTrait {
@@ -188,5 +220,27 @@ impl CardModelImpl of CardModelTrait {
     hash = pedersen::pedersen(hash, 3);
 
     Into::<felt252, u256>::into(hash).low
+  }
+
+  fn json_metadata(self: CardModel) -> Array<felt252> {
+    array![]
+  }
+}
+
+// Pack trait
+
+trait PackTrait {
+  fn is_valid(self: Pack) -> bool;
+
+  fn json_metadata(self: Pack) -> Array<felt252>;
+}
+
+impl PackImpl of PackTrait {
+  fn is_valid(self: Pack) -> bool {
+    self.name.is_non_zero()
+  }
+
+  fn json_metadata(self: Pack) -> Array<felt252> {
+    array![]
   }
 }

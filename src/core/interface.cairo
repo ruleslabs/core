@@ -11,8 +11,7 @@ const METADATA_MULTIHASH_IDENTIFIER: u16 = 0x1220;
 
 #[derive(Serde, Copy, Drop)]
 struct Metadata {
-  multihash_identifier: u16,
-  hash: u256,
+  hash: Span<felt252>,
 }
 
 // Scarcity
@@ -30,6 +29,13 @@ struct CardModel {
   artist_name: felt252,
   season: felt252,
   scarcity_id: felt252,
+}
+
+// Pack
+
+#[derive(Serde, Copy, Drop)]
+struct Pack {
+  name: felt252,
 }
 
 // Token id
@@ -97,6 +103,8 @@ trait IRulesTokensCamelCase<TContractState> {
 trait IRulesData<TContractState> {
   fn card_model(self: @TContractState, card_model_id: u128) -> CardModel;
 
+  fn pack(self: @TContractState, pack_id: u128) -> Pack;
+
   fn card_model_metadata(self: @TContractState, card_model_id: u128) -> Metadata;
 
   fn scarcity(self: @TContractState, season: felt252, scarcity_id: felt252) -> Scarcity;
@@ -104,6 +112,8 @@ trait IRulesData<TContractState> {
   fn uncommon_scarcities_count(self: @TContractState, season: felt252) -> felt252;
 
   fn add_card_model(ref self: TContractState, new_card_model: CardModel, metadata: Metadata) -> u128;
+
+  fn add_pack(ref self: TContractState, new_pack: Pack, metadata: Metadata) -> u128;
 
   fn add_scarcity(ref self: TContractState, season: felt252, scarcity: Scarcity);
 

@@ -35,6 +35,8 @@ trait RulesTokensABI<TContractState> {
 
   fn add_card_model(ref self: TContractState, new_card_model: CardModel, metadata: Metadata) -> u128;
 
+  fn add_pack(ref self: TContractState, new_pack_name: felt252, metadata: Metadata) -> u128;
+
   fn add_scarcity(ref self: TContractState, season: felt252, scarcity: Scarcity);
 
   fn redeem_voucher(ref self: TContractState, voucher: Voucher, signature: Span<felt252>);
@@ -48,7 +50,8 @@ trait RulesTokensABI<TContractState> {
 
 #[starknet::contract]
 mod RulesTokens {
-  use array::{ ArrayTrait, SpanTrait };
+  use core::traits::TryInto;
+use array::{ ArrayTrait, SpanTrait };
   use zeroable::Zeroable;
   use integer::U128Zeroable;
 
@@ -75,6 +78,7 @@ mod RulesTokens {
     IRulesTokensCamelCase,
     Scarcity,
     CardModel,
+    Pack,
     Metadata,
     Voucher,
     CardToken,
@@ -92,7 +96,7 @@ mod RulesTokens {
     InternalTrait as OwnableInternalTrait,
   };
 
-  use rules_tokens::utils::zeroable::{ CardModelZeroable };
+  use rules_tokens::utils::zeroable::{ CardModelZeroable, PackZeroable };
   use super::TokenIdTrait;
 
   // dispatchers
@@ -329,6 +333,12 @@ mod RulesTokens {
       rules_data_self.card_model(:card_model_id)
     }
 
+    fn pack(self: @ContractState, pack_id: u128) -> Pack {
+      let rules_data_self = RulesData::unsafe_new_contract_state();
+
+      rules_data_self.pack(:pack_id)
+    }
+
     fn card_model_metadata(self: @ContractState, card_model_id: u128) -> Metadata {
       let rules_data_self = RulesData::unsafe_new_contract_state();
 
@@ -355,6 +365,16 @@ mod RulesTokens {
       let mut rules_data_self = RulesData::unsafe_new_contract_state();
 
       rules_data_self.add_card_model(:new_card_model, :metadata)
+    }
+
+    fn add_pack(ref self: ContractState, new_pack: Pack, metadata: Metadata) -> u128 {
+      // Modifiers
+      self._only_owner();
+
+      // Body
+      let mut rules_data_self = RulesData::unsafe_new_contract_state();
+
+      rules_data_self.add_pack(:new_pack, :metadata)
     }
 
     fn add_scarcity(ref self: ContractState, season: felt252, scarcity: Scarcity) {
@@ -748,6 +768,10 @@ mod RulesTokens {
 
     fn _mint_pack(ref self: ContractState, to: starknet::ContractAddress, pack_token: PackToken, amount: u256) {
       let mut erc1155_self = ERC1155::unsafe_new_contract_state();
+
+      // assert pack exists
+      let pack_ = self.pack(pack_id: pack_token.id.try_into().unwrap());
+      assert(pack_.is_non_zero(), 'Pack does not exists');
 
       // mint token
       erc1155_self._unsafe_mint(:to, id: pack_token.id, :amount);

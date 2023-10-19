@@ -5,7 +5,7 @@ use rules_tokens::core::interface::{ Metadata };
 
 impl MetadataEq of PartialEq<Metadata> {
   fn eq(lhs: @Metadata, rhs: @Metadata) -> bool {
-    (*lhs.multihash_identifier == *rhs.multihash_identifier) & (*lhs.hash == *rhs.hash)
+    *lhs.hash == *rhs.hash
   }
 
   #[inline(always)]

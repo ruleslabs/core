@@ -1,7 +1,7 @@
 use traits::PartialEq;
 
 // locals
-use rules_tokens::core::interface::{ Scarcity, CardModel, Metadata };
+use rules_tokens::core::interface::{ Scarcity, CardModel, Pack };
 
 impl ScarcityEq of PartialEq<Scarcity> {
   fn eq(lhs: @Scarcity, rhs: @Scarcity) -> bool {
@@ -21,6 +21,17 @@ impl CardModelEq of PartialEq<CardModel> {
 
   #[inline(always)]
   fn ne(lhs: @CardModel, rhs: @CardModel) -> bool {
+    !(lhs == rhs)
+  }
+}
+
+impl PackEq of PartialEq<Pack> {
+  fn eq(lhs: @Pack, rhs: @Pack) -> bool {
+    *lhs.name == *rhs.name
+  }
+
+  #[inline(always)]
+  fn ne(lhs: @Pack, rhs: @Pack) -> bool {
     !(lhs == rhs)
   }
 }
