@@ -87,6 +87,7 @@ mod RulesTokens {
     Token,
   };
   use rules_tokens::core::data::RulesData;
+  use rules_tokens::core::data::RulesData::{ InternalTrait as RulesDataInternalTrait };
   use rules_tokens::core::messages::RulesMessages;
   use rules_tokens::core::messages::RulesMessages::{ InternalTrait as RulesMessagesInternalTrait };
 
@@ -339,16 +340,22 @@ mod RulesTokens {
       rules_data_self.pack(:pack_id)
     }
 
-    fn card_model_metadata(self: @ContractState, card_model_id: u128) -> Metadata {
+    fn card_model_image_metadata(self: @ContractState, card_model_id: u128) -> Metadata {
       let rules_data_self = RulesData::unsafe_new_contract_state();
 
-      rules_data_self.card_model_metadata(:card_model_id)
+      rules_data_self.card_model_image_metadata(:card_model_id)
     }
 
-    fn pack_metadata(self: @ContractState, pack_id: u128) -> Metadata {
+    fn card_model_animation_metadata(self: @ContractState, card_model_id: u128) -> Metadata {
       let rules_data_self = RulesData::unsafe_new_contract_state();
 
-      rules_data_self.pack_metadata(:pack_id)
+      rules_data_self.card_model_animation_metadata(:card_model_id)
+    }
+
+    fn pack_image_metadata(self: @ContractState, pack_id: u128) -> Metadata {
+      let rules_data_self = RulesData::unsafe_new_contract_state();
+
+      rules_data_self.pack_image_metadata(:pack_id)
     }
 
     fn scarcity(self: @ContractState, season: felt252, scarcity_id: felt252) -> Scarcity {
@@ -363,24 +370,29 @@ mod RulesTokens {
       rules_data_self.uncommon_scarcities_count(:season)
     }
 
-    fn add_card_model(ref self: ContractState, new_card_model: CardModel, metadata: Metadata) -> u128 {
+    fn add_card_model(
+      ref self: ContractState,
+      new_card_model: CardModel,
+      image_metadata: Metadata,
+      animation_metadata: Metadata,
+    ) -> u128 {
       // Modifiers
       self._only_owner();
 
       // Body
       let mut rules_data_self = RulesData::unsafe_new_contract_state();
 
-      rules_data_self.add_card_model(:new_card_model, :metadata)
+      rules_data_self.add_card_model(:new_card_model, :image_metadata, :animation_metadata)
     }
 
-    fn add_pack(ref self: ContractState, new_pack: Pack, metadata: Metadata) -> u128 {
+    fn add_pack(ref self: ContractState, new_pack: Pack, image_metadata: Metadata) -> u128 {
       // Modifiers
       self._only_owner();
 
       // Body
       let mut rules_data_self = RulesData::unsafe_new_contract_state();
 
-      rules_data_self.add_pack(:new_pack, :metadata)
+      rules_data_self.add_pack(:new_pack, :image_metadata)
     }
 
     fn add_scarcity(ref self: ContractState, season: felt252, scarcity: Scarcity) {
@@ -393,24 +405,29 @@ mod RulesTokens {
       rules_data_self.add_scarcity(:season, :scarcity)
     }
 
-    fn set_card_model_metadata(ref self: ContractState, card_model_id: u128, metadata: Metadata) {
+    fn set_card_model_metadata(
+      ref self: ContractState,
+      card_model_id: u128,
+      image_metadata: Metadata,
+      animation_metadata: Metadata
+    ) {
       // Modifiers
       self._only_owner();
 
       // Body
       let mut rules_data_self = RulesData::unsafe_new_contract_state();
 
-      rules_data_self.set_card_model_metadata(:card_model_id, :metadata)
+      rules_data_self.set_card_model_metadata(:card_model_id, :image_metadata, :animation_metadata)
     }
 
-    fn set_pack_metadata(ref self: ContractState, pack_id: u128, metadata: Metadata) {
+    fn set_pack_metadata(ref self: ContractState, pack_id: u128, image_metadata: Metadata) {
       // Modifiers
       self._only_owner();
 
       // Body
       let mut rules_data_self = RulesData::unsafe_new_contract_state();
 
-      rules_data_self.set_pack_metadata(:pack_id, :metadata)
+      rules_data_self.set_pack_metadata(:pack_id, :image_metadata)
     }
   }
 
@@ -623,9 +640,18 @@ mod RulesTokens {
   #[external(v0)]
   impl IERC1155MetadataImpl of IERC1155Metadata<ContractState> {
     fn uri(self: @ContractState, token_id: u256) -> Span<felt252> {
-      let erc1155_self = ERC1155::unsafe_new_contract_state();
+      let rules_data_self = RulesData::unsafe_new_contract_state();
 
-      erc1155_self.uri(:token_id)
+      match (TokenIdTrait::new(id: token_id).parse()) {
+        Token::card(card_token) => {
+          rules_data_self
+            ._card_uri(card_model_id: card_token.card_model_id, serial_number: card_token.serial_number)
+            .span()
+        },
+        Token::pack(pack_token) => {
+          rules_data_self._pack_uri(pack_id: pack_token.pack_id).span()
+        },
+      }
     }
   }
 
@@ -800,7 +826,7 @@ impl TokenIdImpl of TokenIdTrait {
       })
     } else {
       Token::pack(PackToken {
-        pack_id: self.id.high,
+        pack_id: self.id.low,
         id: self.id,
       })
     }

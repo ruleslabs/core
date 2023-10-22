@@ -5,11 +5,13 @@ use starknet::testing;
 use zeroable::Zeroable;
 use starknet::class_hash::Felt252TryIntoClassHash;
 use integer::U256Zeroable;
+use debug::PrintTrait;
 
-use rules_erc1155::erc1155::interface::{ IERC1155_ID, IERC1155 };
+use rules_erc1155::erc1155::interface::{ IERC1155_ID, IERC1155, IERC1155Metadata };
 
 use rules_utils::introspection::interface::ISRC5;
 use rules_utils::royalties::interface::{ IERC2981_ID, IERC2981 };
+use rules_utils::utils::array::ArrayTraitExt;
 
 // locals
 use rules_tokens::core::RulesTokens;
@@ -37,6 +39,7 @@ use super::constants::{
   PACK_2,
   PACK_ID_1,
   METADATA,
+  METADATA_2,
   RECEIVER_DEPLOYED_ADDRESS,
   OTHER_RECEIVER_DEPLOYED_ADDRESS,
   CARD_TOKEN_ID_2,
@@ -48,7 +51,9 @@ use super::constants::{
   SEASON,
   MARKETPLACE,
   ROYALTIES_RECEIVER,
-  ROYALTIES_PERCENTAGE
+  ROYALTIES_PERCENTAGE,
+  CARD_MODEL_2_URI,
+  PACK_1_URI,
 };
 
 // dispatchers
@@ -79,7 +84,8 @@ fn setup() -> RulesTokensContractState {
   let card_model_3 = CARD_MODEL_3();
   let pack_1 = PACK_1();
   let pack_2 = PACK_2();
-  let metadata = METADATA();
+  let image_metadata = METADATA();
+  let animation_metadata = METADATA_2();
   let scarcity = SCARCITY();
 
   // Create card models packs and scarcities
@@ -88,11 +94,11 @@ fn setup() -> RulesTokensContractState {
 
   rules_tokens.add_scarcity(season: card_model_3.season, :scarcity);
 
-  rules_tokens.add_card_model(new_card_model: card_model_2, :metadata);
-  rules_tokens.add_card_model(new_card_model: card_model_3, :metadata);
+  rules_tokens.add_card_model(new_card_model: card_model_2, :image_metadata, :animation_metadata);
+  rules_tokens.add_card_model(new_card_model: card_model_3, :image_metadata, :animation_metadata);
 
-  rules_tokens.add_pack(new_pack: pack_1, :metadata);
-  rules_tokens.add_pack(new_pack: pack_2, :metadata);
+  rules_tokens.add_pack(new_pack: pack_1, :image_metadata);
+  rules_tokens.add_pack(new_pack: pack_2, :image_metadata);
 
   rules_tokens
 }
@@ -285,7 +291,7 @@ fn test__mint_pack() {
   let receiver = setup_receiver();
 
   let pack_id = PACK_ID_1();
-  let pack_token_id = u256 { low: pack_id, high: 0 };
+  let pack_token_id: u256 = pack_id.into();
   let amount = 2;
 
   assert(
@@ -308,7 +314,7 @@ fn test__mint_unknown_pack() {
   let mut rules_tokens = setup();
   let receiver = setup_receiver();
 
-  let pack_token_id = u256 { low: 100, high: 0 };
+  let pack_token_id: u256 = 100;
 
   rules_tokens._mint(to: receiver.contract_address, token_id: TokenIdTrait::new(id: pack_token_id), amount: 1);
 }
@@ -370,10 +376,11 @@ fn test_add_card_model_from_zero() {
   let mut rules_tokens = setup();
 
   let card_model_2 = CARD_MODEL_2();
-  let metadata = METADATA();
+  let image_metadata = METADATA();
+  let animation_metadata = METADATA();
 
   testing::set_caller_address(ZERO());
-  rules_tokens.add_card_model(new_card_model: card_model_2, :metadata);
+  rules_tokens.add_card_model(new_card_model: card_model_2, :image_metadata, :animation_metadata);
 }
 
 #[test]
@@ -383,10 +390,11 @@ fn test_add_card_model_unauthorized() {
   let mut rules_tokens = setup();
 
   let card_model_2 = CARD_MODEL_2();
-  let metadata = METADATA();
+  let image_metadata = METADATA();
+  let animation_metadata = METADATA();
 
   testing::set_caller_address(OTHER());
-  rules_tokens.add_card_model(new_card_model: card_model_2, :metadata);
+  rules_tokens.add_card_model(new_card_model: card_model_2, :image_metadata, :animation_metadata);
 }
 
 // Set card model metadata
@@ -399,10 +407,11 @@ fn test_set_card_model_metadata_from_zero() {
 
   let card_model = CARD_MODEL_2();
   let card_model_id = card_model.id();
-  let metadata = METADATA();
+  let image_metadata = METADATA();
+  let animation_metadata = METADATA();
 
   testing::set_caller_address(ZERO());
-  rules_tokens.set_card_model_metadata(:card_model_id, :metadata);
+  rules_tokens.set_card_model_metadata(:card_model_id, :image_metadata, :animation_metadata);
 }
 
 #[test]
@@ -413,10 +422,39 @@ fn test_set_card_model_metadata_unauthorized() {
 
   let card_model = CARD_MODEL_2();
   let card_model_id = card_model.id();
-  let metadata = METADATA();
+  let image_metadata = METADATA();
+  let animation_metadata = METADATA();
 
   testing::set_caller_address(OTHER());
-  rules_tokens.set_card_model_metadata(:card_model_id, :metadata);
+  rules_tokens.set_card_model_metadata(:card_model_id, :image_metadata, :animation_metadata);
+}
+
+// Set pack metadata
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is the zero address',))]
+fn test_set_pack_metadata_from_zero() {
+  let mut rules_tokens = setup();
+
+  let pack_id = PACK_ID_1();
+  let image_metadata = METADATA();
+
+  testing::set_caller_address(ZERO());
+  rules_tokens.set_pack_metadata(:pack_id, :image_metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Caller is not the owner',))]
+fn test_set_pack_metadata_unauthorized() {
+  let mut rules_tokens = setup();
+
+  let pack_id = PACK_ID_1();
+  let image_metadata = METADATA();
+
+  testing::set_caller_address(OTHER());
+  rules_tokens.set_pack_metadata(:pack_id, :image_metadata);
 }
 
 // Marketplace
@@ -790,4 +828,31 @@ fn test_set_contract_uri_unauthorized() {
 
   testing::set_caller_address(OTHER());
   rules_tokens.set_contract_uri(contract_uri_: new_contract_uri);
+}
+
+// metadata URI
+
+#[test]
+#[available_gas(2000000000)]
+fn test_card_uri() {
+  let mut rules_tokens = setup();
+
+  let token_id = CARD_TOKEN_ID_2();
+
+  let ret = rules_tokens.uri(:token_id);
+
+  assert(ret == CARD_MODEL_2_URI().span(), 'Invalid token URI');
+}
+
+#[test]
+#[available_gas(2000000000)]
+fn test_pack_uri() {
+  let mut rules_tokens = setup();
+
+  let pack_id = PACK_ID_1();
+  let token_id: u256 = pack_id.into();
+
+  let ret = rules_tokens.uri(:token_id);
+
+  assert(ret == PACK_1_URI().span(), 'Invalid token URI');
 }

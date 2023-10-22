@@ -27,7 +27,7 @@ impl CardModelEq of PartialEq<CardModel> {
 
 impl PackEq of PartialEq<Pack> {
   fn eq(lhs: @Pack, rhs: @Pack) -> bool {
-    *lhs.name == *rhs.name
+    (*lhs.name == *rhs.name) & (*lhs.season == *rhs.season)
   }
 
   #[inline(always)]

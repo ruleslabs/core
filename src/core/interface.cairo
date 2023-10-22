@@ -36,6 +36,7 @@ struct CardModel {
 #[derive(Serde, Copy, Drop)]
 struct Pack {
   name: felt252,
+  season: felt252,
 }
 
 // Token id
@@ -105,23 +106,35 @@ trait IRulesData<TContractState> {
 
   fn pack(self: @TContractState, pack_id: u128) -> Pack;
 
-  fn card_model_metadata(self: @TContractState, card_model_id: u128) -> Metadata;
+  fn card_model_image_metadata(self: @TContractState, card_model_id: u128) -> Metadata;
 
-  fn pack_metadata(self: @TContractState, pack_id: u128) -> Metadata;
+  fn card_model_animation_metadata(self: @TContractState, card_model_id: u128) -> Metadata;
+
+  fn pack_image_metadata(self: @TContractState, pack_id: u128) -> Metadata;
 
   fn scarcity(self: @TContractState, season: felt252, scarcity_id: felt252) -> Scarcity;
 
   fn uncommon_scarcities_count(self: @TContractState, season: felt252) -> felt252;
 
-  fn add_card_model(ref self: TContractState, new_card_model: CardModel, metadata: Metadata) -> u128;
+  fn add_card_model(
+    ref self: TContractState,
+    new_card_model: CardModel,
+    image_metadata: Metadata,
+    animation_metadata: Metadata
+  ) -> u128;
 
-  fn add_pack(ref self: TContractState, new_pack: Pack, metadata: Metadata) -> u128;
+  fn add_pack(ref self: TContractState, new_pack: Pack, image_metadata: Metadata) -> u128;
 
   fn add_scarcity(ref self: TContractState, season: felt252, scarcity: Scarcity);
 
-  fn set_card_model_metadata(ref self: TContractState, card_model_id: u128, metadata: Metadata);
+  fn set_card_model_metadata(
+    ref self: TContractState,
+    card_model_id: u128,
+    image_metadata: Metadata,
+    animation_metadata: Metadata
+  );
 
-  fn set_pack_metadata(ref self: TContractState, pack_id: u128, metadata: Metadata);
+  fn set_pack_metadata(ref self: TContractState, pack_id: u128, image_metadata: Metadata);
 }
 
 #[starknet::interface]

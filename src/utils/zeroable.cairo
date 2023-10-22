@@ -47,6 +47,7 @@ impl PackZeroable of Zeroable<Pack> {
   fn zero() -> Pack {
     Pack {
       name: 0,
+      season: 0,
     }
   }
 

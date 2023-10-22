@@ -1,5 +1,8 @@
 use array::ArrayTrait;
 
+use rules_utils::utils::base64::Base64;
+use rules_utils::utils::array::ArrayTraitExt;
+
 // locals
 use rules_tokens::core::data::{ RulesData, CardModelTrait, ScarcityTrait };
 use rules_tokens::core::interface::{ CardModel, Scarcity, Pack, Metadata, METADATA_MULTIHASH_IDENTIFIER };
@@ -62,12 +65,14 @@ fn CARD_MODEL_ID() -> u128 {
 fn PACK_1() -> Pack {
   Pack {
     name: 'Pack 1',
+    season: 1,
   }
 }
 
 fn PACK_2() -> Pack {
   Pack {
     name: 'Pack 2',
+    season: 2,
   }
 }
 
@@ -108,6 +113,42 @@ fn CHAIN_ID() -> felt252 {
 
 fn BLOCK_TIMESTAMP() -> u64 {
   103374042_u64
+}
+
+//
+// METADATA URI
+//
+
+fn CARD_MODEL_2_URI() -> Array<felt252> {
+  let mut ret = array![
+    '{"image":"ipfs://hash 1hash 2",',
+    '"animation_url":"ipfs://hash 2h',
+    'ash 1","name":"Double P - Commo',
+    'n #66","attributes":[{"trait_ty',
+    'pe":"Serial number","value":"66',
+    '"},{"trait_type":"Artist","valu',
+    'e":"Double P"},{"trait_type":"R',
+    'arity","value":"Common"},{"trai',
+    't_type":"Season","value":"1995"',
+    '}]}',
+  ];
+
+  ret = ret.encode();
+
+  array!['data:application/json;base64,'].concat(@ret)
+}
+
+fn PACK_1_URI() -> Array<felt252> {
+  let mut ret = array![
+    '{"image":"ipfs://hash 1hash 2",',
+    '"name":"Pack 1","attributes":[{',
+    '"trait_type":"Season","value":"',
+    '1"}]}',
+  ];
+
+  ret = ret.encode();
+
+  array!['data:application/json;base64,'].concat(@ret)
 }
 
 //

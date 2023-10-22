@@ -12,13 +12,16 @@ const COMMON_SCARCITY_NAME: felt252 = 'Common';
 trait RulesDataABI<TContractState> {
   fn card_model(self: @TContractState, card_model_id: u128) -> CardModel;
 
-  fn card_model_metadata(self: @TContractState, card_model_id: u128) -> Metadata;
-
   fn scarcity(self: @TContractState, season: felt252, scarcity_id: felt252) -> Scarcity;
 
   fn uncommon_scarcities_count(self: @TContractState, season: felt252) -> felt252;
 
-  fn add_card_model(ref self: TContractState, new_card_model: CardModel, metadata: Metadata) -> u128;
+  fn add_card_model(
+    ref self: TContractState,
+    new_card_model: CardModel,
+    animation_metadata: Metadata,
+    image_metadata: Metadata
+  ) -> u128;
 
   fn add_scarcity(ref self: TContractState, season: felt252, scarcity: Scarcity);
 }
@@ -26,6 +29,11 @@ trait RulesDataABI<TContractState> {
 #[starknet::contract]
 mod RulesData {
   use zeroable::Zeroable;
+  use traits::Into;
+
+  use rules_utils::utils::base64::Base64;
+  use rules_utils::utils::array::ArrayTraitExt;
+  use rules_utils::utils::strings::Strings;
 
   // locals
   use rules_tokens::core::interface;
@@ -46,16 +54,20 @@ mod RulesData {
     _uncommon_scarcities_count: LegacyMap<felt252, felt252>,
     // (season, scarcity_id) -> Scarcity
     _scarcities: LegacyMap<(felt252, felt252), Scarcity>,
+
     // card_model_id -> CardModel
     _card_models: LegacyMap<u128, CardModel>,
-    // card_model_id -> Metadata
-    _card_models_metadata: LegacyMap<u128, Metadata>,
+    // card_model_id -> Image Metadata
+    _card_models_image_metadata: LegacyMap<u128, Metadata>,
+    // card_model_id -> Animation Metadata
+    _card_models_animation_metadata: LegacyMap<u128, Metadata>,
+
     // pack_id -> Pack
     _packs: LegacyMap<u128, Pack>,
     // number of packs already created
     _packs_count: u128,
     // pack_id -> Metadata
-    _packs_metadata: LegacyMap<u128, Metadata>,
+    _packs_image_metadata: LegacyMap<u128, Metadata>,
   }
 
   //
@@ -78,12 +90,16 @@ mod RulesData {
       self._packs.read(pack_id)
     }
 
-    fn card_model_metadata(self: @ContractState, card_model_id: u128) -> Metadata {
-      self._card_models_metadata.read(card_model_id)
+    fn card_model_image_metadata(self: @ContractState, card_model_id: u128) -> Metadata {
+      self._card_models_image_metadata.read(card_model_id)
     }
 
-    fn pack_metadata(self: @ContractState, pack_id: u128) -> Metadata {
-      self._packs_metadata.read(pack_id)
+    fn card_model_animation_metadata(self: @ContractState, card_model_id: u128) -> Metadata {
+      self._card_models_animation_metadata.read(card_model_id)
+    }
+
+    fn pack_image_metadata(self: @ContractState, pack_id: u128) -> Metadata {
+      self._packs_image_metadata.read(pack_id)
     }
 
     fn scarcity(self: @ContractState, season: felt252, scarcity_id: felt252) -> Scarcity {
@@ -98,10 +114,16 @@ mod RulesData {
       self._uncommon_scarcities_count.read(season)
     }
 
-    fn add_card_model(ref self: ContractState, new_card_model: CardModel, metadata: Metadata) -> u128 {
+    fn add_card_model(
+      ref self: ContractState,
+      new_card_model: CardModel,
+      image_metadata: Metadata,
+      animation_metadata: Metadata
+    ) -> u128 {
       // assert card model and metadata are valid
       assert(new_card_model.is_valid(), 'Invalid card model');
-      assert(metadata.is_valid(), 'Invalid metadata');
+      assert(image_metadata.is_valid(), 'Invalid image metadata');
+      assert(animation_metadata.is_valid(), 'Invalid animation metadata');
 
       // assert card model does not already exists
       let card_model_id = new_card_model.id();
@@ -113,23 +135,24 @@ mod RulesData {
 
       // save card model and metadata
       self._card_models.write(card_model_id, new_card_model);
-      self._card_models_metadata.write(card_model_id, metadata);
+      self._card_models_image_metadata.write(card_model_id, image_metadata);
+      self._card_models_animation_metadata.write(card_model_id, animation_metadata);
 
       // return card model id
       card_model_id
     }
 
-    fn add_pack(ref self: ContractState, new_pack: Pack, metadata: Metadata) -> u128 {
+    fn add_pack(ref self: ContractState, new_pack: Pack, image_metadata: Metadata) -> u128 {
       // assert pack name and metadata are valid
       assert(new_pack.is_valid(), 'Invalid pack');
-      assert(metadata.is_valid(), 'Invalid metadata');
+      assert(image_metadata.is_valid(), 'Invalid image metadata');
 
       // get new pack id
       let pack_id = self._packs_count.read() + 1;
 
       // save card model and metadata
       self._packs.write(pack_id, new_pack);
-      self._packs_metadata.write(pack_id, metadata);
+      self._packs_image_metadata.write(pack_id, image_metadata);
 
       // increase pack count
       self._packs_count.write(pack_id);
@@ -150,20 +173,112 @@ mod RulesData {
 
     // Set Metadata
 
-    fn set_card_model_metadata(ref self: ContractState, card_model_id: u128, metadata: Metadata) {
+    fn set_card_model_metadata(
+      ref self: ContractState,
+      card_model_id: u128,
+      image_metadata: Metadata,
+      animation_metadata: Metadata
+    ) {
       // assert card model already exists
       assert(self.card_model(:card_model_id).is_non_zero(), 'Card model does not exists');
 
       // save metadata
-      self._card_models_metadata.write(card_model_id, metadata);
+      self._card_models_image_metadata.write(card_model_id, image_metadata);
+      self._card_models_animation_metadata.write(card_model_id, animation_metadata);
     }
 
-    fn set_pack_metadata(ref self: ContractState, pack_id: u128, metadata: Metadata) {
+    fn set_pack_metadata(ref self: ContractState, pack_id: u128, image_metadata: Metadata) {
       // assert card model already exists
       assert(self.pack(:pack_id).is_non_zero(), 'Pack does not exists');
 
       // save metadata
-      self._packs_metadata.write(pack_id, metadata);
+      self._packs_image_metadata.write(pack_id, image_metadata);
+    }
+  }
+
+  //
+  // Internals
+  //
+
+  #[generate_trait]
+  impl InternalImpl of InternalTrait {
+    fn _card_uri(self: @ContractState, card_model_id: u128, serial_number: u128) -> Array<felt252> {
+      let card_model = self.card_model(:card_model_id);
+      let scarcity = self.scarcity(season: card_model.season, scarcity_id: card_model.scarcity_id);
+      let image_metadata = self.card_model_image_metadata(:card_model_id);
+      let animation_metadata = self.card_model_animation_metadata(:card_model_id);
+
+      let mut ret = array!['{"image":"ipfs://'];
+
+      // append metadata
+      ret = ret.concat(image_metadata.hash.snapshot);
+      ret.append('","animation_url":"ipfs://');
+      ret = ret.concat(animation_metadata.hash.snapshot);
+
+      // append onchain data
+      let mut arr = array![
+        '","name":"',
+        card_model.artist_name,
+        ' - ',
+        scarcity.name,
+        ' #',
+        serial_number.into().itoa(),
+        '","attributes":[{"trait_type":"',
+        'Serial number","value":"',
+        serial_number.into().itoa(),
+        '"},{"trait_type":"Artist","valu',
+        'e":"',
+        card_model.artist_name,
+        '"},{"trait_type":"Rarity","valu',
+        'e":"',
+        scarcity.name,
+        '"},{"trait_type":"Season","valu',
+        'e":"',
+        card_model.season.itoa(),
+        '"}]}',
+      ];
+
+      ret.append_all(ref :arr);
+
+      // base64 encode and return
+      ret = ret.encode();
+
+      // add data URL prefix
+      arr = array!['data:application/json;base64,'];
+      arr.append_all(ref arr: ret);
+
+      arr
+    }
+
+    fn _pack_uri(self: @ContractState, pack_id: u128) -> Array<felt252> {
+      let pack = self.pack(:pack_id);
+      let image_metadata = self.pack_image_metadata(:pack_id);
+
+      let mut ret = array!['{"image":"ipfs://'];
+
+      // append metadata
+      ret = ret.concat(image_metadata.hash.snapshot);
+
+      // append onchain data
+      let mut arr = array![
+        '","name":"',
+        pack.name,
+        '","attributes":[{"trait_type":"',
+        'Season","value":"',
+        pack.season.itoa(),
+        '"}]}',
+      ];
+
+      ret.append_all(ref :arr);
+
+      // base64 encode and return
+      ret = ret.encode();
+
+      // add data URL prefix
+      arr = array!['data:application/json;base64,'];
+      arr.append_all(ref arr: ret);
+
+      arr
     }
   }
 }
@@ -211,8 +326,6 @@ trait CardModelTrait {
   fn is_valid(self: CardModel) -> bool;
 
   fn id(self: CardModel) -> u128;
-
-  fn json_metadata(self: CardModel) -> Array<felt252>;
 }
 
 impl CardModelImpl of CardModelTrait {
@@ -232,26 +345,16 @@ impl CardModelImpl of CardModelTrait {
 
     Into::<felt252, u256>::into(hash).low
   }
-
-  fn json_metadata(self: CardModel) -> Array<felt252> {
-    array![]
-  }
 }
 
 // Pack trait
 
 trait PackTrait {
   fn is_valid(self: Pack) -> bool;
-
-  fn json_metadata(self: Pack) -> Array<felt252>;
 }
 
 impl PackImpl of PackTrait {
   fn is_valid(self: Pack) -> bool {
-    self.name.is_non_zero()
-  }
-
-  fn json_metadata(self: Pack) -> Array<felt252> {
-    array![]
+    self.name.is_non_zero() & self.season.is_non_zero()
   }
 }

@@ -33,7 +33,7 @@ use rules_tokens::core::data::{ RulesDataABIDispatcher, RulesDataABIDispatcherTr
 fn setup() -> RulesDataContractState {
   let mut rules_data = RulesData::unsafe_new_contract_state();
 
-  rules_data.add_card_model(CARD_MODEL_1(), METADATA());
+  rules_data.add_card_model(CARD_MODEL_1(), METADATA(), METADATA_2());
 
   rules_data.add_pack(PACK_1(), METADATA());
 
@@ -55,13 +55,24 @@ fn test_card_model() {
 
 #[test]
 #[available_gas(20000000)]
-fn test_card_model_metadata() {
+fn test_card_model_image_metadata() {
   let mut rules_data = setup();
 
-  let metadata = METADATA();
+  let image_metadata = METADATA();
   let card_model_id = CARD_MODEL_ID();
 
-  assert(rules_data.card_model_metadata(:card_model_id) == metadata, 'Invalid metadata');
+  assert(rules_data.card_model_image_metadata(:card_model_id) == image_metadata, 'Invalid metadata');
+}
+
+#[test]
+#[available_gas(20000000)]
+fn test_card_model_animation_metadata() {
+  let mut rules_data = setup();
+
+  let animation_metadata = METADATA_2();
+  let card_model_id = CARD_MODEL_ID();
+
+  assert(rules_data.card_model_animation_metadata(:card_model_id) == animation_metadata, 'Invalid metadata');
 }
 
 #[test]
@@ -70,9 +81,10 @@ fn test_add_card_model_returns_valid_id() {
   let mut rules_data = RulesData::unsafe_new_contract_state();
 
   let card_model = CARD_MODEL_1();
-  let metadata = METADATA();
+  let image_metadata = METADATA();
+  let animation_metadata = METADATA_2();
 
-  let card_model_id = rules_data.add_card_model(new_card_model: card_model, :metadata);
+  let card_model_id = rules_data.add_card_model(new_card_model: card_model, :image_metadata, :animation_metadata);
 
   assert(card_model_id == CARD_MODEL_ID(), 'Invalid card model id');
 }
@@ -82,7 +94,8 @@ fn test_add_card_model_returns_valid_id() {
 fn test_multiple_add_card_model() {
   let mut rules_data = setup();
 
-  let metadata = METADATA();
+  let image_metadata = METADATA();
+  let animation_metadata = METADATA_2();
 
   // add card model
 
@@ -91,9 +104,9 @@ fn test_multiple_add_card_model() {
 
   assert_state_before_add_card_model(ref :rules_data, :card_model);
 
-  let card_model_id = rules_data.add_card_model(new_card_model: card_model, :metadata);
+  let card_model_id = rules_data.add_card_model(new_card_model: card_model, :image_metadata, :animation_metadata);
 
-  assert_state_after_add_card_model(ref :rules_data, :card_model, :metadata);
+  assert_state_after_add_card_model(ref :rules_data, :card_model, :image_metadata, :animation_metadata);
 
   // add card model
 
@@ -102,9 +115,9 @@ fn test_multiple_add_card_model() {
 
   assert_state_before_add_card_model(ref :rules_data, :card_model);
 
-  let card_model_id = rules_data.add_card_model(new_card_model: card_model, :metadata);
+  let card_model_id = rules_data.add_card_model(new_card_model: card_model, :image_metadata, :animation_metadata);
 
-  assert_state_after_add_card_model(ref :rules_data, :card_model, :metadata);
+  assert_state_after_add_card_model(ref :rules_data, :card_model, :image_metadata, :animation_metadata);
 
   // add card model
 
@@ -114,9 +127,9 @@ fn test_multiple_add_card_model() {
 
   assert_state_before_add_card_model(ref :rules_data, :card_model);
 
-  let card_model_id = rules_data.add_card_model(new_card_model: card_model, :metadata);
+  let card_model_id = rules_data.add_card_model(new_card_model: card_model, :image_metadata, :animation_metadata);
 
-  assert_state_after_add_card_model(ref :rules_data, :card_model, :metadata);
+  assert_state_after_add_card_model(ref :rules_data, :card_model, :image_metadata, :animation_metadata);
 }
 
 #[test]
@@ -126,9 +139,10 @@ fn test_add_card_model_already_exists() {
   let mut rules_data = setup();
 
   let card_model = CARD_MODEL_1();
-  let metadata = METADATA();
+  let image_metadata = METADATA();
+  let animation_metadata = METADATA_2();
 
-  rules_data.add_card_model(new_card_model: card_model, :metadata);
+  rules_data.add_card_model(new_card_model: card_model, :image_metadata, :animation_metadata);
 }
 
 #[test]
@@ -138,11 +152,12 @@ fn test_add_card_model_invalid_artist_name() {
   let mut rules_data = setup();
 
   let mut card_model = CARD_MODEL_1();
-  let metadata = METADATA();
+  let image_metadata = METADATA();
+  let animation_metadata = METADATA_2();
 
   card_model.artist_name = 0;
 
-  rules_data.add_card_model(new_card_model: card_model, :metadata);
+  rules_data.add_card_model(new_card_model: card_model, :image_metadata, :animation_metadata);
 }
 
 #[test]
@@ -152,11 +167,12 @@ fn test_add_card_model_invalid_season() {
   let mut rules_data = setup();
 
   let mut card_model = CARD_MODEL_1();
-  let metadata = METADATA();
+  let image_metadata = METADATA();
+  let animation_metadata = METADATA_2();
 
   card_model.season = 0;
 
-  rules_data.add_card_model(new_card_model: card_model, :metadata);
+  rules_data.add_card_model(new_card_model: card_model, :image_metadata, :animation_metadata);
 }
 
 #[test]
@@ -166,23 +182,38 @@ fn test_add_card_model_invalid_scarcity() {
   let mut rules_data = setup();
 
   let mut card_model = CARD_MODEL_1();
-  let metadata = METADATA();
+  let image_metadata = METADATA();
+  let animation_metadata = METADATA_2();
 
   card_model.scarcity_id += 1;
 
-  rules_data.add_card_model(new_card_model: card_model, :metadata);
+  rules_data.add_card_model(new_card_model: card_model, :image_metadata, :animation_metadata);
 }
 
 #[test]
 #[available_gas(20000000)]
-#[should_panic(expected: ('Invalid metadata',))]
-fn test_add_card_model_invalid_metadata_hash() {
+#[should_panic(expected: ('Invalid image metadata',))]
+fn test_add_card_model_invalid_image_metadata() {
   let mut rules_data = setup();
 
   let card_model = CARD_MODEL_1();
-  let mut metadata = INVALID_METADATA();
+  let image_metadata = INVALID_METADATA();
+  let animation_metadata = METADATA();
 
-  rules_data.add_card_model(new_card_model: card_model, :metadata);
+  rules_data.add_card_model(new_card_model: card_model, :image_metadata, :animation_metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Invalid animation metadata',))]
+fn test_add_card_model_invalid_animation_metadata() {
+  let mut rules_data = setup();
+
+  let card_model = CARD_MODEL_1();
+  let image_metadata = METADATA();
+  let animation_metadata = INVALID_METADATA();
+
+  rules_data.add_card_model(new_card_model: card_model, :image_metadata, :animation_metadata);
 }
 
 // Scarcity
@@ -325,10 +356,10 @@ fn test_pack() {
 fn test_pack_metadata() {
   let mut rules_data = setup();
 
-  let metadata = METADATA();
+  let image_metadata = METADATA();
   let pack_id = PACK_ID_1();
 
-  assert(rules_data.pack_metadata(:pack_id) == metadata, 'Invalid metadata');
+  assert(rules_data.pack_image_metadata(:pack_id) == image_metadata, 'Invalid metadata');
 }
 
 #[test]
@@ -337,9 +368,9 @@ fn test_add_pack_returns_valid_id() {
   let mut rules_data = RulesData::unsafe_new_contract_state();
 
   let pack = PACK_1();
-  let metadata = METADATA();
+  let image_metadata = METADATA();
 
-  let pack_id = rules_data.add_pack(new_pack: pack, :metadata);
+  let pack_id = rules_data.add_pack(new_pack: pack, :image_metadata);
 
   assert(pack_id == PACK_ID_1(), 'Invalid pack id');
 }
@@ -349,7 +380,7 @@ fn test_add_pack_returns_valid_id() {
 fn test_multiple_add_pack() {
   let mut rules_data = setup();
 
-  let metadata = METADATA();
+  let image_metadata = METADATA();
 
   // add pack
 
@@ -358,19 +389,19 @@ fn test_multiple_add_pack() {
 
   assert_state_before_add_pack(ref :rules_data);
 
-  let card_model_id = rules_data.add_pack(new_pack: pack, :metadata);
+  let card_model_id = rules_data.add_pack(new_pack: pack, :image_metadata);
 
-  assert_state_after_add_pack(ref :rules_data, :pack, :metadata);
+  assert_state_after_add_pack(ref :rules_data, :pack, :image_metadata);
 
   // add pack
 
-  pack.name += 100;
+  pack.season += 100;
 
   assert_state_before_add_pack(ref :rules_data);
 
-  let card_model_id = rules_data.add_pack(new_pack: pack, :metadata);
+  let card_model_id = rules_data.add_pack(new_pack: pack, :image_metadata);
 
-  assert_state_after_add_pack(ref :rules_data, :pack, :metadata);
+  assert_state_after_add_pack(ref :rules_data, :pack, :image_metadata);
 
   // add pack
 
@@ -378,35 +409,49 @@ fn test_multiple_add_pack() {
 
   assert_state_before_add_pack(ref :rules_data);
 
-  let card_model_id = rules_data.add_pack(new_pack: pack, :metadata);
+  let card_model_id = rules_data.add_pack(new_pack: pack, :image_metadata);
 
-  assert_state_after_add_pack(ref :rules_data, :pack, :metadata);
+  assert_state_after_add_pack(ref :rules_data, :pack, :image_metadata);
 }
 
 #[test]
 #[available_gas(20000000)]
 #[should_panic(expected: ('Invalid pack',))]
-fn test_add_card_model_invalid_name() {
+fn test_add_pack_invalid_name() {
   let mut rules_data = RulesData::unsafe_new_contract_state();
 
   let mut pack = PACK_1();
-  let metadata = METADATA();
+  let image_metadata = METADATA();
 
   pack.name = 0;
 
-  let card_model_id = rules_data.add_pack(new_pack: pack, :metadata);
+  let card_model_id = rules_data.add_pack(new_pack: pack, :image_metadata);
 }
 
 #[test]
 #[available_gas(20000000)]
-#[should_panic(expected: ('Invalid metadata',))]
-fn test_add_pack_invalid_metadata_hash() {
+#[should_panic(expected: ('Invalid pack',))]
+fn test_add_pack_invalid_season() {
+  let mut rules_data = RulesData::unsafe_new_contract_state();
+
+  let mut pack = PACK_1();
+  let image_metadata = METADATA();
+
+  pack.season = 0;
+
+  let card_model_id = rules_data.add_pack(new_pack: pack, :image_metadata);
+}
+
+#[test]
+#[available_gas(20000000)]
+#[should_panic(expected: ('Invalid image metadata',))]
+fn test_add_pack_invalid_image_metadata() {
   let mut rules_data = setup();
 
   let pack = PACK_1();
-  let mut metadata = INVALID_METADATA();
+  let image_metadata = INVALID_METADATA();
 
-  rules_data.add_pack(new_pack: pack, :metadata);
+  rules_data.add_pack(new_pack: pack, :image_metadata);
 }
 
 // Set metadata
@@ -418,11 +463,12 @@ fn test_set_card_model_metadata() {
 
   let card_model = CARD_MODEL_1();
   let card_model_id = card_model.id();
-  let metadata = METADATA_2();
+  let image_metadata = METADATA_2();
+  let animation_metadata = METADATA();
 
-  rules_data.set_card_model_metadata(:card_model_id, :metadata);
+  rules_data.set_card_model_metadata(:card_model_id, :image_metadata, :animation_metadata);
 
-  assert_state_after_add_card_model(ref :rules_data, :card_model, :metadata);
+  assert_state_after_add_card_model(ref :rules_data, :card_model, :image_metadata, :animation_metadata);
 }
 
 #[test]
@@ -433,9 +479,10 @@ fn test_set_card_model_metadata_does_not_exists() {
 
   let card_model = CARD_MODEL_1();
   let card_model_id = card_model.id() + 1;
-  let metadata = METADATA_2();
+  let image_metadata = METADATA_2();
+  let animation_metadata = METADATA();
 
-  rules_data.set_card_model_metadata(:card_model_id, :metadata);
+  rules_data.set_card_model_metadata(:card_model_id, :image_metadata, :animation_metadata);
 }
 
 #[test]
@@ -444,9 +491,9 @@ fn test_set_pack_metadata() {
   let mut rules_data = setup();
 
   let pack_id = PACK_ID_1();
-  let metadata = METADATA_2();
+  let image_metadata = METADATA_2();
 
-  rules_data.set_pack_metadata(:pack_id, :metadata);
+  rules_data.set_pack_metadata(:pack_id, :image_metadata);
 }
 
 //
@@ -459,14 +506,24 @@ fn assert_state_before_add_card_model(ref rules_data: RulesDataContractState, ca
   let card_model_id = card_model.id();
 
   assert(rules_data.card_model(:card_model_id) == CardModelZeroable::zero(), 'card model before');
-  assert(rules_data.card_model_metadata(:card_model_id) == MetadataZeroable::zero(), 'metadata before');
+  assert(rules_data.card_model_image_metadata(:card_model_id) == MetadataZeroable::zero(), 'image metadata before');
+  assert(
+    rules_data.card_model_animation_metadata(:card_model_id) == MetadataZeroable::zero(),
+    'animation metadata before'
+  );
 }
 
-fn assert_state_after_add_card_model(ref rules_data: RulesDataContractState, card_model: CardModel, metadata: Metadata) {
+fn assert_state_after_add_card_model(
+  ref rules_data: RulesDataContractState,
+  card_model: CardModel,
+  image_metadata: Metadata,
+  animation_metadata: Metadata
+) {
   let card_model_id = card_model.id();
 
   assert(rules_data.card_model(:card_model_id) == card_model, 'card model after');
-  assert(rules_data.card_model_metadata(:card_model_id) == metadata, 'metadata after');
+  assert(rules_data.card_model_image_metadata(:card_model_id) == image_metadata, 'image metadata after');
+  assert(rules_data.card_model_animation_metadata(:card_model_id) == animation_metadata, 'animation metadata after');
 }
 
 // Scarcity
@@ -489,12 +546,12 @@ fn assert_state_before_add_pack(ref rules_data: RulesDataContractState) {
   let pack_id = rules_data._packs_count.read() + 1;
 
   assert(rules_data.pack(:pack_id) == PackZeroable::zero(), 'pack before');
-  assert(rules_data.pack_metadata(:pack_id) == MetadataZeroable::zero(), 'metadata before');
+  assert(rules_data.pack_image_metadata(:pack_id) == MetadataZeroable::zero(), 'image_metadata before');
 }
 
-fn assert_state_after_add_pack(ref rules_data: RulesDataContractState, pack: Pack, metadata: Metadata) {
+fn assert_state_after_add_pack(ref rules_data: RulesDataContractState, pack: Pack, image_metadata: Metadata) {
   let pack_id = rules_data._packs_count.read();
 
   assert(rules_data.pack(:pack_id) == pack, 'pack after');
-  assert(rules_data.pack_metadata(:pack_id) == metadata, 'metadata after');
+  assert(rules_data.pack_image_metadata(:pack_id) == image_metadata, 'metadata after');
 }

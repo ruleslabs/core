@@ -151,6 +151,7 @@ impl StorePack of Store::<Pack> {
     Result::Ok(
       Pack {
         name: storage_read_syscall(address_domain, storage_address_from_base_and_offset(base, offset))?,
+        season: storage_read_syscall(address_domain, storage_address_from_base_and_offset(base, offset + 1))?,
       }
     )
   }
@@ -161,10 +162,12 @@ impl StorePack of Store::<Pack> {
     offset: u8,
     value: Pack
   ) -> SyscallResult::<()> {
-    storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, offset), value.name)
+    storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, offset), value.name)?;
+
+    storage_write_syscall(address_domain, storage_address_from_base_and_offset(base, offset + 1), value.season)
   }
 
   fn size() -> u8 {
-    1
+    2
   }
 }
