@@ -7,7 +7,7 @@ use starknet::class_hash::Felt252TryIntoClassHash;
 use integer::U256Zeroable;
 use debug::PrintTrait;
 
-use rules_erc1155::erc1155::interface::{ IERC1155_ID, IERC1155, IERC1155Metadata };
+use erc1155::erc1155::interface::{ IERC1155_ID, IERC1155, IERC1155Metadata };
 
 use rules_utils::introspection::interface::ISRC5;
 use rules_utils::royalties::interface::{ IERC2981_ID, IERC2981 };

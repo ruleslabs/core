@@ -5,7 +5,7 @@ use rules_utils::utils::array::ArrayTraitExt;
 
 // locals
 use rules_tokens::core::data::{ RulesData, CardModelTrait, ScarcityTrait };
-use rules_tokens::core::interface::{ CardModel, Scarcity, Pack, Metadata, METADATA_MULTIHASH_IDENTIFIER };
+use rules_tokens::core::interface::{ CardModel, Scarcity, Pack, Metadata };
 use rules_tokens::core::voucher::Voucher;
 
 fn METADATA() -> Metadata {

@@ -3,7 +3,7 @@ use traits::Into;
 use integer::{ U128Zeroable, U256Zeroable };
 
 // locals
-use super::interface::{ Scarcity, CardModel, Pack, Metadata, METADATA_MULTIHASH_IDENTIFIER };
+use super::interface::{ Scarcity, CardModel, Pack, Metadata };
 
 const COMMON_SCARCITY_MAX_SUPPLY: u128 = 0xffffffffffffffffffffffffffffffff;
 const COMMON_SCARCITY_NAME: felt252 = 'Common';

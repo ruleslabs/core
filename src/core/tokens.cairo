@@ -55,9 +55,9 @@ mod RulesTokens {
   use zeroable::Zeroable;
   use integer::U128Zeroable;
 
-  use rules_erc1155::erc1155::ERC1155;
-  use rules_erc1155::erc1155::ERC1155::InternalTrait as ERC1155InternalTrait;
-  use rules_erc1155::erc1155::interface::{ IERC1155, IERC1155Camel, IERC1155Metadata };
+  use erc1155::erc1155::ERC1155;
+  use erc1155::erc1155::ERC1155::InternalTrait as ERC1155InternalTrait;
+  use erc1155::erc1155::interface::{ IERC1155, IERC1155Camel, IERC1155Metadata };
 
   use rules_utils::introspection::src5::SRC5;
   use rules_utils::introspection::interface::{ ISRC5, ISRC5Camel };

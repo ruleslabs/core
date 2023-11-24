@@ -5,8 +5,6 @@ use option::OptionTrait;
 
 use super::voucher::Voucher;
 
-const METADATA_MULTIHASH_IDENTIFIER: u16 = 0x1220;
-
 // Metadata
 
 #[derive(Serde, Copy, Drop)]

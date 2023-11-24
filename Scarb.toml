@@ -8,7 +8,7 @@ name = "rules_tokens"
 # See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest
 
 [dependencies]
-rules_erc1155 = { git = "https://github.com/ruleslabs/starknet-erc-1155.git" }
+erc1155 = { git = "https://github.com/ruleslabs/starknet-erc-1155.git" }
 messages = { git = "https://github.com/ruleslabs/starknet-messages.git" }
 rules_utils = { git = "https://github.com/ruleslabs/starknet-utils.git" }
 starknet = ">=2.1.0-rc0"
